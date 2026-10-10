@@ -133,7 +133,7 @@ class ApduHandler {
 
     // B0 02 — legacy GET_APP_NAME probe; respond with the device name.
     if (command.cla == Cla.global && command.ins == Ins.getAppName) {
-      final nameBytes = Uint8List.fromList('OpenLedger'.codeUnits);
+      final nameBytes = Uint8List.fromList('OpenLedgerAppApp'.codeUnits);
       return ApduResponse(data: nameBytes, sw1: 0x90, sw2: 0x00);
     }
 

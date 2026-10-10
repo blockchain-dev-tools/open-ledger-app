@@ -65,7 +65,7 @@ const String bleCccdDescriptorUuid = '00002902-0000-1000-8000-00805f9b34fb';
 
 /// Information about a discovered or connected BLE device.
 class BleDeviceInfo {
-  /// Human-readable device name (e.g. "OpenLedger").
+  /// Human-readable device name (e.g. "OpenLedgerAppApp").
   final String name;
 
   /// Bluetooth MAC address or UUID. `null` for unconnected devices

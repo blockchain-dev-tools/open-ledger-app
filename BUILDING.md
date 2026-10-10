@@ -1,4 +1,4 @@
-# Building Open Ledger App App
+# Building Open Ledger App
 
 Run root commands from the clone's own Git root. The app remains at `apps/mobile-flutter/`; Rust remains at `crates/`. Do not move only one directory or build against files from another checkout.
 

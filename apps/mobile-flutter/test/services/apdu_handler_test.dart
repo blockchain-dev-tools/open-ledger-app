@@ -51,7 +51,7 @@ void main() {
         equals('1.10.3'));
   });
 
-  test('getAppName returns "OpenLedger" for non-OS CLA', () {
+  test('getAppName returns "OpenLedgerAppApp" for non-OS CLA', () {
     final cmd = ApduCommand(
       cla: Cla.global,
       ins: Ins.getAppName,
@@ -63,7 +63,7 @@ void main() {
 
     expect(response.isSuccess, isTrue);
     expect(response.data, isNotNull);
-    expect(String.fromCharCodes(response.data!), equals('OpenLedger'));
+    expect(String.fromCharCodes(response.data!), equals('OpenLedgerAppApp'));
   });
 
   test('GET_APP_CONFIGURATION returns capability flags and Ethereum version', () {

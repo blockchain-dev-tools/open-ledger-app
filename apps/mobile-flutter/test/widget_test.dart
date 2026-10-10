@@ -1,4 +1,4 @@
-// Basic smoke test for the Open Ledger App app entry point.
+// Basic smoke test for the Open Ledger App entry point.
 //
 // Verifies the app boots without errors and shows the expected
 // initial screen (Welcome for fresh install, Unlock for existing wallet).
@@ -12,7 +12,7 @@ void main() {
   testWidgets('app renders welcome screen on fresh install',
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const OpenLedgerApp());
+    await tester.pumpWidget(const OpenLedgerAppApp());
     // Let the async wallet check resolve (NoWalletStorage returns null).
     await tester.pumpAndSettle();
 
@@ -23,7 +23,7 @@ void main() {
   testWidgets('app shows nothing until wallet check resolves',
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const OpenLedgerApp());
+    await tester.pumpWidget(const OpenLedgerAppApp());
     // With mock SharedPreferences, async init resolves. One extra pump
     // triggers rebuild to WelcomeScreen — no blocker/flash.
     await tester.pump();

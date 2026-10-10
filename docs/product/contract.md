@@ -73,7 +73,7 @@ The active Ledger app is separate from BLE connection state. Starting a chain op
 1. `AppState.onAppBackgrounded`/`onAppForegrounded` are not called from an App lifecycle observer. The only lifecycle observer handles privacy shielding, not wallet locking. The intended five-minute background lock and BLE pause/resume cannot be relied upon. Foreground idle locking and a manual lock entry point are also absent.
 2. The registered legacy `/backup-seed` route still supports clipboard export; it is separate from the current QR export journey.
 3. SharedPreferences storage and the six-digit PIN allow offline guesses if an attacker extracts app data. Metadata and counters are not encrypted as a whole-store boundary.
-4. BLE-name edits are UI state only and do not persist or update the advertiser name; the device default is `OpenLedger`.
+4. BLE-name edits are UI state only and do not persist or update the advertiser name; the device default is `OpenLedgerAppApp`.
 5. Android release builds still use debug signing. An official APK requires a deliberate release-signing setup and independent validation.
 6. iOS, host-wallet compatibility, air-gap product flow and recovery behavior require separate validation. The corpus includes regression snapshots and declared gaps; passing them is not a blanket protocol certification.
 

@@ -54,7 +54,7 @@ class FakeBlePeripheral extends ChangeNotifier implements IBlePeripheral {
   BleState get state => _state;
 
   @override
-  String get deviceName => 'OpenLedger';
+  String get deviceName => 'OpenLedgerAppApp';
 
   @override
   int get mtu => 247;

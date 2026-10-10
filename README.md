@@ -1,4 +1,4 @@
-# Open Ledger App App
+# Open Ledger App
 
 [中文](README.zh-CN.md) · [Build instructions](BUILDING.md) · [Security](SECURITY.md)
 

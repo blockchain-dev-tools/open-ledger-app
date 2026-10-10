@@ -289,7 +289,7 @@ Future<void> coldStart(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
 
-  await tester.pumpWidget(const app.OpenLedgerApp());
+  await tester.pumpWidget(const app.OpenLedgerAppApp());
   await waitForAny(
     tester,
     [

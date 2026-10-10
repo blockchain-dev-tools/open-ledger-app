@@ -22,7 +22,7 @@ void main() {
       // The name lives in the scan response, so its length cannot affect this
       // packet — the UUID stays discoverable even at the longest allowed name.
       final primary = _flagsAd() + _uuid128Ad();
-      for (final name in ['IV', 'OpenLedger', 'A' * maxBleDeviceNameLength]) {
+      for (final name in ['IV', 'OpenLedgerAppApp', 'A' * maxBleDeviceNameLength]) {
         expect(primary, lessThanOrEqualTo(_adPayloadLimit),
             reason: 'primary packet must not depend on name "$name"');
       }
@@ -30,7 +30,7 @@ void main() {
 
     test('cannot also carry the default device name', () {
       // 3 + 18 + 11 = 32B — one byte over. This is what forces the split.
-      expect(_flagsAd() + _uuid128Ad() + _localNameAd('OpenLedger'),
+      expect(_flagsAd() + _uuid128Ad() + _localNameAd('OpenLedgerAppApp'),
           greaterThan(_adPayloadLimit));
     });
   });

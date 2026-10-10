@@ -35,17 +35,17 @@ void main() {
   if (kDebugMode) {
     SemanticsBinding.instance.ensureSemantics();
   }
-  runApp(const OpenLedgerApp());
+  runApp(const OpenLedgerAppApp());
 }
 
-class OpenLedgerApp extends StatefulWidget {
-  const OpenLedgerApp({super.key});
+class OpenLedgerAppApp extends StatefulWidget {
+  const OpenLedgerAppApp({super.key});
 
   @override
-  State<OpenLedgerApp> createState() => _OpenLedgerAppState();
+  State<OpenLedgerAppApp> createState() => _OpenLedgerAppAppState();
 }
 
-class _OpenLedgerAppState extends State<OpenLedgerApp> {
+class _OpenLedgerAppAppState extends State<OpenLedgerAppApp> {
   final AppState _appState = AppState(
     settingsService: SettingsService(
       repo: SettingsRepositoryImpl(),
