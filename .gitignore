@@ -1,0 +1,55 @@
+# Private development tooling and process records (at any depth)
+.opencode/
+.sisyphus/
+.claude/
+.omc/
+.superpowers/
+.vercel/
+.vscode/
+.idea/
+opencode.json
+
+# Credentials and machine configuration
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
+local.properties
+
+# Build, dependency and device output
+node_modules/
+.turbo/
+.next/
+out/
+dist/
+build/
+target/
+.dart_tool/
+.gradle/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.tsbuildinfo
+*.log
+*.apk
+*.ipa
+*.so
+*.dylib
+*.a
+*.dSYM/
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+tmp/
+coverage/
+
+# Internal work records
+BACKLOG.md
+docs/tickets/
+docs/findings/
+docs/planning/
+audit/
