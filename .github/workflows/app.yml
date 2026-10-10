@@ -1,0 +1,58 @@
+name: App source validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-and-host-verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Select Rust stable
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Test Rust workspace
+        run: cargo test --locked --manifest-path crates/Cargo.toml
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install pinned host verifier dependencies
+        run: |
+          npm install --global pnpm@10.34.5 --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify public BIP-39 vector
+        run: pnpm run check:e2e-verifier
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install official Flutter 3.44.0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = '559ffa3f75e7402d65a8def9c28389a9b2e6fe42'
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Select Rust stable
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Build host Rust FFI for conformance tests
+        run: cargo build --locked --manifest-path crates/Cargo.toml --release
+      - name: Resolve locked Flutter dependencies
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics pub get --enforce-lockfile
+      - name: Analyze Flutter source
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics analyze
+      - name: Run Flutter and real Rust FFI conformance tests
+        working-directory: apps/mobile-flutter
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/crates/target/release
+        run: flutter --no-version-check --suppress-analytics test
+      - name: Build web design gallery
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics build web --release -t tool/gallery/main.dart
