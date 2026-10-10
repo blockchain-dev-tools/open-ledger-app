@@ -15,7 +15,7 @@
 5. Tap "Import" button
 6. **SetPinScreen** — enter `1 2 3 4 5 6` (Create PIN phase)
 7. Confirm PIN — enter `1 2 3 4 5 6` again
-8. **VaultScreen** — verify 5 chain sections visible (Ethereum, Solana, Bitcoin, Tron, Sui)
+8. **VaultScreen** — verify 3 chain sections visible (Ethereum, Solana, Tron); Bitcoin and Sui are hidden
 9. Kill and restart app
 10. **UnlockScreen** — enter `1 2 3 4 5 6`
 11. **VaultScreen** — verify accounts persist (5 chain sections, fingerprint banner)

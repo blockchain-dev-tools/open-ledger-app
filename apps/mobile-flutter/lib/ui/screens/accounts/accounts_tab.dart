@@ -36,7 +36,7 @@ class _AccountsTabState extends State<AccountsTab> {
 
   /// Chain sections in display order — from the chain registry, the single
   /// source of truth shared with the BLE control sheet.
-  static final _chainOrder = [for (final chain in Chain.values) chain.id];
+  static final _chainOrder = [for (final chain in Chain.visible) chain.id];
 
   // ── Helpers ────────────────────────────────────────────────────────
 

@@ -95,7 +95,7 @@ Widget _app(_FakeBleControl control, {BleLogController? logController}) {
 final _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  testWidgets('idle: FAB opens a 5-chain picker; tapping one starts BLE',
+  testWidgets('idle: FAB opens a 3-chain picker; tapping one starts BLE',
       (tester) async {
     final control = _FakeBleControl();
     await tester.pumpWidget(_app(control));
@@ -108,12 +108,13 @@ void main() {
     for (final label in const [
       'Ethereum',
       'Solana',
-      'Bitcoin',
       'Tron',
-      'Sui',
     ]) {
       expect(find.text(label), findsOneWidget);
     }
+
+    expect(find.byKey(const ValueKey('ble-chain-bitcoin')), findsNothing);
+    expect(find.byKey(const ValueKey('ble-chain-sui')), findsNothing);
 
     await tester.tap(find.text('Ethereum'));
     await tester.pump();
@@ -123,7 +124,7 @@ void main() {
     expect(control.stops, 0);
     // Starting from idle leaves the sheet open so the flip to broadcasting
     // is visible — the tile now carries the stop affordance.
-    expect(find.text('Bitcoin'), findsOneWidget);
+    expect(find.text('Tron'), findsOneWidget);
     expect(find.byIcon(Icons.power_settings_new), findsOneWidget);
     expect(find.text('Tap the active chain again to stop broadcasting.'),
         findsOneWidget);
@@ -149,7 +150,7 @@ void main() {
     expect(control.stops, 0);
     expect(control.activeChain, Chain.solana);
     // Switching does not dismiss the sheet — the tiles update in place.
-    expect(find.text('Bitcoin'), findsOneWidget);
+    expect(find.text('Tron'), findsOneWidget);
     expect(find.byType(BottomSheet), findsOneWidget);
   });
 
@@ -179,7 +180,7 @@ void main() {
     expect(control.starts, isEmpty);
     expect(control.bleState, BleState.idle);
     // Stopping does not dismiss the sheet either.
-    expect(find.text('Bitcoin'), findsOneWidget);
+    expect(find.text('Tron'), findsOneWidget);
     expect(find.byType(BottomSheet), findsOneWidget);
   });
 
@@ -210,7 +211,7 @@ void main() {
     await tester.tap(find.byType(BleFab));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Bitcoin'), findsOneWidget); // control view
+    expect(find.text('Tron'), findsOneWidget); // control view
 
     await tester.tap(find.text('Ethereum'));
     await tester.pump();
@@ -253,7 +254,7 @@ void main() {
     await tester.tap(find.byType(BleFab));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Bitcoin'), findsOneWidget); // control view
+    expect(find.text('Tron'), findsOneWidget); // control view
 
     await tester.tap(find.byIcon(Icons.article_outlined));
     await tester.pump();
@@ -273,7 +274,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byIcon(Icons.arrow_back), findsNothing);
-    expect(find.text('Bitcoin'), findsOneWidget);
+    expect(find.text('Tron'), findsOneWidget);
     expect(find.byType(BottomSheet), findsOneWidget);
   });
 

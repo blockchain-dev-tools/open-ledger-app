@@ -15,7 +15,7 @@ import 'ble_log_view.dart';
 /// Two views share ONE sheet route (house rule: never stack a sheet on a
 /// sheet):
 /// - **control** — idle: pick which chain app to expose and start
-///   advertising (a single-select 2×3 grid of chain tiles); active: show
+///   advertising (a single-select grid of visible chain tiles); active: show
 ///   the active chain + state, offer Stop and hot-switching to any other
 ///   chain;
 /// - **logs** — the live APDU log, reached from the control header and
@@ -24,7 +24,7 @@ class BleControlSheet {
   const BleControlSheet._();
 
   /// Chains shown in the picker, in the registry's canonical order.
-  static const chains = Chain.values;
+  static const chains = Chain.visible;
 
   static Future<void> open(
     BuildContext context, {
@@ -275,9 +275,9 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
               ),
             ),
             Divider(height: 1, color: c.border),
-            // ── Chain grid (3 cols × 2 rows) ─────────────────────
+            // ── Chain grid (3 columns) ─────────────────────
             // Chain selection is a single-select choice, so a grid of
-            // chain tiles reads far denser than five full-width rows —
+            // chain tiles reads far denser than full-width rows —
             // the only per-row information was "which one is selected".
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),

@@ -64,6 +64,11 @@ Public keys in account records are true public keys: ETH/Tron uncompressed 65 by
 
 ## Chains and APDU identity
 
+BTC and Sui are temporarily hidden from account sections, the BLE chain picker
+and private-key export lists pending validation. These UI entry points share
+`Chain.visible`; restore the chains there after testing. Stored accounts,
+derivation, signing history and APDU implementations remain intact.
+
 Default paths are ETH `m/44'/60'/0'/0/0`, SOL `m/44'/501'/0'/0'`, BTC `m/84'/0'/0'/0/0`, Tron `m/44'/195'/0'/0/0`, and Sui `m/44'/784'/0'/0'/0'`. ETH/BTC/Tron use secp256k1; ETH signatures enforce low-s. Solana/Sui use Ed25519.
 
 The active Ledger app is separate from BLE connection state. Starting a chain opens that app and begins advertising; stopping returns to the dashboard. Dashboard `GET_APP_AND_VERSION` reports format `00`/BOLOS; an open app reports format `01`. CLA `E0` selects the open Ethereum/Solana/Tron INS table. With no app open, app-specific `E0` commands return `6D00`. Bitcoin uses `E1`/`F8`, Sui uses `07`, and Tron retains a legacy `14` alias. Codec constants and framing are documented in [ble.md](../reference/ble.md).

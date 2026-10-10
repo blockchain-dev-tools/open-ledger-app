@@ -42,9 +42,9 @@ appId: app.openledger.mobile
   timeout: 10000
 - assertVisible: "Ethereum"
 - assertVisible: "Solana"
-- assertVisible: "Bitcoin"
+- assertNotVisible: "Bitcoin"
 - assertVisible: "Tron"
-- assertVisible: "Sui"
+- assertNotVisible: "Sui"
 
 # Step 7: Kill and restart
 - stopApp

@@ -9,10 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:open_ledger_app/core/interfaces/wallet_service.dart';
+import 'package:open_ledger_app/core/models/chain.dart';
 import 'package:open_ledger_app/core/models/vault.dart';
 import 'package:open_ledger_app/core/models/wallet_accounts.dart';
 import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
 import 'package:open_ledger_app/ui/screens/accounts/accounts_tab.dart';
+import 'package:open_ledger_app/ui/screens/seed_export/private_key_list_screen.dart';
 
 /// Minimal hand-written wallet service returning fixed accounts.
 class _FakeWalletService implements IWalletService {
@@ -199,6 +201,57 @@ Widget _app(WalletAccounts accounts) {
 }
 
 void main() {
+  final allAccounts = WalletAccounts(
+    mnemonicFingerprint: 'test',
+    accounts: [
+      for (final chain in Chain.values)
+        ChainAccount(
+          address: 'test-${chain.id}',
+          derivationPath: chain.defaultAccountPath,
+          publicKey: 'aa',
+          chain: chain.id,
+        ),
+    ],
+  );
+
+  for (final brightness in Brightness.values) {
+    testWidgets('hides BTC/Sui account sections in $brightness', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: brightness),
+        localizationsDelegates: const [AppLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: AccountsTab(walletService: _FakeWalletService(allAccounts)),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      for (final chain in ['ethereum', 'solana', 'tron']) {
+        expect(find.byKey(ValueKey('chain-header-$chain')), findsOneWidget);
+      }
+      for (final chain in ['bitcoin', 'sui']) {
+        expect(find.byKey(ValueKey('chain-header-$chain')), findsNothing);
+      }
+      expect(allAccounts.accounts, hasLength(5));
+    });
+
+    testWidgets('hides BTC/Sui private-key entries in $brightness', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: brightness),
+        localizationsDelegates: const [AppLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivateKeyListScreen(accounts: allAccounts.accounts),
+      ));
+      await tester.pumpAndSettle();
+      for (final chain in [Chain.ethereum, Chain.solana, Chain.tron]) {
+        expect(find.text(chain.defaultAccountPath), findsOneWidget);
+      }
+      for (final chain in [Chain.bitcoin, Chain.sui]) {
+        expect(find.text(chain.defaultAccountPath), findsNothing);
+      }
+      expect(allAccounts.accounts, hasLength(5));
+    });
+  }
+
   testWidgets('chain sections start collapsed', (tester) async {
     await tester.pumpWidget(_app(_accounts()));
     await tester.pumpAndSettle();

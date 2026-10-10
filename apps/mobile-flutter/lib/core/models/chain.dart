@@ -22,6 +22,11 @@ enum Chain {
   tron,
   sui;
 
+  /// Chains offered by account, BLE-picker and private-key export UI.
+  /// BTC and Sui are temporarily hidden pending validation. Restore them
+  /// here after testing; keep [values] intact for storage and protocols.
+  static const visible = [ethereum, solana, tron];
+
   /// Persisted identifier, used in [WalletAccounts] metadata, signing
   /// history, and the BLE control UI. Also the enum name, so
   /// `Chain.values.map((c) => c.id)` stays stable for storage.

@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/interfaces/export_service.dart';
 import '../../../core/interfaces/screen_security.dart';
+import '../../../core/models/chain.dart';
 import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
@@ -51,6 +52,9 @@ class PrivateKeyListScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
+    final visibleAccounts = accounts
+        .where((account) => Chain.visible.contains(Chain.fromId(account.chain)))
+        .toList();
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -76,7 +80,7 @@ class PrivateKeyListScreen extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (var i = 0; i < accounts.length; i++) ...[
+                  for (var i = 0; i < visibleAccounts.length; i++) ...[
                     if (i > 0)
                       Divider(
                         height: 1,
@@ -86,11 +90,12 @@ class PrivateKeyListScreen extends StatelessWidget {
                       ),
                     _AccountRow(
                       c: c,
-                      account: accounts[i],
-                      accountIndex: accountIndexInPath(accounts[i].derivationPath),
+                      account: visibleAccounts[i],
+                      accountIndex:
+                          accountIndexInPath(visibleAccounts[i].derivationPath),
                       enabled:
                           exportService != null || encodedKeyFor != null,
-                      onTap: () => _openKey(context, accounts[i]),
+                      onTap: () => _openKey(context, visibleAccounts[i]),
                     ),
                   ],
                 ],
