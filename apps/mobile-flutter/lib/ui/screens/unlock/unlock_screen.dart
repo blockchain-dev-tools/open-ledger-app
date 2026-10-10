@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
-import '../../theme/widgets/brand_shield.dart';
+import '../../theme/widgets/brand_mark.dart';
 import '../../widgets/pin/pin_number_pad.dart';
 import '../../widgets/pin/pin_dot_indicator.dart';
 import '../../widgets/pin/pin_shake_wrapper.dart';
@@ -192,7 +192,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // ── Brand Mark ────────────────────────────────────
-                    const BrandShield(size: 80),
+                    const BrandMark(size: 80),
 
                     const SizedBox(height: 32),
 

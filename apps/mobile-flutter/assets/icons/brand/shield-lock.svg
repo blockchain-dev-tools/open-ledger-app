@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="16 20 88 88">
-  <path d="M36 26H84Q94 26 94 36V56C94 78 79 94 60 102C41 94 26 78 26 56V36Q26 26 36 26Z"
-        fill="none" stroke="currentColor" stroke-width="7.5" stroke-linejoin="round"/>
-  <circle cx="60" cy="53" r="8.5" fill="currentColor"/>
-  <path d="M60 58L65 77Q60 80 55 77Z" fill="currentColor"/>
-</svg>

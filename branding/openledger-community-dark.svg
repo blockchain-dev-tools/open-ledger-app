@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" role="img" aria-label="OpenLedger">
+  <rect width="900" height="220" fill="#000000"/>
+  <g fill="#A1F44E" transform="translate(0 10) scale(.2)">
+    <path d="M320 120H680L880 320V680L680 880H320L120 680V320Z"/>
+    <path fill="#000000" d="M350 235H650L765 350V650L650 765H350L235 650V350Z"/>
+    <path d="M375 330H490V585H620L685 650H375Z"/>
+  </g>
+  <text x="215" y="143" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="700" letter-spacing="-3">OpenLedger</text>
+</svg>

@@ -7,6 +7,7 @@ import '../../../core/models/launcher_disguise.dart';
 import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../theme/widgets/brand_mark.dart';
 
 /// App settings: theme toggle, language selection, security options,
 /// BLE device name configuration, and about section.
@@ -761,15 +762,7 @@ class _AboutCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       child: Column(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: c.primary,
-              borderRadius: BorderRadius.circular(R.lg),
-            ),
-            child: Icon(Icons.shield_outlined, color: c.onPrimary, size: 30),
-          ),
+          const BrandMark(size: 56),
           const SizedBox(height: 14),
           Text(
             l10n.appTitle,

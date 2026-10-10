@@ -4,14 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../services/settings_service.dart';
 import '../../theme/color_tokens.dart';
-import '../../theme/widgets/brand_shield.dart';
+import '../../theme/widgets/brand_mark.dart';
 import '../../widgets/common/enigma_logo_icon.dart';
 import 'components/entry_card.dart';
 
 /// Welcome screen — the app's landing page with three wallet entry points.
 ///
 /// Ported from the original TypeScript implementation.
-/// Displays the Ledger logo, app title, subtitle, and three styled action cards:
+/// Displays the OpenLedger mark, app title, subtitle, and three action cards:
 /// Create New Wallet, Import Existing, Enigma Setup.
 ///
 /// Also hosts a language selector so users can switch the display language
@@ -148,7 +148,7 @@ class WelcomeScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           // ── Brand Mark ───────────────────────────────
-                          const BrandShield(size: 120),
+                          const BrandMark(size: 120),
 
                           const SizedBox(height: 32),
 

@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="branding/openledger-community-dark.svg">
+  <img alt="OpenLedger" src="branding/openledger-community-light.svg" width="450">
+</picture>
+
 # Open Ledger App
 
 [English](README.md) · [构建说明](BUILDING.md) · [安全说明](SECURITY.md)

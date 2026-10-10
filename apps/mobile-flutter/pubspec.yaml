@@ -87,14 +87,14 @@ flutter:
           weight: 700
 
 flutter_launcher_icons:
-  image_path: "assets/icon/icon.png"
+  image_path: "assets/icon/icon-light.png"
   android: true
   ios: true
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/icon/adaptive_fg.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/adaptive-fg-light.png"
   adaptive_icon_foreground_inset: 0
   remove_alpha_ios: true
-  background_color_ios: "#000000"
+  background_color_ios: "#FFFFFF"
   min_sdk_android: 21
   web:
     generate: false
