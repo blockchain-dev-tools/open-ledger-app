@@ -29,6 +29,8 @@ jobs:
 
   flutter:
     runs-on: ubuntu-latest
+    env:
+      PUB_HOSTED_URL: https://pub.dev
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Install official Flutter 3.44.0 source

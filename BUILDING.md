@@ -27,10 +27,12 @@ cargo test --locked --manifest-path crates/Cargo.toml
 From `apps/mobile-flutter/`:
 
 ```bash
-flutter --no-version-check --suppress-analytics pub get
+PUB_HOSTED_URL=https://pub.dev flutter --no-version-check --suppress-analytics pub get --enforce-lockfile
 flutter --no-version-check --suppress-analytics analyze
 flutter --no-version-check --suppress-analytics test
 ```
+
+The committed lockfile uses `pub.dev`, matching CI. Package sources are part of the lockfile: changing `PUB_HOSTED_URL` to a mirror requires resolving a local lockfile for that source. Keep mirror-specific changes local; preserve the official-source lockfile in commits. Messages about newer incompatible package versions are informational and do not require an upgrade for a locked install.
 
 `spec/apdu/` must be present at the repository root. Plain `flutter test` skips real-Rust conformance cases when the native library cannot load. On Linux, exercise those cases explicitly after a host build:
 
