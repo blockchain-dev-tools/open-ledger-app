@@ -13,11 +13,6 @@
     "@scure/bip32": "2.0.1",
     "@scure/bip39": "2.0.1"
   },
-  "pnpm": {
-    "patchedDependencies": {
-      "@scure/bip39@2.0.1": "patches/@scure__bip39@2.0.1.patch"
-    }
-  },
   "scripts": {
     "check:e2e-verifier": "node scripts/check-e2e-verifier.mjs"
   }

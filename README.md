@@ -24,7 +24,6 @@ apps/mobile-flutter/    Flutter UI, Android/iOS projects, tests and tooling
 crates/                Rust crypto, chain logic and C FFI workspace
 spec/apdu/             APDU command coverage and conformance vectors
 docs/                  Product contract, protocol and testing references
-patches/               Pinned upstream correction for E2E dependencies
 ```
 
 The directory layout is retained to keep build scripts and test corpus paths stable. Runtime cryptography is implemented in Rust. Root Node dependencies are used only by the independent host-side E2E verifier.

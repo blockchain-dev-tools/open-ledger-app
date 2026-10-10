@@ -12,7 +12,7 @@ The full upstream license is retained in [OFL.txt](apps/mobile-flutter/assets/fo
 
 Flutter/Dart dependencies and versions are recorded in `apps/mobile-flutter/pubspec.lock`; Rust crates in `crates/Cargo.lock`; independent E2E dependencies in root `pnpm-lock.yaml`. Their upstream license files remain part of installed distributions. Before distributing an APK, generate and inspect the license inventory for the resolved dependency graph and retain any notices required by those packages. Lockfiles are reproducibility inputs, not a complete notice inventory.
 
-The host verifier uses `@noble/curves`, `@noble/hashes`, `@scure/bip32`, `@scure/bip39`, and transitive `@scure/base`. Their exact upstream MIT notices are retained in [LICENSES/](LICENSES/). The vendored BIP-39 patch corrects an upstream wordlist export typo without copying its library implementation into the project.
+The host verifier uses `@noble/curves`, `@noble/hashes`, `@scure/bip32`, `@scure/bip39`, and transitive `@scure/base`. Their exact upstream MIT notices are retained in [LICENSES/](LICENSES/).
 
 ## Icons and names
 

@@ -24,7 +24,6 @@ apps/mobile-flutter/    Flutter UI、Android/iOS 工程、测试与工具
 crates/                Rust 密码学、链业务与 C FFI 工作区
 spec/apdu/             APDU 指令覆盖表与一致性测试向量
 docs/                  产品契约、协议和测试说明
-patches/               E2E 依赖的固定上游修正
 ```
 
 保留目录结构是为了维持脚本与测试数据的相对路径。设备运行时密码学来自 Rust；根目录 Node 依赖仅供主机侧 E2E 独立验签。
