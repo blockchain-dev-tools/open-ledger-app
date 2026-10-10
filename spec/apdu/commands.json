@@ -1,0 +1,318 @@
+{
+  "_about": "Authoritative Ledger APDU INS tables, transcribed verbatim from the official LedgerHQ app sources. This is the frozen 'spec' side of the static cross-check in apps/mobile-flutter/test/protocols/apdu/ins_coverage_test.dart. It is intentionally NOT auto-generated: when an upstream app changes its INS table, re-extract and refresh the line numbers here. Each entry carries file:line provenance (paths are relative to the upstream repo, which is not vendored in this repo). CLA values are cross-checked against the Dart Cla table as well.",
+  "sources": {
+    "ethereum": {
+      "repo": "LedgerHQ/app-ethereum",
+      "file": "src/apdu_constants.h"
+    },
+    "solana": {
+      "repo": "LedgerHQ/app-solana",
+      "file": "src/globals.h"
+    },
+    "tron": {
+      "repo": "LedgerHQ/app-tron",
+      "file": "src/handlers/handlers.h"
+    },
+    "bitcoin": {
+      "repo": "LedgerHQ/app-bitcoin-new",
+      "file": "src/commands.h"
+    }
+  },
+  "apps": {
+    "ethereum": {
+      "cla": "0xe0",
+      "claSource": "app-ethereum/src/apdu_constants.h:13",
+      "insSource": "app-ethereum/src/apdu_constants.h:14-40",
+      "ins": [
+        {
+          "ins": "0x02",
+          "name": "GET_PUBLIC_KEY",
+          "line": 14
+        },
+        {
+          "ins": "0x04",
+          "name": "SIGN",
+          "line": 15
+        },
+        {
+          "ins": "0x06",
+          "name": "GET_APP_CONFIGURATION",
+          "line": 16
+        },
+        {
+          "ins": "0x08",
+          "name": "SIGN_PERSONAL_MESSAGE",
+          "line": 17
+        },
+        {
+          "ins": "0x0a",
+          "name": "PROVIDE_ERC20_TOKEN_INFORMATION",
+          "line": 18
+        },
+        {
+          "ins": "0x0c",
+          "name": "SIGN_EIP_712_MESSAGE",
+          "line": 19
+        },
+        {
+          "ins": "0x0e",
+          "name": "GET_ETH2_PUBLIC_KEY",
+          "line": 20
+        },
+        {
+          "ins": "0x10",
+          "name": "SET_ETH2_WITHDRAWAL_INDEX",
+          "line": 21
+        },
+        {
+          "ins": "0x12",
+          "name": "SET_EXTERNAL_PLUGIN",
+          "line": 22
+        },
+        {
+          "ins": "0x14",
+          "name": "PROVIDE_NFT_INFORMATION",
+          "line": 23
+        },
+        {
+          "ins": "0x16",
+          "name": "SET_PLUGIN",
+          "line": 24
+        },
+        {
+          "ins": "0x18",
+          "name": "PERFORM_PRIVACY_OPERATION",
+          "line": 25
+        },
+        {
+          "ins": "0x1a",
+          "name": "EIP712_STRUCT_DEF",
+          "line": 26
+        },
+        {
+          "ins": "0x1c",
+          "name": "EIP712_STRUCT_IMPL",
+          "line": 27
+        },
+        {
+          "ins": "0x1e",
+          "name": "EIP712_FILTERING",
+          "line": 28
+        },
+        {
+          "ins": "0x20",
+          "name": "GET_CHALLENGE",
+          "line": 29
+        },
+        {
+          "ins": "0x22",
+          "name": "PROVIDE_TRUSTED_NAME",
+          "line": 30
+        },
+        {
+          "ins": "0x24",
+          "name": "PROVIDE_ENUM_VALUE",
+          "line": 31
+        },
+        {
+          "ins": "0x26",
+          "name": "GTP_TRANSACTION_INFO",
+          "line": 32
+        },
+        {
+          "ins": "0x28",
+          "name": "GTP_FIELD",
+          "line": 33
+        },
+        {
+          "ins": "0x2a",
+          "name": "PROVIDE_PROXY_INFO",
+          "line": 34
+        },
+        {
+          "ins": "0x30",
+          "name": "PROVIDE_NETWORK_CONFIGURATION",
+          "line": 35
+        },
+        {
+          "ins": "0x32",
+          "name": "PROVIDE_TX_SIMULATION",
+          "line": 36
+        },
+        {
+          "ins": "0x34",
+          "name": "SIGN_EIP7702_AUTHORIZATION",
+          "line": 37
+        },
+        {
+          "ins": "0x36",
+          "name": "PROVIDE_SAFE_ACCOUNT",
+          "line": 38
+        },
+        {
+          "ins": "0x38",
+          "name": "PROVIDE_GATING",
+          "line": 39
+        },
+        {
+          "ins": "0x3a",
+          "name": "PROVIDE_MAP_ENTRY",
+          "line": 40
+        }
+      ]
+    },
+    "solana": {
+      "cla": "0xe0",
+      "claSource": "app-solana/src/globals.h:7",
+      "insSource": "app-solana/src/globals.h:55-71",
+      "ins": [
+        {
+          "ins": "0x01",
+          "name": "GET_APP_CONFIGURATION (deprecated)",
+          "line": 57
+        },
+        {
+          "ins": "0x02",
+          "name": "GET_PUBKEY (deprecated)",
+          "line": 58
+        },
+        {
+          "ins": "0x03",
+          "name": "SIGN_MESSAGE (deprecated)",
+          "line": 59
+        },
+        {
+          "ins": "0x04",
+          "name": "GET_APP_CONFIGURATION",
+          "line": 61
+        },
+        {
+          "ins": "0x05",
+          "name": "GET_PUBKEY",
+          "line": 62
+        },
+        {
+          "ins": "0x06",
+          "name": "SIGN_MESSAGE",
+          "line": 63
+        },
+        {
+          "ins": "0x07",
+          "name": "SIGN_OFFCHAIN_MESSAGE",
+          "line": 64
+        },
+        {
+          "ins": "0x08",
+          "name": "SIGN_MESSAGE_PREVIEW",
+          "line": 65
+        },
+        {
+          "ins": "0x09",
+          "name": "SIGN_MESSAGE_DELAYED",
+          "line": 66
+        },
+        {
+          "ins": "0x16",
+          "name": "TRUSTED_INFO_PROVIDE_INSTRUCTION_DESCRIPTOR",
+          "line": 67
+        },
+        {
+          "ins": "0x20",
+          "name": "TRUSTED_INFO_GET_CHALLENGE",
+          "line": 68
+        },
+        {
+          "ins": "0x21",
+          "name": "TRUSTED_INFO_PROVIDE_INFO",
+          "line": 69
+        },
+        {
+          "ins": "0x22",
+          "name": "TRUSTED_INFO_PROVIDE_DYNAMIC_DESCRIPTOR",
+          "line": 70
+        }
+      ]
+    },
+    "tron": {
+      "cla": "0xe0",
+      "claSource": "app-tron/src/handlers/handlers.h:24",
+      "insSource": "app-tron/src/handlers/handlers.h:26-32",
+      "ins": [
+        {
+          "ins": "0x02",
+          "name": "GET_PUBLIC_KEY",
+          "line": 26
+        },
+        {
+          "ins": "0x04",
+          "name": "SIGN",
+          "line": 27
+        },
+        {
+          "ins": "0x05",
+          "name": "SIGN_TXN_HASH",
+          "line": 28
+        },
+        {
+          "ins": "0x06",
+          "name": "GET_APP_CONFIGURATION",
+          "line": 29
+        },
+        {
+          "ins": "0x08",
+          "name": "SIGN_PERSONAL_MESSAGE",
+          "line": 30
+        },
+        {
+          "ins": "0x0a",
+          "name": "GET_ECDH_SECRET",
+          "line": 31
+        },
+        {
+          "ins": "0x0c",
+          "name": "SIGN_TIP_712_MESSAGE",
+          "line": 32
+        }
+      ]
+    },
+    "bitcoin": {
+      "cla": "0xe1",
+      "claSource": "app-bitcoin-new/src/constants.h:10 (CLA_APP)",
+      "frameworkCla": "0xf8",
+      "frameworkClaSource": "app-bitcoin-new/src/constants.h:15 (CLA_FRAMEWORK)",
+      "insSource": "app-bitcoin-new/src/commands.h:6-13",
+      "ins": [
+        {
+          "ins": "0x00",
+          "name": "GET_EXTENDED_PUBKEY",
+          "line": 7
+        },
+        {
+          "ins": "0x02",
+          "name": "REGISTER_WALLET",
+          "line": 8
+        },
+        {
+          "ins": "0x03",
+          "name": "GET_WALLET_ADDRESS",
+          "line": 9
+        },
+        {
+          "ins": "0x04",
+          "name": "SIGN_PSBT",
+          "line": 10
+        },
+        {
+          "ins": "0x05",
+          "name": "GET_MASTER_FINGERPRINT",
+          "line": 11
+        },
+        {
+          "ins": "0x10",
+          "name": "SIGN_MESSAGE",
+          "line": 12
+        }
+      ]
+    }
+  }
+}

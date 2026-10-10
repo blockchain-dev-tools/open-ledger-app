@@ -1,0 +1,68 @@
+# Reset Wallet flow
+# Preq: Fresh install (no prior wallet data)
+appId: app.openledger.mobile
+---
+# ── Step 1-8: Import wallet first ─────────────────────────────────────
+# Step 1: Welcome screen -> tap Import Existing
+- tapOn:
+    id: "entry-import"
+- waitFor: "Import Wallet"
+  timeout: 5000
+
+# Step 2-3: Type mnemonic and import
+- inputText:
+    id: "mnemonic-input"
+    text: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+- assertVisible: "Valid phrase"
+- tapOn:
+    id: "import-btn"
+
+# Step 4: Set PIN phase 1
+- assertVisible: "Create PIN"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+
+# Step 5: Confirm PIN
+- waitFor: "Confirm PIN"
+  timeout: 3000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+
+# Step 6: Verify Vault
+- waitFor: "Open Ledger App"
+  timeout: 10000
+- assertVisible: "Ethereum"
+
+# ── Step 7-8: Reset wallet ─────────────────────────────────────────────
+# Navigate to Settings (tap gear icon in AppBar)
+- tapOn: "Settings"
+
+# Step 8: Scroll down to Reset Wallet and confirm
+- scroll
+- scroll
+- tapOn: "Reset Wallet"
+- waitFor: "Are you sure"
+  timeout: 3000
+- tapOn: "Reset"
+
+# Step 9: Verify Welcome screen (wallet cleared)
+- waitFor: "Open Ledger App"
+  timeout: 5000
+- assertVisible: "Create New Wallet"
+
+# ── Step 10: Kill and restart ──────────────────────────────────────────
+- stopApp
+- startApp
+
+# Step 11: Verify still on Welcome (not Unlock)
+- waitFor: "Open Ledger App"
+  timeout: 10000
+- assertVisible: "Create New Wallet"

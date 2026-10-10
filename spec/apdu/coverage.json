@@ -1,0 +1,342 @@
+{
+  "_about": "Declarative coverage manifest: maps every INS in spec/apdu/commands.json to the Dart Ins constant that serves it (apps/mobile-flutter/lib/protocols/apdu/apdu_constants.dart). This is the machine-checked ledger of DECLARED divergence. The static test in ins_coverage_test.dart fails if a Dart Ins constant is added / renamed / removed without updating this file, if an official INS is dropped from coverage, or if a mapped byte value drifts. Update this file whenever you change the Dart Ins table or re-extract commands.json.",
+  "dartSource": "apps/mobile-flutter/lib/protocols/apdu/apdu_constants.dart",
+  "states": {
+    "aligned": "Same byte, same semantic role (the constant name may differ cosmetically).",
+    "differentMeaning": "Dart claims this byte for a different role than the official INS of the same app.",
+    "missing": "Dart has no constant dedicated to this app's INS at this byte. The flat Ins namespace may still hold the byte for another app (e.g. 0x01 is both BOLOS GET_VERSION and Solana's deprecated GET_APP_CONFIGURATION)."
+  },
+  "coverage": [
+    {
+      "app": "ethereum",
+      "ins": "0x02",
+      "dart": "getPublicKey",
+      "state": "aligned"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x04",
+      "dart": "ethSign",
+      "state": "aligned"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x06",
+      "dart": "getAppConfiguration",
+      "state": "aligned"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x08",
+      "dart": "signEthPersonalMessage",
+      "state": "aligned"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x0a",
+      "dart": "ethProvideErc20TokenInfo",
+      "state": "aligned"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x0c",
+      "dart": "ethSignEip712",
+      "state": "aligned"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x0e",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x10",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x12",
+      "state": "missing",
+      "note": "official 0x12 = SET_EXTERNAL_PLUGIN"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x14",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x16",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x18",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x1a",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x1c",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x1e",
+      "state": "missing",
+      "note": "official 0x1E = EIP712_FILTERING (V1 streaming; not implemented)"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x20",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x22",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x24",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x26",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x28",
+      "state": "missing",
+      "note": "official 0x28 = GTP_FIELD; the TS simulator used 0x28 as a GET_PUBLIC_KEY alias"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x2a",
+      "state": "missing",
+      "note": "official 0x2A = PROVIDE_PROXY_INFO"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x30",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x32",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x34",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x36",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x38",
+      "state": "missing"
+    },
+    {
+      "app": "ethereum",
+      "ins": "0x3a",
+      "state": "missing"
+    },
+    {
+      "app": "solana",
+      "ins": "0x01",
+      "state": "missing",
+      "note": "deprecated GET_APP_CONFIGURATION; Dart's Ins.getVersion 0x01 is the OS-level GET_VERSION"
+    },
+    {
+      "app": "solana",
+      "ins": "0x02",
+      "state": "missing",
+      "note": "deprecated GET_PUBKEY (superseded by 0x05)"
+    },
+    {
+      "app": "solana",
+      "ins": "0x03",
+      "state": "missing",
+      "note": "deprecated SIGN_MESSAGE (superseded by 0x06)"
+    },
+    {
+      "app": "solana",
+      "ins": "0x04",
+      "dart": "solGetVersion",
+      "state": "differentMeaning",
+      "note": "official 0x04 = GET_APP_CONFIGURATION (flags + version); Dart's Ins.solGetVersion returns only a 4-byte version block"
+    },
+    {
+      "app": "solana",
+      "ins": "0x05",
+      "dart": "solGetAddress",
+      "state": "aligned",
+      "note": "official GET_PUBKEY; Dart returns the bare 32-byte Ed25519 pubkey"
+    },
+    {
+      "app": "solana",
+      "ins": "0x06",
+      "dart": "solSignMessage",
+      "state": "aligned"
+    },
+    {
+      "app": "solana",
+      "ins": "0x07",
+      "dart": "solSignOffchainMessage",
+      "state": "aligned"
+    },
+    {
+      "app": "solana",
+      "ins": "0x08",
+      "state": "missing"
+    },
+    {
+      "app": "solana",
+      "ins": "0x09",
+      "state": "missing"
+    },
+    {
+      "app": "solana",
+      "ins": "0x16",
+      "state": "missing"
+    },
+    {
+      "app": "solana",
+      "ins": "0x20",
+      "state": "missing"
+    },
+    {
+      "app": "solana",
+      "ins": "0x21",
+      "state": "missing"
+    },
+    {
+      "app": "solana",
+      "ins": "0x22",
+      "state": "missing"
+    },
+    {
+      "app": "tron",
+      "ins": "0x02",
+      "dart": "tronGetPublicKey",
+      "state": "aligned"
+    },
+    {
+      "app": "tron",
+      "ins": "0x04",
+      "dart": "tronSignTx",
+      "state": "aligned"
+    },
+    {
+      "app": "tron",
+      "ins": "0x05",
+      "dart": "tronSignHash",
+      "state": "aligned"
+    },
+    {
+      "app": "tron",
+      "ins": "0x06",
+      "dart": "tronGetAppConfiguration",
+      "state": "aligned"
+    },
+    {
+      "app": "tron",
+      "ins": "0x08",
+      "dart": "tronSignPersonalMessage",
+      "state": "aligned"
+    },
+    {
+      "app": "tron",
+      "ins": "0x0a",
+      "state": "missing"
+    },
+    {
+      "app": "tron",
+      "ins": "0x0c",
+      "state": "missing"
+    },
+    {
+      "app": "bitcoin",
+      "ins": "0x00",
+      "state": "missing",
+      "ref": "btc-app-version-target"
+    },
+    {
+      "app": "bitcoin",
+      "ins": "0x02",
+      "state": "missing",
+      "ref": "btc-app-version-target"
+    },
+    {
+      "app": "bitcoin",
+      "ins": "0x03",
+      "state": "missing",
+      "ref": "btc-app-version-target"
+    },
+    {
+      "app": "bitcoin",
+      "ins": "0x04",
+      "state": "missing",
+      "ref": "btc-app-version-target"
+    },
+    {
+      "app": "bitcoin",
+      "ins": "0x05",
+      "state": "missing",
+      "ref": "btc-app-version-target"
+    },
+    {
+      "app": "bitcoin",
+      "ins": "0x10",
+      "state": "missing",
+      "ref": "btc-app-version-target"
+    }
+  ],
+  "dartOnly": [
+    {
+      "dart": "openApp",
+      "reason": "BOLOS OPEN_APP — dispatched by the OS, not a per-app INS table"
+    },
+    {
+      "dart": "quitApp",
+      "reason": "BOLOS QUIT_APP — OS-level"
+    },
+    {
+      "dart": "getVersion",
+      "reason": "OS-level GET_VERSION (CLA 0xB0 GET_APP_AND_VERSION / CLA 0xE0 GET_VERSION)"
+    },
+    {
+      "dart": "getAppName",
+      "reason": "OS-level app-name query, not a per-app INS"
+    },
+    {
+      "dart": "btcGetWalletPublicKey",
+      "ref": "btc-app-version-target",
+      "reason": "legacy Ledger Bitcoin command set (0x40), not present in app-bitcoin-new"
+    },
+    {
+      "dart": "btcSignTx",
+      "ref": "btc-app-version-target",
+      "reason": "legacy Ledger Bitcoin command set (0x44), not present in app-bitcoin-new"
+    },
+    {
+      "dart": "suiGetPublicKey",
+      "reason": "no official app-sui source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "suiSignTx",
+      "reason": "no official app-sui source is vendored in spec/apdu/commands.json"
+    }
+  ]
+}

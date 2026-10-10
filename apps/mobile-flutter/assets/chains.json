@@ -1,0 +1,17 @@
+{
+  "1": "Ethereum",
+  "5": "Goerli",
+  "10": "Optimism",
+  "56": "BSC",
+  "100": "Gnosis",
+  "137": "Polygon",
+  "250": "Fantom",
+  "324": "zkSync Era",
+  "42161": "Arbitrum One",
+  "43114": "Avalanche C-Chain",
+  "59144": "Linea",
+  "80001": "Mumbai",
+  "8453": "Base",
+  "534352": "Scroll",
+  "11155111": "Sepolia"
+}

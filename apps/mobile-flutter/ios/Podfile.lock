@@ -1,0 +1,21 @@
+PODS:
+  - Flutter (1.0.0)
+  - open_ledger_crypto (0.1.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - open_ledger_crypto (from `.`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  open_ledger_crypto:
+    :path: "."
+
+SPEC CHECKSUMS:
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  open_ledger_crypto: 3b2b52c142d6065c92a02088173a542fb712fd71
+
+PODFILE CHECKSUM: 705d82531a7641509440a2814eda185a9a1320ff
+
+COCOAPODS: 1.17.0

@@ -1,0 +1,23 @@
+{
+  "_about": "Known protocol deviations surfaced as skipped tests. When fixing a gap, add a measured vector with provenance and update the public protocol reference. Refs point to public documentation.",
+  "gaps": [
+    {
+      "id": "eth-app-config-flags-unverified",
+      "ref": "docs/reference/ble.md",
+      "area": "ethereum",
+      "description": "GET_APP_CONFIGURATION returns a single bitmask flags byte (APP_FLAG_DATA_ALLOWED 0x01 | APP_FLAG_EXTERNAL_TOKEN_NEEDED 0x02 | APP_FLAG_TX_CHECKS_ENABLE 0x10 | APP_FLAG_TX_CHECKS_OPT_IN 0x20). The device hardcodes 0x01 only; since it accepts ERC20 token provisioning (0x0A) the value is unverified against the real app, which sets EXTERNAL_TOKEN_NEEDED when it wants the host to send token metadata. Source: app-ethereum/src/apdu_constants.h:8-11."
+    },
+    {
+      "id": "btc-app-version-target",
+      "ref": "docs/reference/ble.md",
+      "area": "bitcoin",
+      "description": "Target-version decision, not a defect: Open Ledger App implements the legacy Ledger Bitcoin command set (CLA 0xE1, INS 0x40 GET_WALLET_PUBLIC_KEY, trusted-input flow). The current app-bitcoin-new uses CLA 0xE1 with a different INS set (0x00 GET_EXTENDED_PUBKEY, 0x02 REGISTER_WALLET, 0x03 GET_WALLET_ADDRESS, 0x04 SIGN_PSBT, 0x05 GET_MASTER_FINGERPRINT, 0x10 SIGN_MESSAGE) and a wallet-policy/PSBT protocol. Hosts such as OKX still speak the legacy APDUs, so staying on the legacy set is defensible; recorded so the choice is explicit. Source: app-bitcoin-new/src/commands.h:6-13."
+    },
+    {
+      "id": "sol-get-pubkey-verified-aligned",
+      "ref": "docs/reference/ble.md",
+      "area": "solana",
+      "description": "Verified aligned, kept as a positive note (not an open gap): app-solana INS 0x05 GET_PUBKEY / 0x06 SIGN_MESSAGE and a bare 32-byte Ed25519 pubkey response with no length prefix. Open Ledger App (apdu_handler.dart _handleSolGetAddress, _buildSolVersion) matches. Pending byte-exact vectors once a capture is possible. Source: app-solana/src/globals.h:58-66, src/handle_get_pubkey.c (set_result_get_pubkey returns PUBKEY_LENGTH)."
+    }
+  ]
+}

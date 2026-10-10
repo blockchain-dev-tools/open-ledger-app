@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# iOS Podfile for open-ledger-app
+# Standard Flutter iOS Podfile scaffold + local `open_ledger_crypto` pod that
+# statically links the Rust SDK (libopen_ledger_crypto.a) into the Runner
+# executable, exposing #[no_mangle] symbols to DynamicLibrary.process().
+# ─────────────────────────────────────────────────────────────────────────────
+
+platform :ios, '15.0'
+
+# CocoaPods analytics sends program stats by default. Disable by setting:
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+# Locate the Flutter SDK from Generated.xcconfig (written by `flutter pub get`).
+def flutter_root
+  generated_xcode_build_settings = File.expand_path(File.join('Flutter', 'Generated.xcconfig'), __dir__)
+  unless File.exist?(generated_xcode_build_settings)
+    raise "#{generated_xcode_build_settings} must exist. Run `flutter pub get` first."
+  end
+
+  File.foreach(generated_xcode_build_settings) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings}."
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  # Brings in Flutter.framework + all plugins declared in pubspec.yaml.
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # ── Local Rust crypto pod (statically linked .a) ─────────────────────────
+  # `vendored_libraries` in open_ledger_crypto.podspec makes CocoaPods link the
+  # .a directly into the Runner executable — making #[no_mangle] extern "C"
+  # symbols visible via DynamicLibrary.process() on the Dart FFI side.
+  pod 'open_ledger_crypto', :path => '.'
+
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end

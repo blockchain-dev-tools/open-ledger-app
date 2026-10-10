@@ -1,0 +1,314 @@
+/// Widget tests for [UnlockScreen].
+///
+/// Covers:
+/// - Reset via "Forgot PIN?" link → calls resetAll → navigates to welcome
+/// - Reset after lockout → calls resetAll → navigates to welcome
+library;
+// ignore_for_file: depend_on_referenced_packages
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:open_ledger_app/core/interfaces/wallet_service.dart';
+import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
+import 'package:open_ledger_app/core/models/vault.dart';
+import 'package:open_ledger_app/core/models/wallet_accounts.dart';
+import 'package:open_ledger_app/ui/screens/unlock/unlock_screen.dart';
+
+// ═══════════════════════════════════════════════════════════════════════
+// Hand-written Mock IWalletService
+// ═══════════════════════════════════════════════════════════════════════
+
+class _MockWalletService implements IWalletService {
+  @override
+  void Function()? onActiveVaultChanged;
+
+  @override
+  void Function(Set<String> vaultIds)? onVaultsDestroyed;
+
+  @override
+  Future<bool> verifySessionPin(String pin) async => true;
+  bool clearWalletCalled = false;
+  bool resetAllCalled = false;
+  bool _isLockedResult = false;
+  final bool _verifyPinResult = true;
+
+  void setLocked() {
+    _isLockedResult = true;
+  }
+
+  @override
+  Future<bool> isLocked() => Future.value(_isLockedResult);
+
+  @override
+  Future<bool> verifyPin(String pin) => Future.value(_verifyPinResult);
+
+  @override
+  Future<void> clearWallet() async {
+    clearWalletCalled = true;
+  }
+
+  @override
+  Future<void> resetAll() async {
+    resetAllCalled = true;
+  }
+
+  // ── Unused stubs ────────────────────────────────────────────────────
+
+  @override
+  Future<bool> hasWallet() => Future.value(true);
+
+  @override
+  bool get isUnlocked => false;
+
+  @override
+  void lock() {}
+
+  @override
+  int get pinAttempts => 0;
+
+  @override
+  Future<WalletAccounts> setupWallet(
+    String mnemonic, {
+    required String pin,
+    String passphrase = '',
+    bool storePassphrase = false,
+    VaultSource source = VaultSource.imported,
+    int enigmaLanguage = 0,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<WalletAccounts> unlockWallet(String pin) =>
+      throw UnimplementedError();
+
+  @override
+  WalletAccounts? getAccounts() => null;
+
+  @override
+  Future<WalletAccounts> addAccount(String chain, String path) =>
+      throw UnimplementedError();
+
+  @override
+  Future<WalletAccounts> removeAccount(String chain, String address) =>
+      throw UnimplementedError();
+
+  @override
+  Future<String?> revealMnemonic(String pin) => Future.value(null);
+
+  @override
+  String? get seedHex => null;
+
+  @override
+  String? get mnemonic => null;
+
+  @override
+  String? get passphrase => null;
+
+  @override
+  Future<bool> updatePin(String oldPin, String newPin) =>
+      Future.value(true);
+
+  // ── Multi-vault session stubs (unused by these tests) ───────────────
+
+  @override
+  List<Vault> get vaults => const [];
+
+  @override
+  String? get activeVaultId => null;
+
+  @override
+  Vault? get activeVault => null;
+
+  @override
+  int? get sessionDepth => null;
+
+  @override
+  bool get isStandInSession => false;
+
+  @override
+  Future<bool> hasStandIn() => Future.value(false);
+
+  @override
+  Future<StandInMode> standInMode() => Future.value(StandInMode.hide);
+
+  @override
+  bool get lastUnlockWiped => false;
+
+  @override
+  Future<void> configureStandIn(
+    String mnemonic, {
+    required String pin,
+    required String mainPin,
+    StandInMode mode = StandInMode.hide,
+    VaultSource source = VaultSource.imported,
+    int enigmaLanguage = 0,
+  }) async {}
+
+  @override
+  Future<void> updateStandInPin({
+    required String oldPin,
+    required String newPin,
+  }) async {}
+
+  @override
+  Future<void> updateStandInMode({
+    required String pin,
+    required StandInMode mode,
+  }) async {}
+
+  @override
+  Future<void> removeStandIn({required String pin}) async {}
+
+  @override
+  Future<void> switchVault(String id) async {}
+
+  @override
+  Future<void> renameVault(String id, String label) async {}
+
+  @override
+  Future<WalletAccounts> addVault(
+    String mnemonic, {
+    required String pin,
+    String passphrase = '',
+    bool storePassphrase = false,
+    String label = '',
+    VaultSource source = VaultSource.imported,
+    int enigmaLanguage = 0,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> removeVault(String id, {required String pin}) =>
+      throw UnimplementedError();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Test helper: builds a GoRouter with only the routes needed by the test
+// ═══════════════════════════════════════════════════════════════════════
+
+GoRouter _testRouter({required Widget unlockScreen}) => GoRouter(
+      initialLocation: '/unlock',
+      routes: [
+        GoRoute(
+          path: '/unlock',
+          builder: (_, _) => unlockScreen,
+        ),
+        GoRoute(
+          path: '/welcome',
+          builder: (_, _) => const Scaffold(
+            body: Center(child: Text('Welcome Screen')),
+          ),
+        ),
+        GoRoute(
+          path: '/vault',
+          builder: (_, _) => const Scaffold(
+            body: Center(child: Text('Vault Screen')),
+          ),
+        ),
+      ],
+    );
+
+// ═══════════════════════════════════════════════════════════════════════
+// Tests
+// ═══════════════════════════════════════════════════════════════════════
+
+void main() {
+  testWidgets('forgot PIN calls resetAll and navigates to welcome',
+      (tester) async {
+    final mockWallet = _MockWalletService();
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: _testRouter(
+          unlockScreen: UnlockScreen(
+            walletService: mockWallet,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // "Forgot PIN?" is at the bottom of the scrollable column.
+    // Scroll down to reveal it.
+    await tester.scrollUntilVisible(
+      find.text('Forgot PIN?'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    // Tap "Forgot PIN?"
+    await tester.tap(find.text('Forgot PIN?'));
+    await tester.pumpAndSettle();
+
+    // Verify: resetAll was called (not the session-scoped clearWallet)
+    expect(mockWallet.resetAllCalled, isTrue);
+    expect(mockWallet.clearWalletCalled, isFalse);
+
+    // Verify: navigated to /welcome
+    expect(find.text('Welcome Screen'), findsOneWidget);
+  });
+
+  testWidgets('reset after lockout calls resetAll and navigates',
+      (tester) async {
+    final mockWallet = _MockWalletService();
+    mockWallet.setLocked();
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: _testRouter(
+          unlockScreen: UnlockScreen(
+            walletService: mockWallet,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Enter 6 PIN digits to trigger auto-verification.
+    // The mock wallet is locked, so _verifyPin() will set _lockedOut = true.
+    for (int i = 0; i < 6; i++) {
+      await tester.tap(find.byKey(const Key('unlock-btn-1')));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+
+    // Lockout view should now show the reset affordance.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('reset-wallet')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Reset Wallet'), findsOneWidget);
+
+    // Tap the button itself: the "Reset Wallet" text above it is only the
+    // explanatory label, the tappable control reads "Reset".
+    await tester.tap(find.byKey(const Key('reset-wallet')));
+    await tester.pumpAndSettle();
+
+    // Verify: resetAll was called (not the session-scoped clearWallet)
+    expect(mockWallet.resetAllCalled, isTrue);
+    expect(mockWallet.clearWalletCalled, isFalse);
+
+    // Verify: navigated to /welcome
+    expect(find.text('Welcome Screen'), findsOneWidget);
+  });
+}

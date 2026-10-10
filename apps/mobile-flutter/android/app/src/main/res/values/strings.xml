@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher disguise (ADR-012): label shown on the desktop while the
+         calculator activity-alias is enabled. Localized per system language. -->
+    <string name="launcher_label_calculator">Calculator</string>
+</resources>

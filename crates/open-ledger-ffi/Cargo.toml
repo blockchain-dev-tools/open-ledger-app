@@ -1,0 +1,26 @@
+[package]
+name = "open-ledger-ffi"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "open_ledger_crypto"
+# cdylib  → Android (.so via jniLibs) + iOS dynamic framework
+# staticlib → iOS (.a, statically linked into Runner → DynamicLibrary.process())
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+open-ledger-crypto = { path = "../open-ledger-crypto" }
+open-ledger-biz = { path = "../open-ledger-biz" }
+hex = { workspace = true }
+thiserror = { workspace = true }
+zeroize = { workspace = true }
+
+[features]
+default = ["all"]
+all = ["eth", "sol", "btc", "tron", "sui"]
+eth = []
+sol = []
+btc = []
+tron = []
+sui = []

@@ -1,0 +1,323 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../generated/l10n/app_localizations.dart';
+import '../../theme/color_tokens.dart';
+import '../../widgets/common/enigma_logo_icon.dart';
+import '../../widgets/common/primary_button.dart';
+import '../../../data/bip39_wordlist.dart';
+import '../../../utils/enigma.dart';
+
+/// Enigma wallet creation screen.
+///
+/// Alternative wallet creation flow: the user provides a personal riddle
+/// and secret key. These are combined and hashed to produce deterministic
+/// entropy, from which a 24-word BIP-39 mnemonic is derived.
+///
+/// On success, navigates to [EnigmaMnemonicScreen] with the generated words.
+///
+/// Ported from the original TypeScript implementation.
+class EnigmaScreen extends StatefulWidget {
+  const EnigmaScreen({super.key});
+
+  @override
+  State<EnigmaScreen> createState() => _EnigmaScreenState();
+}
+
+class _EnigmaScreenState extends State<EnigmaScreen> {
+  final _riddleController = TextEditingController();
+  final _secretController = TextEditingController();
+  bool _obscureSecret = true;
+  bool _isGenerating = false;
+  Bip39WordlistLanguage _selectedLanguage = Bip39WordlistLanguage.english;
+
+  @override
+  void dispose() {
+    _riddleController.dispose();
+    _secretController.dispose();
+    super.dispose();
+  }
+
+  /// Whether both input fields have content.
+  bool get _isFormValid =>
+      _riddleController.text.trim().isNotEmpty &&
+      _secretController.text.trim().isNotEmpty;
+
+  String _localizedLanguageName(Bip39WordlistLanguage lang) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (lang) {
+      case Bip39WordlistLanguage.english:
+        return l10n.languageEnglish;
+      case Bip39WordlistLanguage.chineseSimplified:
+        return l10n.languageChinese;
+    }
+  }
+
+  void _onGenerate() {
+    if (!_isFormValid || _isGenerating) return;
+
+    setState(() => _isGenerating = true);
+    final language = _selectedLanguage;
+
+    // Brief delay to show processing state.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      try {
+        final result = generateEnigmaMnemonic(
+          _riddleController.text.trim(),
+          _secretController.text.trim(),
+          language: language,
+        );
+
+        setState(() => _isGenerating = false);
+
+        context.go('/enigma-mnemonic', extra: {
+          'words': result.words,
+          'language': language,
+          'entropyHex': result.entropyHex,
+          'riddle': _riddleController.text.trim(),
+          'secret': _secretController.text.trim(),
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isGenerating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Secret Phrase generation failed: $e'),
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? ColorTokens.dark.error
+                : ColorTokens.light.error,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = isDark ? ColorTokens.dark : ColorTokens.light;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go('/welcome');
+      },
+      child: Scaffold(
+        backgroundColor: c.bg,
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context)!.enigmaWallet),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: c.text),
+            onPressed: () => context.go('/welcome'),
+          ),
+        ),
+        body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Header ──────────────────────────────────────────
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: c.primary.withAlpha(20),
+                  border: Border.all(color: c.primary.withAlpha(60)),
+                ),
+                alignment: Alignment.center,
+                child: EnigmaLogoIcon(color: c.primary, size: 36),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                AppLocalizations.of(context)!.enigmaTitle,
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                AppLocalizations.of(context)!.enigmaDescription,
+                style: TextStyle(
+                  color: c.text.withAlpha(160),
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // ── Riddle Input ────────────────────────────────────
+              Text(
+                AppLocalizations.of(context)!.yourRiddle,
+                style: TextStyle(
+                  color: c.text.withAlpha(200),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _riddleController,
+                maxLines: 3,
+                style: TextStyle(color: c.text, fontSize: 15),
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText:
+                      AppLocalizations.of(context)!.enterMemorablePhrase,
+                  hintStyle: TextStyle(
+                    color: c.text.withAlpha(100),
+                    fontSize: 14,
+                  ),
+                  filled: true,
+                  fillColor: c.surface,
+                  contentPadding: const EdgeInsets.all(16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.lg),
+                    borderSide: BorderSide(color: c.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.lg),
+                    borderSide: BorderSide(color: c.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.lg),
+                    borderSide: BorderSide(color: c.primary, width: 1.5),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Language Selector ──────────────────────────────
+              Text(
+                AppLocalizations.of(context)!.mnemonicLanguage,
+                style: TextStyle(
+                  color: c.text.withAlpha(200),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(R.lg),
+                  border: Border.all(color: c.border),
+                ),
+                child: DropdownButton<Bip39WordlistLanguage>(
+                  value: _selectedLanguage,
+                  isExpanded: true,
+                  underline: const SizedBox.shrink(),
+                  dropdownColor: c.surface,
+                  style:
+                      TextStyle(color: c.text, fontSize: 15),
+                  icon: Icon(Icons.arrow_drop_down,
+                      color: c.text.withAlpha(120)),
+                  items: Bip39WordlistLanguage.values.map((lang) {
+                    return DropdownMenuItem(
+                      value: lang,
+                      child: Text(_localizedLanguageName(lang)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedLanguage = value);
+                    }
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Secret Key Input ────────────────────────────────
+              Text(
+                AppLocalizations.of(context)!.secretKey,
+                style: TextStyle(
+                  color: c.text.withAlpha(200),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _secretController,
+                obscureText: _obscureSecret,
+                style: TextStyle(color: c.text, fontSize: 15),
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                   hintText:
+                      AppLocalizations.of(context)!.enterSecretKey,
+                  hintStyle: TextStyle(
+                    color: c.text.withAlpha(100),
+                    fontSize: 14,
+                  ),
+                  filled: true,
+                  fillColor: c.surface,
+                  contentPadding: const EdgeInsets.all(16),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureSecret
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: c.text.withAlpha(150),
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      setState(() => _obscureSecret = !_obscureSecret);
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.lg),
+                    borderSide: BorderSide(color: c.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.lg),
+                    borderSide: BorderSide(color: c.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.lg),
+                    borderSide: BorderSide(color: c.primary, width: 1.5),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ── Tip Text ────────────────────────────────────────
+              Text(
+                AppLocalizations.of(context)!.tipLongUnique,
+                style: TextStyle(
+                  color: c.text.withAlpha(100),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // ── Generate Button ─────────────────────────────────
+              PrimaryButton(
+                label: AppLocalizations.of(context)!.generateWallet,
+                onTap: _isFormValid && !_isGenerating ? _onGenerate : null,
+                loading: _isGenerating,
+              ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    ),
+    );
+  }
+}

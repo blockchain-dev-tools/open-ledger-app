@@ -1,0 +1,33 @@
+{
+  "_about": "ETH GET_PUBLIC_KEY (CLA 0xE0 INS 0x02) chain-code layout. These vectors require the real Rust FFI (the BIP-32 chain code and the keccak address cannot be reproduced by FakeCryptoService), so `needsCrypto: true` — they run in a future integration_test runner and are reported as deferred by the structural runner. Provenance `regression`: bytes snapshotted from the Rust implementation for a fixed 64-byte seed (not yet a speculos capture). Expected layout per app-ethereum/doc/apdu.md:59-81 and get_public_key.c:46-58: [0x41][65B pubkey][0x28][40B ASCII addr] (+ [32B chain code] when P2=0x01)[SW].",
+  "vectors": [
+    {
+      "id": "eth-get-public-key-no-chaincode",
+      "provenance": "regression",
+      "needsCrypto": true,
+      "currentApp": "ethereum",
+      "seedHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "cla": 224,
+      "ins": 2,
+      "p1": 0,
+      "p2": 0,
+      "data": null,
+      "response": "41048df1c46ac23b373ac7269cb4a0f5c790474d70d7f2c99e4d3f7f1108f770f13c2c3a917e38d997bad3ece55b4de72c8b0a8400d4e441eb21cb2274f7130c43f428323535343832623130636561343331643661463965613466634439453464653236324538633334319000",
+      "note": "P2=0x00 → address only, no chain code. Path defaults to m/44'/60'/0'/0/0 (no data)."
+    },
+    {
+      "id": "eth-get-public-key-chaincode",
+      "provenance": "regression",
+      "needsCrypto": true,
+      "currentApp": "ethereum",
+      "seedHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "cla": 224,
+      "ins": 2,
+      "p1": 0,
+      "p2": 1,
+      "data": null,
+      "response": "41048df1c46ac23b373ac7269cb4a0f5c790474d70d7f2c99e4d3f7f1108f770f13c2c3a917e38d997bad3ece55b4de72c8b0a8400d4e441eb21cb2274f7130c43f428323535343832623130636561343331643661463965613466634439453464653236324538633334316ffbe8f21b768f99f32120738949f7029c263dc31dd9f741f09836e11fc6b8239000",
+      "note": "P2=0x01 → the same address plus the trailing 32-byte BIP-32 chain code (6ffbe8f2…c6b823), so the host can rebuild an xpub."
+    }
+  ]
+}

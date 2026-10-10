@@ -1,0 +1,88 @@
+# Create Wallet flow (Entropy)
+# Preq: Fresh install (no prior wallet data)
+appId: app.openledger.mobile
+---
+# Step 1: Welcome screen -> tap Create New Wallet
+- tapOn:
+    id: "entry-create"
+- waitFor: "Touch Entropy"
+  timeout: 5000
+
+# Step 2: Generate entropy via 200 taps
+# Maestro needs a loop — use runScript or repeat tapOn at different coords
+- tapOn:
+    point: "50%,50%"
+- repeat:
+    times: 199
+    commands:
+      - tapOn:
+          point: "50%,50%"
+
+# Step 3: GenerateMnemonic screen
+- waitFor: "Your Wallet"
+  timeout: 10000
+- assertVisible: "abandon"
+
+# Step 4: Continue to verify
+- tapOn: "Continue"
+
+# Step 5: VerifyMnemonic — quiz at position 3, 7, 11
+# Each is 4-choice; pick the correct word
+- waitFor: "Verify"
+  timeout: 5000
+# Quiz 1 (word #3)
+- tapOn: "position 3" # depends on UI text — adjust as needed
+
+# Quiz 2 (word #7)
+- tapOn: "position 7"
+
+# Quiz 3 (word #11)
+- tapOn: "position 11"
+
+# Confirm verification
+- tapOn: "Confirm"
+- waitFor: "Create PIN"
+  timeout: 5000
+
+# Step 6: Set PIN phase 1
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+
+# Step 7: Confirm PIN
+- waitFor: "Confirm PIN"
+  timeout: 3000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+
+# Step 8: Verify Vault
+- waitFor: "Open Ledger App"
+  timeout: 10000
+- assertVisible: "Ethereum"
+- assertVisible: "Solana"
+
+# Step 9: Kill and restart
+- stopApp
+- startApp
+
+# Step 10: Unlock
+- waitFor: "Enter PIN"
+  timeout: 5000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+
+# Step 11: Verify unlock -> Vault
+- waitFor: "Open Ledger App"
+  timeout: 10000
+- assertVisible: "Ethereum"

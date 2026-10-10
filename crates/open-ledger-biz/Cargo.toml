@@ -1,0 +1,21 @@
+[package]
+name = "open-ledger-biz"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+open-ledger-crypto = { path = "../open-ledger-crypto" }
+bip32 = { workspace = true }
+bip39 = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+sha3 = { workspace = true }
+rlp = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+bs58 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# Round-trip verification of the Sui `suiprivkey` bech32 payload (ADR-011 §3).
+bech32 = { workspace = true }

@@ -1,0 +1,53 @@
+# Unlock + Account Detail flow
+# Preq: Wallet already exists (run import-wallet or create-wallet first)
+appId: app.openledger.mobile
+---
+# Step 1: Unlock
+- waitFor: "Enter PIN"
+  timeout: 10000
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+- tapOn: "5"
+- tapOn: "6"
+
+# Step 2: Wait for Vault
+- waitFor: "Open Ledger App"
+  timeout: 10000
+- assertVisible: "Ethereum"
+
+# Step 3: Expand Ethereum section
+- tapOn:
+    id: "chain-header-ethereum"
+- waitFor: "ethereum" # address text should appear
+  timeout: 3000
+
+# Step 4: Tap first Ethereum account
+- tapOn:
+    id: "chain-header-ethereum"
+# Actually tap the first expanded account row
+# Maestro will find it by text or we navigate via accessibility
+
+# Step 5: Account Detail screen
+- assertVisible: "Address"
+- assertVisible: "Derivation Path"
+
+# Step 6: Back to Vault
+- back
+
+# Step 7: Verify Vault still intact
+- waitFor: "Open Ledger App"
+  timeout: 5000
+- assertVisible: "Ethereum"
+
+# Step 8: Try wrong PIN
+# Lock the wallet first via settings
+- tapOn:
+    id: "settings-btn"
+- waitFor: "Settings"
+  timeout: 5000
+# Go back (just testing back navigation)
+- back
+- waitFor: "Open Ledger App"
+  timeout: 5000

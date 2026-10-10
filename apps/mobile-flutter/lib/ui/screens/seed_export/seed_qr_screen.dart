@@ -1,0 +1,242 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../../core/interfaces/export_service.dart';
+import '../../../core/interfaces/screen_security.dart';
+import '../../../generated/l10n/app_localizations.dart';
+import '../../theme/color_tokens.dart';
+import '../../widgets/common/primary_button.dart';
+import '../../widgets/mnemonic/warning_banner.dart';
+import '../../widgets/pin/pin_gate.dart';
+import '../../widgets/security/privacy_shield.dart';
+import 'auto_hide_countdown.dart';
+
+/// Recovery-phrase export as a single static QR.
+///
+/// The pure-QR counterpart to [BackupSeedScreen]: the English BIP-39 phrase is
+/// encoded verbatim, since 12/24 English words are importable by every wallet.
+/// Entered from Settings → Backup & Export. With an [exportService] the
+/// phrase is revealed behind a [PinGate] — PIN re-verification on the spot,
+/// per contract I6 — and without one the preview phrase is rendered
+/// verbatim, which is how the gallery reviews the layout.
+///
+/// The QR is the only exit — no clipboard, no file. A BIP-39 passphrase is
+/// deliberately NOT encoded and gets an explicit warning instead, so the user
+/// does not discover the gap only when restoring.
+class SeedQrScreen extends StatefulWidget {
+  const SeedQrScreen({
+    super.key,
+    this.exportService,
+    this.screenSecurity,
+    this.previewMnemonic,
+    this.previewFingerprint,
+    this.hasPassphrase = false,
+    this.previewSeconds,
+  });
+
+  /// Production gate + reveal path. `null` → render the preview fields.
+  final IExportService? exportService;
+
+  /// Screenshot / recents-thumbnail block held while this screen is mounted
+  /// (ADR-011 §6).
+  final IScreenSecurity? screenSecurity;
+
+  /// Preview-only phrase, rendered verbatim when [exportService] is null.
+  final String? previewMnemonic;
+
+  /// Wallet fingerprint shown as a chip so the user can tell which wallet
+  /// the QR belongs to. Preview-only, like [previewMnemonic].
+  final String? previewFingerprint;
+
+  /// Whether the wallet uses a BIP-39 passphrase (never encoded in the QR).
+  final bool hasPassphrase;
+
+  /// Freezes the auto-hide countdown for deterministic screenshots.
+  final int? previewSeconds;
+
+  @override
+  State<SeedQrScreen> createState() => _SeedQrScreenState();
+}
+
+class _SeedQrScreenState extends State<SeedQrScreen> {
+  static const int _autoHideSeconds = 60;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final l10n = AppLocalizations.of(context)!;
+    final exportService = widget.exportService;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      backgroundColor: c.bg,
+      appBar: AppBar(
+        title: Text(l10n.exportSeedTitle),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: c.text),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+      ),
+      // The QR lives in the body, so the lifecycle cover hides exactly the
+      // secret while the plain "Recovery Phrase" title stays put.
+      body: PrivacyShield(
+        screenSecurity: widget.screenSecurity,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                WarningBanner(message: l10n.mnemonicQrWarning),
+                const SizedBox(height: 20),
+                if (exportService != null)
+                  PinGate(
+                    exportService: exportService,
+                    keyPrefix: 'export-seed-pin',
+                    onUnlocked: (pin) async {
+                      final revealed = await exportService.revealMnemonic(pin);
+                      if (revealed == null || revealed.isEmpty) return null;
+                      return _buildQrView(c, l10n, screenWidth, revealed,
+                          exportService.fingerprint,
+                          exportService.hasPassphrase);
+                    },
+                  )
+                else if (widget.previewMnemonic == null ||
+                    widget.previewMnemonic!.isEmpty)
+                  _buildEmptyState(c, l10n)
+                else
+                  _buildQrView(c, l10n, screenWidth, widget.previewMnemonic!,
+                      widget.previewFingerprint, widget.hasPassphrase),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQrView(ColorTokens c, AppLocalizations l10n, double screenWidth,
+      String mnemonic, String? fingerprint, bool hasPassphrase) {
+    final qrSize = math.min(220.0, screenWidth - 96.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              // Black-on-white is REQUIRED for QR scannability.
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(R.lg),
+              // Without a border the white card disappears on the light
+              // theme's white background.
+              border: Border.all(color: c.border),
+            ),
+            child: QrImageView(
+              data: mnemonic,
+              version: QrVersions.auto,
+              size: qrSize,
+              backgroundColor: Colors.white,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Colors.black,
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (fingerprint != null)
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(R.lg),
+                border: Border.all(color: c.border.withAlpha(120)),
+              ),
+              child: Text(
+                l10n.walletChip(fingerprint),
+                style: TextStyle(
+                  color: c.text.withAlpha(150),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 20),
+        AutoHideCountdown(
+          seconds: _autoHideSeconds,
+          previewSeconds: widget.previewSeconds,
+          onElapsed: () => Navigator.of(context).maybePop(),
+        ),
+        const SizedBox(height: 20),
+        PrimaryButton(
+          label: l10n.iveWrittenItDown,
+          onTap: () => Navigator.of(context).maybePop(),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          l10n.englishBip39Note,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: c.text.withAlpha(110), fontSize: 12),
+        ),
+        if (hasPassphrase) ...[
+          const SizedBox(height: 20),
+          _buildPassphraseNote(c, l10n),
+        ],
+      ],
+    );
+  }
+
+  /// Green-tinted note (not the red [WarningBanner]) — the passphrase is a
+  /// gap to be aware of, not a misuse.
+  Widget _buildPassphraseNote(ColorTokens c, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: c.primary.withAlpha(18),
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: c.primary.withAlpha(60)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: c.primary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.passphraseNotIncluded,
+              style: TextStyle(color: c.primary, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ColorTokens c, AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Icon(Icons.qr_code, size: 56, color: c.text.withAlpha(60)),
+          const SizedBox(height: 16),
+          Text(
+            l10n.noMnemonicGenerated,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,104 @@
+name: open_ledger_app
+description: "Open Ledger App Android signing device with a Flutter UI and Rust crypto SDK."
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.0
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # FFI utilities (String <-> Pointer<Utf8> conversion)
+  ffi: ^2.0.0
+
+  # i18n / l10n
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+  # Settings persistence
+  shared_preferences: ^2.0.0
+
+  # === BLE peripheral (Ledger Nano X GATT server) ===
+  permission_handler: ^11.3.0
+
+  # === Planned dependencies (add when implementing corresponding features) ===
+  # Secure key storage
+  # flutter_secure_storage: ^9.0.0
+  # State management
+  # flutter_riverpod: ^2.0.0
+  # Routing
+  go_router: ^14.0.0
+  # QR code display
+  qr_flutter: ^4.1.0
+  flutter_svg: ^2.3.0
+  universal_ble: ^2.2.0
+  # QR code scanning
+  # mobile_scanner: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # 真机端到端测试（in-process 驱动真实 APP）。仅测试用：不进入 release 编译、
+  # 不改 app 入口。运行：flutter test integration_test/<file>.dart -d <device>
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/chains.json
+    - assets/fonts/OFL.txt
+    - assets/icons/chains/
+    - assets/icons/brand/
+
+  # CJK fallback (subsetted Noto Sans CJK SC, see tool/gallery/fonts/).
+  # Latin stays on engine Roboto; this only supplies glyphs Roboto lacks,
+  # keeping web/desktop rendering identical to Android (ADR-005).
+  fonts:
+    - family: NotoSansCJK
+      fonts:
+        - asset: assets/fonts/NotoSansCJK-Subset-Regular.ttf
+        - asset: assets/fonts/NotoSansCJK-Subset-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansCJK-Subset-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  android: true
+  ios: true
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/adaptive_fg.png"
+  adaptive_icon_foreground_inset: 0
+  remove_alpha_ios: true
+  background_color_ios: "#000000"
+  min_sdk_android: 21
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false

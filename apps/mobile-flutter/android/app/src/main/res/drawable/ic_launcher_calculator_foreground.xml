@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Calculator disguise foreground (ADR-012). 108dp adaptive-icon canvas;
+     the glyph stays inside the 66dp center safe zone (21..87). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Body -->
+    <path
+        android:fillColor="#37474F"
+        android:pathData="M38,24 H70 A8,8 0 0 1 78,32 V76 A8,8 0 0 1 70,84 H38 A8,8 0 0 1 30,76 V32 A8,8 0 0 1 38,24 Z"/>
+    <!-- Display -->
+    <path
+        android:fillColor="#ECEFF1"
+        android:pathData="M37,30 H71 A2,2 0 0 1 73,32 V42 A2,2 0 0 1 71,44 H37 A2,2 0 0 1 35,42 V32 A2,2 0 0 1 37,30 Z"/>
+    <!-- Digit keys (3x3) -->
+    <path
+        android:fillColor="#CFD8DC"
+        android:pathData="M37,50 H41 A2,2 0 0 1 43,52 V56 A2,2 0 0 1 41,58 H37 A2,2 0 0 1 35,56 V52 A2,2 0 0 1 37,50 Z
+            M47,50 H51 A2,2 0 0 1 53,52 V56 A2,2 0 0 1 51,58 H47 A2,2 0 0 1 45,56 V52 A2,2 0 0 1 47,50 Z
+            M57,50 H61 A2,2 0 0 1 63,52 V56 A2,2 0 0 1 61,58 H57 A2,2 0 0 1 55,56 V52 A2,2 0 0 1 57,50 Z
+            M37,60 H41 A2,2 0 0 1 43,62 V66 A2,2 0 0 1 41,68 H37 A2,2 0 0 1 35,66 V62 A2,2 0 0 1 37,60 Z
+            M47,60 H51 A2,2 0 0 1 53,62 V66 A2,2 0 0 1 51,68 H47 A2,2 0 0 1 45,66 V62 A2,2 0 0 1 47,60 Z
+            M57,60 H61 A2,2 0 0 1 63,62 V66 A2,2 0 0 1 61,68 H57 A2,2 0 0 1 55,66 V62 A2,2 0 0 1 57,60 Z
+            M37,70 H41 A2,2 0 0 1 43,72 V76 A2,2 0 0 1 41,78 H37 A2,2 0 0 1 35,76 V72 A2,2 0 0 1 37,70 Z
+            M47,70 H51 A2,2 0 0 1 53,72 V76 A2,2 0 0 1 51,78 H47 A2,2 0 0 1 45,76 V72 A2,2 0 0 1 47,70 Z
+            M57,70 H61 A2,2 0 0 1 63,72 V76 A2,2 0 0 1 61,78 H57 A2,2 0 0 1 55,76 V72 A2,2 0 0 1 57,70 Z"/>
+    <!-- Operator keys (right column) -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M67,50 H71 A2,2 0 0 1 73,52 V56 A2,2 0 0 1 71,58 H67 A2,2 0 0 1 65,56 V52 A2,2 0 0 1 67,50 Z
+            M67,60 H71 A2,2 0 0 1 73,62 V66 A2,2 0 0 1 71,68 H67 A2,2 0 0 1 65,66 V62 A2,2 0 0 1 67,60 Z
+            M67,70 H71 A2,2 0 0 1 73,72 V76 A2,2 0 0 1 71,78 H67 A2,2 0 0 1 65,76 V72 A2,2 0 0 1 67,70 Z"/>
+</vector>
