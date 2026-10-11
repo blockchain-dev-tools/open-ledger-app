@@ -115,13 +115,16 @@ jobs:
           set -euo pipefail
           APK_DIR=apps/mobile-flutter/build/app/outputs/flutter-apk
           cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
-          **Pre-release — ephemeral signing key.**
+          **Pre-release — ephemeral signing key, unsigned iOS build.**
 
-          This build was produced by CI to validate the release pipeline. It is signed
-          with a throwaway keystore generated during the build, so its signing identity
-          is not stable and it must not be treated as an official distribution.
+          This build was produced by CI to validate the release pipeline. The Android APK
+          is signed with a throwaway keystore generated during the build, so its signing
+          identity is not stable. The iOS IPA is unsigned and cannot be installed as
+          published. Neither artifact is an official distribution.
 
-          - Native code: arm64-v8a only (`libopen_ledger_crypto.so`)
+          - Android: `app-release.apk` + checksum, native code arm64-v8a only
+          - iOS: `OpenLedger-unsigned.ipa` + checksum — re-sign locally with Xcode
+            against your own Apple ID before installing on a registered device
           - Toolchain: Flutter 3.44.0 (pinned), Rust stable, Java 17, Android NDK
 
           Known limitations are documented in `SECURITY.md` and are not fixed by this
@@ -132,3 +135,76 @@ jobs:
             --prerelease \
             --notes-file "$RUNNER_TEMP/release-notes.md" \
             "$APK_DIR/app-release.apk" "$APK_DIR/app-release.apk.sha256"
+
+  ios-unsigned:
+    needs: android-release
+    runs-on: macos-latest
+    env:
+      PUB_HOSTED_URL: https://pub.dev
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install official Flutter 3.44.0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = '559ffa3f75e7402d65a8def9c28389a9b2e6fe42'
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust stable and the iOS target
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add aarch64-apple-ios
+
+      - name: Build the Rust SDK for iOS arm64
+        run: |
+          set -euo pipefail
+          cargo build --locked --manifest-path crates/Cargo.toml --target aarch64-apple-ios --release
+          cp crates/target/aarch64-apple-ios/release/libopen_ledger_crypto.a \
+             apps/mobile-flutter/ios/libopen_ledger_crypto.a
+
+      - name: Resolve locked Flutter dependencies
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics pub get --enforce-lockfile
+
+      - name: Build the iOS app without signing
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics build ios --release --no-codesign
+
+      - name: Package and checksum the unsigned IPA
+        working-directory: apps/mobile-flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=build/ios/iphoneos/Runner.app
+          test -d "$APP"
+          test -f ios/libopen_ledger_crypto.a
+          rm -rf build/ios/Payload
+          mkdir -p build/ios/Payload
+          cp -R "$APP" build/ios/Payload/
+          (cd build/ios && zip -qry OpenLedger-unsigned.ipa Payload)
+          cd build/ios
+          shasum -a 256 OpenLedger-unsigned.ipa > OpenLedger-unsigned.ipa.sha256
+          cat OpenLedger-unsigned.ipa.sha256
+
+      - name: Upload the unsigned IPA as a build artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: open-ledger-app-ios-unsigned
+          path: |
+            apps/mobile-flutter/build/ios/OpenLedger-unsigned.ipa
+            apps/mobile-flutter/build/ios/OpenLedger-unsigned.ipa.sha256
+
+      - name: Attach the unsigned IPA to the pre-release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          D=apps/mobile-flutter/build/ios
+          gh release upload "$GITHUB_REF_NAME" \
+            "$D/OpenLedger-unsigned.ipa" "$D/OpenLedger-unsigned.ipa.sha256" --clobber
