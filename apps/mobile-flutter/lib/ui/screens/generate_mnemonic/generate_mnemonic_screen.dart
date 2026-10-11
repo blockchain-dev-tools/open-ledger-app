@@ -52,7 +52,9 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final c = ColorTokens.dark;
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
     final words = _words;
 
     return Scaffold(

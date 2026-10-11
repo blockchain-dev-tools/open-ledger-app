@@ -31,7 +31,9 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final c = ColorTokens.dark;
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
     final result = widget.previewResult ?? widget.appState?.lastSignResult;
 
     // If no result, show redirect to vault.

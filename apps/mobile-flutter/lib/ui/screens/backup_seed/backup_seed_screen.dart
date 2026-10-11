@@ -135,7 +135,9 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final c = ColorTokens.dark;
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
