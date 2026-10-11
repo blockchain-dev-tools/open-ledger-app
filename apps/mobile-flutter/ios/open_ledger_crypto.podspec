@@ -36,27 +36,32 @@ Pod::Spec.new do |s|
   # device with lookup errors. Fix: mark each entry point as a required root
   # (-u), which both pulls it in and shields it from dead-strip.
   #
-  # Every #[no_mangle] export in crates/open-ledger-ffi (lib.rs + types.rs);
-  # Mach-O names carry one leading underscore. KEEP IN SYNC with the crate:
-  # if a symbol is renamed/removed here, the LINK fails loudly (undefined
-  # symbol) instead of the app failing silently at runtime.
-  ffi_symbols = %w[
-    chacha20_decrypt chacha20_encrypt
-    derive_btc_address_ffi derive_ed25519_private_key_ffi derive_eth_address_ffi
-    derive_secp256k1_private_key_ffi derive_sol_address_ffi derive_sui_address_ffi
-    derive_tron_address_ffi
-    enigma_derive_mnemonic enigma_entropy_hex
-    eth_address_from_private_key_ffi eth_public_key_bytes_ffi
-    free_ffi_result free_string
-    generate_mnemonic generate_mnemonic_lang
-    mnemonic_from_entropy mnemonic_to_seed
-    p2wpkh_address_ffi parse_sign_data pbkdf2_derive
-    reencode_mnemonic
-    sign_eth_eip712_ffi sign_eth_personal_message_ffi sign_eth_transaction_ffi
-    sign_solana_message_ffi solana_public_key_bytes_ffi sui_address_ffi
-    tron_address_from_pubkey_ffi
-    validate_mnemonic validate_mnemonic_lang
-  ].map { |sym| "-Wl,-u,_#{sym}" }.join(' ')
+  # The required-root list is derived from the archive itself instead of being
+  # hand-maintained: a stale hand-written list silently drops newly added
+  # exports (that is exactly how aead_encrypt_with_key, hkdf_expand32,
+  # constant_time_eq, history_encrypt/decrypt, public_key_for_chain,
+  # encode_private_key and derive_secp256k1_extended_ffi went missing at
+  # runtime while the link still succeeded).
+  #
+  # Selection rule: global text symbols with a SINGLE leading underscore are
+  # the `#[no_mangle] extern "C"` entry points. Everything the toolchain adds
+  # uses a double/triple underscore instead — Rust-mangled names (`__R…`) and
+  # the bundled compiler-rt/libc runtime (`__aarch64_*`, `___absvdi2`) — so it
+  # is filtered out. (A few single-underscore runtime helpers such as
+  # `_atomic_thread_fence` may slip through; force-keeping them is harmless.)
+  archive = File.join(__dir__, 'libopen_ledger_crypto.a')
+  raise "open_ledger_crypto: #{archive} is missing — build the Rust SDK first" unless File.exist?(archive)
+
+  ffi_symbols = `nm -gU "#{archive}" 2>/dev/null`
+    .lines
+    .map(&:split)
+    .select { |parts| parts[1] == 'T' && parts[2].to_s.start_with?('_') }
+    .map { |parts| parts[2] }
+    .uniq
+    .reject { |sym| sym.start_with?('__') }
+  raise 'open_ledger_crypto: no exported symbols found in the archive' if ffi_symbols.empty?
+
+  ffi_symbols = ffi_symbols.map { |sym| "-Wl,-u,#{sym}" }.join(' ')
 
   s.user_target_xcconfig = {
     'OTHER_LDFLAGS' => "$(inherited) -force_load $(SRCROOT)/libopen_ledger_crypto.a #{ffi_symbols}"
