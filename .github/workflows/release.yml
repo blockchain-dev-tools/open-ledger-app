@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    env:
+      PUB_HOSTED_URL: https://pub.dev
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install official Flutter 3.44.0 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = '559ffa3f75e7402d65a8def9c28389a9b2e6fe42'
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust stable and the Android target
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add aarch64-linux-android
+
+      - name: Install an Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          if [ -z "$(ls -A "$ANDROID_HOME/ndk" 2>/dev/null)" ]; then
+            GRADLE_UTILS="$RUNNER_TEMP/flutter/packages/flutter_tools/lib/src/android/gradle_utils.dart"
+            NDK_VERSION="$(grep -oE "ndkVersion = '[^']+'" "$GRADLE_UTILS" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || true)"
+            NDK_VERSION="${NDK_VERSION:-27.0.12077973}"
+            echo "Installing NDK $NDK_VERSION"
+            yes | "$SDKMANAGER" --install "ndk;$NDK_VERSION" > /dev/null
+          fi
+          NDK="$(ls -d "$ANDROID_HOME/ndk/"* 2>/dev/null | sort -V | tail -n1)"
+          echo "Using NDK: $NDK"
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+
+      - name: Build the Rust SDK for Android arm64
+        run: |
+          set -euo pipefail
+          source apps/mobile-flutter/scripts/android-env.sh
+          cargo build --locked --manifest-path crates/Cargo.toml --target aarch64-linux-android --release
+          mkdir -p apps/mobile-flutter/android/app/src/main/jniLibs/arm64-v8a
+          cp crates/target/aarch64-linux-android/release/libopen_ledger_crypto.so \
+             apps/mobile-flutter/android/app/src/main/jniLibs/arm64-v8a/
+
+      - name: Create an ephemeral signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          ANDROID_DIR="$GITHUB_WORKSPACE/apps/mobile-flutter/android"
+          STORE_PASSWORD="$(openssl rand -hex 16)"
+          keytool -genkeypair -v \
+            -keystore "$ANDROID_DIR/ephemeral.keystore" \
+            -alias ephemeral-ci \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$STORE_PASSWORD" -keypass "$STORE_PASSWORD" \
+            -dname "CN=Open Ledger CI ephemeral, OU=CI, O=Open Ledger, C=NA"
+          cat > "$ANDROID_DIR/key.properties" <<EOF
+          storePassword=$STORE_PASSWORD
+          keyPassword=$STORE_PASSWORD
+          keyAlias=ephemeral-ci
+          storeFile=$ANDROID_DIR/ephemeral.keystore
+          EOF
+
+      - name: Resolve locked Flutter dependencies
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics pub get --enforce-lockfile
+
+      - name: Build the release APK
+        working-directory: apps/mobile-flutter
+        run: flutter --no-version-check --suppress-analytics build apk --release
+
+      - name: Verify identity and native packaging
+        working-directory: apps/mobile-flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_DIR=build/app/outputs/flutter-apk
+          unzip -l "$APK_DIR/app-release.apk" | grep -q 'lib/arm64-v8a/libopen_ledger_crypto.so'
+          APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)"
+          "$APKSIGNER" verify --print-certs "$APK_DIR/app-release.apk"
+          cd "$APK_DIR"
+          sha256sum app-release.apk > app-release.apk.sha256
+          cat app-release.apk.sha256
+
+      - name: Upload the APK as a build artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: open-ledger-app-android-release
+          path: |
+            apps/mobile-flutter/build/app/outputs/flutter-apk/app-release.apk
+            apps/mobile-flutter/build/app/outputs/flutter-apk/app-release.apk.sha256
+
+      - name: Publish the GitHub pre-release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          APK_DIR=apps/mobile-flutter/build/app/outputs/flutter-apk
+          cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+          **Pre-release — ephemeral signing key.**
+
+          This build was produced by CI to validate the release pipeline. It is signed
+          with a throwaway keystore generated during the build, so its signing identity
+          is not stable and it must not be treated as an official distribution.
+
+          - Native code: arm64-v8a only (`libopen_ledger_crypto.so`)
+          - Toolchain: Flutter 3.44.0 (pinned), Rust stable, Java 17, Android NDK
+
+          Known limitations are documented in `SECURITY.md` and are not fixed by this
+          build. Use disposable test wallets only.
+          EOF
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Open Ledger App $GITHUB_REF_NAME" \
+            --prerelease \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            "$APK_DIR/app-release.apk" "$APK_DIR/app-release.apk.sha256"
