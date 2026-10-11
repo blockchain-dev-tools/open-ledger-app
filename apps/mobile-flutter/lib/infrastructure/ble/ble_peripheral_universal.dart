@@ -21,10 +21,16 @@ import 'dart:typed_data';
 import 'package:universal_ble/universal_ble.dart';
 
 import '../../core/interfaces/ble_peripheral.dart';
+import '../../core/interfaces/ble_permissions.dart';
 import '../../core/models/ble_types.dart';
+import 'ble_permissions.dart';
 
 class BlePeripheralUniversal implements IBlePeripheral {
-  BlePeripheralUniversal();
+  BlePeripheralUniversal({IBlePermissions permissions = const BlePermissions()})
+      : _permissions = permissions;
+
+  /// Gate that requests the OS-level BLE runtime permissions before advertising.
+  final IBlePermissions _permissions;
 
   // ── Ledger BLE framing ───────────────────────────────────────────────
 
@@ -104,6 +110,16 @@ class BlePeripheralUniversal implements IBlePeripheral {
 
     if (_state == BleState.broadcasting || _state == BleState.connected) {
       _log('Already advertising or connected.');
+      return;
+    }
+
+    // Android 12+ gates advertising behind runtime permissions; ask before
+    // touching the platform so a denial surfaces as a clear error state
+    // instead of a SecurityException from the GATT stack.
+    if (!await _permissions.ensureGranted()) {
+      _log('⚠ BLE permission denied — grant "Nearby devices" '
+          '(BLUETOOTH_ADVERTISE / CONNECT / SCAN) in system settings, then retry.');
+      _transition(BleState.error);
       return;
     }
 
