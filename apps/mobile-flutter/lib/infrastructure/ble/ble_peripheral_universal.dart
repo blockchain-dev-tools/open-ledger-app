@@ -421,7 +421,7 @@ class BlePeripheralUniversal implements IBlePeripheral {
       return PeripheralReadRequestResult(value: Uint8List(0));
     }
 
-    _log('GATT read served ${buffered.length} bytes');
+    _log('GATT read served ${buffered.length} bytes (offset=$offset)');
     final slice = offset < buffered.length
         ? Uint8List.sublistView(buffered, offset)
         : Uint8List(0);
