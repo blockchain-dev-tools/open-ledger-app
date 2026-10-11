@@ -33,7 +33,7 @@ DEFAULT_MTU = 20
 # 设备本地名（Android 端默认）。BlueZ 的 Device1.ServiceUUIDs 只反映主广播包，
 # 而本设备把 128 位 UUID 放在 scan response（addServicesInScanResponse），
 # 于是扫描时按名字兜底匹配；连上后特征仍严格按 UUID 解析。
-DEVICE_NAME_PREFIX = "OpenLedgerAppApp"
+DEVICE_NAME_PREFIX = "OpenLedgerApp"
 
 BLUEZ = "org.bluez"
 

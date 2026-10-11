@@ -42,7 +42,7 @@ class BlePeripheralUniversal implements IBlePeripheral {
   // ── State ────────────────────────────────────────────────────────────
 
   BleState _state = BleState.idle;
-  String _deviceName = 'OpenLedgerAppApp';
+  String _deviceName = defaultBleDeviceName;
   int _mtu = _defaultMtu;
   bool _disposed = false;
 

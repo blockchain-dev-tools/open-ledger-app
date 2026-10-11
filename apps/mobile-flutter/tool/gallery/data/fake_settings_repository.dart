@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:open_ledger_app/core/interfaces/settings_repository.dart';
+import 'package:open_ledger_app/core/models/ble_types.dart';
 import 'package:open_ledger_app/core/models/launcher_disguise.dart';
 
 /// In-memory [ISettingsRepository] for the gallery (ADR-005) — no storage,
@@ -11,12 +12,14 @@ class FakeSettingsRepository implements ISettingsRepository {
   Locale locale;
   bool storePassphrase;
   LauncherDisguise launcherDisguise;
+  String bleName;
 
   FakeSettingsRepository({
     this.themeMode = ThemeMode.dark,
     this.locale = const Locale('en'),
     this.storePassphrase = false,
     this.launcherDisguise = LauncherDisguise.standard,
+    this.bleName = defaultBleDeviceName,
   });
 
   @override
@@ -25,6 +28,7 @@ class FakeSettingsRepository implements ISettingsRepository {
         locale: locale,
         storePassphrase: storePassphrase,
         launcherDisguise: launcherDisguise,
+        bleName: bleName,
       );
 
   @override
@@ -39,4 +43,7 @@ class FakeSettingsRepository implements ISettingsRepository {
   @override
   Future<void> setLauncherDisguise(LauncherDisguise value) async =>
       launcherDisguise = value;
+
+  @override
+  Future<void> setBleName(String name) async => bleName = name;
 }

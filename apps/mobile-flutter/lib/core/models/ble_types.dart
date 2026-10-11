@@ -57,6 +57,12 @@ const String bleApduWriteCommandCharacteristicUuid =
 /// and needs 2 of them for the AD length/type header.
 const int maxBleDeviceNameLength = 29;
 
+/// Default advertised device name.
+///
+/// Used until the user sets a custom name in Settings. Kept within
+/// [maxBleDeviceNameLength] so it always fits the scan response.
+const String defaultBleDeviceName = 'OpenLedgerApp';
+
 /// Standard CCCD (Client Characteristic Configuration Descriptor) UUID.
 ///
 /// Required on the notify characteristic so that BLE centrals (MetaMask,
@@ -65,7 +71,7 @@ const String bleCccdDescriptorUuid = '00002902-0000-1000-8000-00805f9b34fb';
 
 /// Information about a discovered or connected BLE device.
 class BleDeviceInfo {
-  /// Human-readable device name (e.g. "OpenLedgerAppApp").
+  /// Human-readable device name (e.g. "OpenLedgerApp").
   final String name;
 
   /// Bluetooth MAC address or UUID. `null` for unconnected devices

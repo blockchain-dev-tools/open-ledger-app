@@ -13,6 +13,7 @@ import 'dart:typed_data';
 
 import '../core/interfaces/crypto_service.dart';
 import '../core/models/apdu_message.dart';
+import '../core/models/ble_types.dart';
 import '../core/models/chain.dart';
 import '../protocols/apdu/apdu_constants.dart';
 import 'path_parser.dart';
@@ -133,7 +134,7 @@ class ApduHandler {
 
     // B0 02 — legacy GET_APP_NAME probe; respond with the device name.
     if (command.cla == Cla.global && command.ins == Ins.getAppName) {
-      final nameBytes = Uint8List.fromList('OpenLedgerAppApp'.codeUnits);
+      final nameBytes = Uint8List.fromList(defaultBleDeviceName.codeUnits);
       return ApduResponse(data: nameBytes, sw1: 0x90, sw2: 0x00);
     }
 

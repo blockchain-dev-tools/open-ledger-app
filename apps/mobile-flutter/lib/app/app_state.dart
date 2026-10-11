@@ -10,6 +10,7 @@ import '../core/interfaces/screen_security.dart';
 import '../core/interfaces/ble_peripheral.dart';
 import '../core/interfaces/history_repository.dart';
 import '../core/models/apdu_message.dart';
+import '../core/models/ble_types.dart';
 import '../core/models/chain.dart';
 import '../core/models/signature_record.dart';
 import '../infrastructure/ffi/crypto_service_adapter.dart';
@@ -383,6 +384,24 @@ class AppState extends ChangeNotifier {
 
   Future<void> stopBleAdvertising() async {
     await _bleSession?.stopAdvertising();
+  }
+
+  /// Persist a custom advertised BLE name and apply it to the peripheral.
+  ///
+  /// Restarts a live advertiser so the new name reaches the air immediately,
+  /// but only while broadcasting — a connected host keeps its session and
+  /// picks up the new name on the next advertise.
+  Future<void> setBleDeviceName(String name) async {
+    _settingsService.setBleName(name);
+    final bp = _blePeripheral;
+    if (bp == null) return;
+
+    final wasBroadcasting = bp.state == BleState.broadcasting;
+    await bp.setDeviceName(name);
+    if (wasBroadcasting) {
+      await stopBleAdvertising();
+      await startBleAdvertising();
+    }
   }
 
   // ── Navigation ─────────────────────────────────────────────────────

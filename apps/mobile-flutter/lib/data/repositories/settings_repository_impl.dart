@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/interfaces/settings_repository.dart';
+import '../../core/models/ble_types.dart';
 import '../../core/models/launcher_disguise.dart';
 
 /// [ISettingsRepository] implementation backed by [SharedPreferences].
 ///
-/// Extracted from [AppState] — handles theme mode, locale, and
-/// store-passphrase persistence. Contains zero business logic.
+/// Extracted from [AppState] — handles theme mode, locale,
+/// store-passphrase persistence and the advertised BLE name. Contains zero
+/// business logic.
 class SettingsRepositoryImpl implements ISettingsRepository {
   // ── Preferences keys ───────────────────────────────────────────────
 
@@ -15,6 +17,7 @@ class SettingsRepositoryImpl implements ISettingsRepository {
   static const _keyLocale = 'settings.locale';
   static const _keyStorePassphrase = 'settings.storePassphrase';
   static const _keyLauncherDisguise = 'settings.launcherDisguise';
+  static const _keyBleName = 'settings.bleName';
 
   // ── ISettingsRepository ────────────────────────────────────────────
 
@@ -42,11 +45,17 @@ class SettingsRepositoryImpl implements ISettingsRepository {
       final launcherDisguise =
           LauncherDisguise.fromId(prefs.getString(_keyLauncherDisguise));
 
+      final storedBleName = prefs.getString(_keyBleName);
+      final bleName = (storedBleName == null || storedBleName.isEmpty)
+          ? defaultBleDeviceName
+          : storedBleName;
+
       return SettingsData(
         themeMode: themeMode,
         locale: locale,
         storePassphrase: storePassphrase,
         launcherDisguise: launcherDisguise,
+        bleName: bleName,
       );
     } catch (_) {
       // SharedPreferences unavailable (e.g. test environment).
@@ -80,6 +89,12 @@ class SettingsRepositoryImpl implements ISettingsRepository {
   Future<void> setLauncherDisguise(LauncherDisguise value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLauncherDisguise, value.id);
+  }
+
+  @override
+  Future<void> setBleName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyBleName, name);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────

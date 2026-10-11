@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../services/settings_service.dart';
 import '../../../core/interfaces/wallet_service.dart';
+import '../../../core/models/ble_types.dart';
 import '../../../core/models/launcher_disguise.dart';
 import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
@@ -42,7 +43,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   /// Local tracking of the current BLE device name.
-  String _bleName = 'Open Ledger App';
+  String _bleName = defaultBleDeviceName;
 
   /// Currently selected theme mode (drives the theme sheet check mark).
   ThemeMode _themeMode = ThemeMode.dark;
@@ -106,6 +107,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _themeMode = svc.themeMode;
         _currentLocale = svc.locale;
         _launcherDisguise = svc.launcherDisguise;
+        _bleName = svc.bleName;
       });
     }
   }
@@ -271,11 +273,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                setState(() => _bleName = controller.text.trim().isEmpty
-                    ? 'Open Ledger App'
-                    : controller.text.trim());
+              onPressed: () async {
+                final value = controller.text.trim().isEmpty
+                    ? defaultBleDeviceName
+                    : controller.text.trim();
                 Navigator.of(ctx).pop();
+
+                // Persist + apply to the advertiser. AppState also re-arms a
+                // live advertiser so the new name reaches the air immediately.
+                final appState = widget.appState;
+                if (appState != null) {
+                  await appState.setBleDeviceName(value);
+                } else {
+                  widget.settingsService?.setBleName(value);
+                }
+                if (mounted) setState(() => _bleName = value);
               },
               child: Text(
                 l10n.done,

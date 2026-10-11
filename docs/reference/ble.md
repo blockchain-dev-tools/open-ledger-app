@@ -10,7 +10,7 @@ This document describes the Flutter device transport, not a web simulator transp
 | Notify, responses from device | `13d63400-2c97-0004-0001-4c6564676572` |
 | Write, requests to device | `13d63400-2c97-0004-0002-4c6564676572` |
 
-The host subscribes to Notify and sends requests to Write. Default advertising name is `OpenLedgerAppApp`; identify live advertisements primarily by service UUID rather than a personal device MAC.
+The host subscribes to Notify and sends requests to Write. Default advertising name is `OpenLedgerApp`; a custom name set in Settings is persisted and applied to the advertiser. Identify live advertisements primarily by service UUID rather than a personal device MAC.
 
 ## Tag-first framing
 

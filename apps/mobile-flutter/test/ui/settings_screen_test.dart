@@ -38,6 +38,9 @@ class _InMemorySettingsRepo implements ISettingsRepository {
 
   @override
   Future<void> setLauncherDisguise(LauncherDisguise value) async {}
+
+  @override
+  Future<void> setBleName(String value) async {}
 }
 
 // ═══════════════════════════════════════════════════════════════════════

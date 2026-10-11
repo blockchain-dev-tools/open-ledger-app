@@ -104,8 +104,10 @@ class _OpenLedgerAppAppState extends State<OpenLedgerAppApp> {
     // Inject address-confirmation navigation callback.
     _appState.onAddressRequest = _navigateToAddressConfirm;
 
-    // Initialize BLE peripheral for Ledger Nano X compatibility.
+    // Initialize BLE peripheral for Ledger Nano X compatibility, applying the
+    // persisted BLE name before any advertising starts.
     final blePeripheral = BlePeripheral();
+    await blePeripheral.setDeviceName(_appState.settingsService.bleName);
     _appState.blePeripheral = blePeripheral;
   }
 

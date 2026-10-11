@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:open_ledger_app/core/interfaces/launcher_disguise.dart';
 import 'package:open_ledger_app/core/interfaces/settings_repository.dart';
+import 'package:open_ledger_app/core/models/ble_types.dart';
 import 'package:open_ledger_app/core/models/launcher_disguise.dart';
 import 'package:open_ledger_app/services/settings_service.dart';
 
@@ -29,6 +30,7 @@ class _MockSettingsRepo implements ISettingsRepository {
   final List<Locale> setLocaleCalls = [];
   final List<bool> setStorePassphraseCalls = [];
   final List<LauncherDisguise> setLauncherDisguiseCalls = [];
+  final List<String> setBleNameCalls = [];
   int loadSettingsCallCount = 0;
 
   // ── ISettingsRepository ────────────────────────────────────────────
@@ -60,6 +62,11 @@ class _MockSettingsRepo implements ISettingsRepository {
   @override
   Future<void> setLauncherDisguise(LauncherDisguise value) async {
     setLauncherDisguiseCalls.add(value);
+  }
+
+  @override
+  Future<void> setBleName(String name) async {
+    setBleNameCalls.add(name);
   }
 }
 
@@ -334,5 +341,32 @@ void main() {
 
     expect(service.launcherDisguise, LauncherDisguise.calculator);
     expect(repo.setLauncherDisguiseCalls, [LauncherDisguise.calculator]);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 10. Advertised BLE name
+  // ═══════════════════════════════════════════════════════════════════
+
+  test('default bleName is the shared default', () {
+    expect(service.bleName, defaultBleDeviceName);
+  });
+
+  test('loadSettings restores the persisted BLE name', () async {
+    repo.loadResult = const SettingsData(bleName: 'MyLedger');
+
+    await service.loadSettings();
+
+    expect(service.bleName, 'MyLedger');
+  });
+
+  test('setBleName updates the name, persists and notifies', () {
+    var notified = false;
+    service.addListener(() => notified = true);
+
+    service.setBleName('MyLedger');
+
+    expect(service.bleName, 'MyLedger');
+    expect(repo.setBleNameCalls, ['MyLedger']);
+    expect(notified, isTrue);
   });
 }

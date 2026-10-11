@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/ble_types.dart';
 import '../models/launcher_disguise.dart';
 
 /// Abstract repository for app settings persistence.
@@ -21,6 +22,9 @@ abstract class ISettingsRepository {
 
   /// Persist the launcher disguise choice (ADR-012).
   Future<void> setLauncherDisguise(LauncherDisguise value);
+
+  /// Persist the advertised BLE device name.
+  Future<void> setBleName(String name);
 }
 
 /// Immutable snapshot of all app settings.
@@ -30,10 +34,14 @@ class SettingsData {
   final bool storePassphrase;
   final LauncherDisguise launcherDisguise;
 
+  /// Advertised BLE device name. Defaults to [defaultBleDeviceName].
+  final String bleName;
+
   const SettingsData({
     this.themeMode = ThemeMode.dark,
     this.locale = const Locale('en'),
     this.storePassphrase = false,
     this.launcherDisguise = LauncherDisguise.standard,
+    this.bleName = defaultBleDeviceName,
   });
 }

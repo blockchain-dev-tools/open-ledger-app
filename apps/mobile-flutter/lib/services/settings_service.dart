@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../core/interfaces/launcher_disguise.dart';
 import '../core/interfaces/settings_repository.dart';
+import '../core/models/ble_types.dart';
 import '../core/models/launcher_disguise.dart';
 
 /// Manages app settings — theme, locale, store-passphrase preference,
-/// launcher disguise (ADR-012).
+/// advertised BLE name, launcher disguise (ADR-012).
 ///
 /// All persistence I/O is delegated to [ISettingsRepository]; the OS-facing
 /// side of the disguise goes through [ILauncherDisguise] (no-op off Android).
@@ -61,6 +62,21 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Advertised BLE name ────────────────────────────────────────────
+
+  String _bleName = defaultBleDeviceName;
+  String get bleName => _bleName;
+
+  /// Sets the advertised BLE device name and persists it.
+  ///
+  /// Applying it to the running advertiser is the caller's job
+  /// (`AppState.setBleDeviceName`); this service only owns the setting.
+  void setBleName(String name) {
+    _bleName = name;
+    _repo.setBleName(_bleName);
+    notifyListeners();
+  }
+
   // ── Launcher Disguise (ADR-012) ────────────────────────────────────
 
   LauncherDisguise _launcherDisguise = LauncherDisguise.standard;
@@ -90,6 +106,7 @@ class SettingsService extends ChangeNotifier {
       _locale = data.locale;
       _storePassphrase = data.storePassphrase;
       _launcherDisguise = data.launcherDisguise;
+      _bleName = data.bleName;
     } catch (_) {
       // Repository unavailable (e.g. test environment).
       // Keep default values.
