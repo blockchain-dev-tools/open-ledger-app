@@ -8,7 +8,7 @@
 <h1 align="center">Open Ledger App</h1>
 
 <p align="center">
-  <strong>让旧手机，成为一台专用签名设备。</strong><br>
+  <strong>一个完全开源，Ledger协议兼容的可以运行在ios上的冷钱包。</strong><br>
   一起建设围绕冷钱包、可验证签名与资产自托管的开源社区。
 </p>
 
@@ -17,10 +17,14 @@
   <a href="BUILDING.md">构建 App</a> ·
   <a href="CONTRIBUTING.md">参与贡献</a> ·
   <a href="https://github.com/blockchain-dev-tools/open-ledger-app/issues">问题与想法</a> ·
-  <a href="https://t.me/+3nh0Mgq1D7E5ZmJl">Telegram</a> ·
-  <a href="https://x.com/LewisLLL1">X</a> ·
   <a href="SECURITY.md">安全说明</a> ·
   <a href="DISCLAIMER.md">免责声明</a>
+</p>
+
+<p align="center">
+  <a href="https://t.me/+3nh0Mgq1D7E5ZmJl"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%A4%BE%E5%8C%BA-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
+  &nbsp;&nbsp;
+  <a href="https://x.com/LewisLLL1"><img src="https://img.shields.io/badge/X-%E5%85%B3%E6%B3%A8-000000?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
 </p>
 
 ---

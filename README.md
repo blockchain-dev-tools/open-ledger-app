@@ -8,7 +8,7 @@
 <h1 align="center">Open Ledger App</h1>
 
 <p align="center">
-  <strong>Give an old phone a new role: a dedicated signing device.</strong><br>
+  <strong>A fully open-source, Ledger protocol-compatible cold wallet that runs on iOS.</strong><br>
   Building an open community around cold wallets, verifiable signing and self-custody.
 </p>
 
@@ -17,10 +17,14 @@
   <a href="BUILDING.md">Build the app</a> ·
   <a href="CONTRIBUTING.md">Contribute</a> ·
   <a href="https://github.com/blockchain-dev-tools/open-ledger-app/issues">Issues & ideas</a> ·
-  <a href="https://t.me/+3nh0Mgq1D7E5ZmJl">Telegram</a> ·
-  <a href="https://x.com/LewisLLL1">X</a> ·
   <a href="SECURITY.md">Security</a> ·
   <a href="DISCLAIMER.md">Disclaimer</a>
+</p>
+
+<p align="center">
+  <a href="https://t.me/+3nh0Mgq1D7E5ZmJl"><img src="https://img.shields.io/badge/Telegram-Join%20the%20community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
+  &nbsp;&nbsp;
+  <a href="https://x.com/LewisLLL1"><img src="https://img.shields.io/badge/X-Follow-000000?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
 </p>
 
 ---
