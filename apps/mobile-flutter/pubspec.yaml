@@ -2,7 +2,7 @@ name: open_ledger_app
 description: "Open Ledger App Android signing device with a Flutter UI and Rust crypto SDK."
 publish_to: 'none'
 
-version: 0.1.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.12.0

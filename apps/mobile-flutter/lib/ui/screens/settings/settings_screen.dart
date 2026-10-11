@@ -786,7 +786,7 @@ class _AboutCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${l10n.version} 0.1.0',
+            '${l10n.version} 1.0.0',
             style: TextStyle(color: c.text.withAlpha(120), fontSize: 13),
           ),
           const SizedBox(height: 10),
