@@ -11,6 +11,10 @@ class _DeniedBlePermissions implements IBlePermissions {
 }
 
 void main() {
+  // `dispose()` tears down `universal_ble`'s write/read request handlers,
+  // which reach `ServicesBinding.instance`; the binding must exist first.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     'starting advertising with denied BLE permissions reports an error '
     'instead of throwing',
