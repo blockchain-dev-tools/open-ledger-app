@@ -67,7 +67,7 @@ class _BleFabState extends State<BleFab> with SingleTickerProviderStateMixin {
         _syncPulse(broadcasting, disabled);
 
         // Tone for marks drawn ON the brand fill (badge check).
-        final Color onPrimary = isDark ? Colors.black : Colors.white;
+        final Color onPrimary = c.onPrimary;
 
         // The ring's SHAPE encodes BLE state (pulse / solid / dashed) and
         // must stay truthful even when disabled — a signing request must not

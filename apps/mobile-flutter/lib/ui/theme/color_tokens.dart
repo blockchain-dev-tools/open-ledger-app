@@ -47,13 +47,13 @@ class ColorTokens {
   );
 
   static const light = ColorTokens(
-    primary: Color(0xFF5F8A0E),
+    primary: Color(0xFF7AE60F),
     bg: Color(0xFFFFFFFF),
     groupedBg: Color(0xFFF2F2F7),
     surface: Color(0xFFFFFFFF),
     text: Color(0xFF212121),
     error: Color(0xFFB00020),
-    onPrimary: Color(0xFFFFFFFF),
+    onPrimary: Color(0xFF000000),
     onBg: Color(0xFF212121),
     border: Color(0xFFE0E0E0),
   );

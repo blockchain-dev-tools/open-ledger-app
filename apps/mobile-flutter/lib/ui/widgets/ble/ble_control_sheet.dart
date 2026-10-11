@@ -348,7 +348,6 @@ class _ChainCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     // A selected tile means "this chain is broadcasting"; tapping it again
     // stops, so its label describes that action rather than a selection.
     final String label = selected
@@ -427,7 +426,7 @@ class _ChainCell extends StatelessWidget {
                         child: Icon(
                           Icons.power_settings_new,
                           size: 13,
-                          color: isDark ? Colors.black : Colors.white,
+                          color: c.onPrimary,
                         ),
                       ),
                     ),
