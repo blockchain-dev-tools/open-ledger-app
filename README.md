@@ -63,7 +63,7 @@ Protocol compatibility and device security are separate questions. Implementing 
 | Signing | BLE/APDU request handling, on-device approval/rejection, timeout handling and signing history |
 | Recovery | PIN-gated local backup display and backup verification flows; recovery needs further validation |
 | Android | Current development target; build from source using the linked instructions |
-| iOS | Experimental integration scaffolding; not a validated end-to-end product |
+| iOS | Experimental integration scaffolding — iOS project + Rust static-lib pod; CI builds an unsigned IPA. Not a validated end-to-end product |
 | QR air-gap / USB | QR codecs exist without a product journey; USB is not implemented |
 
 ### Chain implementation is not a compatibility promise
