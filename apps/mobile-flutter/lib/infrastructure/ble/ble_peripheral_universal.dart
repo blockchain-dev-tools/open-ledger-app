@@ -27,7 +27,7 @@ import 'ble_permissions.dart';
 
 class BlePeripheralUniversal implements IBlePeripheral {
   BlePeripheralUniversal({IBlePermissions permissions = const BlePermissions()})
-      : _permissions = permissions;
+      : _permissions = permissions; // ignore: prefer_initializing_formals
 
   /// Gate that requests the OS-level BLE runtime permissions before advertising.
   final IBlePermissions _permissions;
