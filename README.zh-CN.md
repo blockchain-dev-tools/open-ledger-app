@@ -17,6 +17,8 @@
   <a href="BUILDING.md">构建 App</a> ·
   <a href="CONTRIBUTING.md">参与贡献</a> ·
   <a href="https://github.com/blockchain-dev-tools/open-ledger-app/issues">问题与想法</a> ·
+  <a href="https://t.me/+3nh0Mgq1D7E5ZmJl">Telegram</a> ·
+  <a href="https://x.com/LewisLLL1">X</a> ·
   <a href="SECURITY.md">安全说明</a>
 </p>
 
