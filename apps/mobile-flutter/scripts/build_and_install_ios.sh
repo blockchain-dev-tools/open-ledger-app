@@ -80,6 +80,8 @@ usage() {
   --check-only      仅执行设备/工具链预检并退出（0=通过，非 0=失败）
   --help            显示本帮助
 
+安装: 构建后用 ios-deploy 原地覆盖安装（不先卸载旧 App），以保留 iPhone 上的开发者信任设置。
+
 环境变量:
   FLUTTER_BIN               flutter 可执行文件（默认从 PATH 解析 "flutter"）
   FLUTTER_STORAGE_BASE_URL  可选的 engine 产物镜像（网络受限时设置）
@@ -167,6 +169,11 @@ check_prereqs() {
       || fail "python3 未找到（用于解析 flutter devices 输出）"
   fi
 
+  if [[ "$DO_INSTALL" == true ]]; then
+    command -v ios-deploy >/dev/null 2>&1 \
+      || fail "ios-deploy 未找到（iOS 覆盖安装需要它）。安装: brew install ios-deploy"
+  fi
+
   if [[ "$DO_RUST" == true ]]; then
     command -v cargo >/dev/null 2>&1 || fail "cargo 未安装"
     local sysroot
@@ -238,12 +245,22 @@ do_build() {
   ok "构建成功: $FLUTTER_DIR/build/ios/iphoneos/Runner.app"
 }
 
-# ─── 安装（构建 + 安装，不附加调试）──────────────────────────────────────────
+# ─── 安装（构建 + 覆盖安装，不附加调试）──────────────────────────────────────
+# 刻意不用 `flutter install`：它会先卸载旧 App（flutter_tools 的 installApp 默认
+# uninstall: true），而 iPhone 上「信任开发者」条目源自 App 内嵌的描述文件，
+# 一卸载就消失，导致下次重装又弹「未受信任的开发者」。
+#
+# 用 ios-deploy 走 installation_proxy 原地覆盖安装。不用 `xcrun devicectl`：devicectl
+# 依赖 CoreDevice，只支持 iOS 17+，在 iOS 16 设备上会报 CoreDeviceError 1000 (device not found)。
 do_install() {
-  info "构建并安装到设备 ($SELECTED_DEV)..."
-  flutter_cmd install -d "$SELECTED_DEV" "--$BUILD_MODE" \
+  do_build
+  local app="$FLUTTER_DIR/build/ios/iphoneos/Runner.app"
+  [[ -d "$app" ]] || fail "未找到构建产物: $app"
+
+  info "覆盖安装到设备 ($SELECTED_DEV)..."
+  ios-deploy --id "$SELECTED_DEV" --bundle "$app" --no-wifi \
     || fail "安装到设备 $SELECTED_DEV 失败"
-  ok "已安装到 $SELECTED_DEV（应用未自动启动）"
+  ok "已安装到 ${SELECTED_DEV}（原地覆盖，未卸载旧版本，信任设置保留）"
 }
 
 # ─── 附加调试运行（构建 + 安装 + 启动 + 热重载）──────────────────────────────
@@ -253,7 +270,7 @@ do_run() {
 }
 
 # ─── iOS 设备枚举（仅真机；输出 id<TAB>name<TAB>sdk）────────────────────────
-# flutter 的 stderr 不丢弃，改写到 $DEVICES_STDERR_FILE，供预检失败时诊断。
+# flutter 的 stderr 不丢弃，改写到 ${DEVICES_STDERR_FILE}，供预检失败时诊断。
 list_ios_devices() {
   flutter_cmd devices --machine 2>"${DEVICES_STDERR_FILE:-/dev/null}" | python3 -c '
 import json, sys
@@ -316,7 +333,7 @@ preflight_device() {
     for i in "${!ids[@]}"; do
       list+="${ids[$i]}(${names[$i]}) "
     done
-    fail "检测到多个 iOS 真机：$list。请用 --device <udid> 指定目标设备。"
+    fail "检测到多个 iOS 真机：${list}。请用 --device <udid> 指定目标设备。"
   else
     fail_echo "未检测到任何 iOS 真机。请依次排查："
     fail_echo "  1. iPhone 用数据线连接本机（仅充电线不具备数据能力）"

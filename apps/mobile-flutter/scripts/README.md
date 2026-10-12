@@ -7,7 +7,7 @@
 | 脚本 | 用途 |
 |---|---|
 | `build_and_install.sh` | Android 单一可信来源流水线：git pull → Rust SDK → Flutter APK → 设备预检 → 安装 |
-| `build_and_install_ios.sh` | iOS 单一可信来源流水线：git pull → Rust SDK(iOS) → pub get → pod install → 设备预检 → 构建/安装 |
+| `build_and_install_ios.sh` | iOS 单一可信来源流水线：git pull → Rust SDK(iOS) → pub get → pod install → 设备预检 → 构建 → ios-deploy 覆盖安装 |
 | `android-env.sh` | 自动发现 Android NDK 并注入 `CARGO_TARGET_*_LINKER`/`_AR`（Rust 交叉编译用），需 `source` |
 
 ## 前置条件
@@ -81,7 +81,7 @@
 ### iOS
 
 ```bash
-# 默认：git pull + 编译 Rust(iOS) + pub get + pod install + 构建并安装到唯一的 iPhone
+# 默认：git pull + 编译 Rust(iOS) + pub get + pod install + 构建并覆盖安装到唯一的 iPhone
 ./scripts/build_and_install_ios.sh
 
 # 附加调试会话（构建 + 安装 + 启动 + 热重载）
@@ -109,7 +109,11 @@
 | `--check-only` | 仅执行设备/工具链预检并退出（0=通过，非 0=失败） |
 | `--help` | 显示帮助 |
 
-设备预检会校验：`flutter` / `xcodebuild` / `pod` / `python3` 可用性、Rust `aarch64-apple-ios` target、以及真机连接情况（自动选中唯一 iOS 真机；多台需 `--device`）。签名团队不在此脚本内配置，取自 `ios/Runner.xcodeproj` 的 `DEVELOPMENT_TEAM`。
+设备预检会校验：`flutter` / `xcodebuild` / `pod` / `python3` / `ios-deploy` 可用性、Rust `aarch64-apple-ios` target、以及真机连接情况（自动选中唯一 iOS 真机；多台需 `--device`）。签名团队不在此脚本内配置，取自 `ios/Runner.xcodeproj` 的 `DEVELOPMENT_TEAM`。
+
+安装用 `ios-deploy --bundle` 做**原地覆盖安装**（不先卸载旧 App）。这是刻意的：iPhone 上「信任开发者」条目源自 App 内嵌的描述文件，`flutter install` 会先卸载再装（`installApp(uninstall: true)`），一卸载信任条目就消失，导致每次都重弹「未受信任的开发者」。`--run` 仍走 `flutter run`（需要调试会话，无法覆盖安装）。
+
+> 为什么不用 `xcrun devicectl`：devicectl 依赖 CoreDevice，**只支持 iOS 17+**；iOS 16 设备上会报 `CoreDeviceError 1000 (device not found)`，无法安装。
 
 ## Makefile 入口（仓库根目录）
 

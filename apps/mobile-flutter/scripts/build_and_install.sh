@@ -201,7 +201,7 @@ do_apk() {
 
 # ─── 安装 ────────────────────────────────────────────────────────────────────
 do_install() {
-  [[ -f "$APK_PATH" ]] || fail "APK 不存在: $APK_PATH（请先构建，或确认 --release 标志一致）"
+  [[ -f "$APK_PATH" ]] || fail "APK 不存在: ${APK_PATH}（请先构建，或确认 --release 标志一致）"
   info "安装 APK 到设备 ($SELECTED_DEV)..."
   adb -s "$SELECTED_DEV" install -r "$APK_PATH" \
     || fail "安装到设备 $SELECTED_DEV 失败"
@@ -323,7 +323,7 @@ check_usb_mode() {
   fi
   info "设备 $dev USB 模式: $mode"
   if [[ "$mode" != *adb* ]]; then
-    fail "设备 $dev 的 USB 配置不含 adb：当前 sys.usb.config=$mode。请在手机上开启「USB 调试」（或切换 USB 用途）后重试。"
+    fail "设备 $dev 的 USB 配置不含 adb：当前 sys.usb.config=${mode}。请在手机上开启「USB 调试」（或切换 USB 用途）后重试。"
   fi
   if [[ "$mode" != *mtp* && "$mode" != *ptp* ]]; then
     warn "当前 adb 可用，但 USB 模式不含 mtp/ptp。本机权限依赖 MTP（70-uaccess.rules），建议保持「传输文件」模式，或添加 udev 规则。"
