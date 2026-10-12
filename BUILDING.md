@@ -134,4 +134,6 @@ pod install
 
 This describes archive preparation, not a validated iOS product. Simulator slices and BLE peripheral behavior require separate verification. The Podspec's symbol list must match the Rust FFI exports.
 
+The same pipeline is scripted for device builds: `make ios` (build + install to the connected iPhone), `make ios-run` (attach for hot reload), `make ios-build`, and `make ios-check` (device/toolchain preflight). The target device is auto-detected; see [apps/mobile-flutter/scripts/README.md](apps/mobile-flutter/scripts/README.md).
+
 Android `--release` currently still uses debug signing. Before distributing an official APK, configure release signing with secrets supplied outside Git, verify the public certificate and native packaging, address the security limits in [SECURITY.md](SECURITY.md), and publish checksums against the corresponding source tag. A release build flag alone does not establish release readiness.
