@@ -473,7 +473,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				DEVELOPMENT_TEAM = 85XUH5Z4A2;
+				DEVELOPMENT_TEAM = 86ALB2D5W4;
 				PRODUCT_BUNDLE_IDENTIFIER = app.openledger.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -656,7 +656,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				DEVELOPMENT_TEAM = 85XUH5Z4A2;
+				DEVELOPMENT_TEAM = 86ALB2D5W4;
 				PRODUCT_BUNDLE_IDENTIFIER = app.openledger.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -679,7 +679,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				DEVELOPMENT_TEAM = 85XUH5Z4A2;
+				DEVELOPMENT_TEAM = 86ALB2D5W4;
 				PRODUCT_BUNDLE_IDENTIFIER = app.openledger.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
