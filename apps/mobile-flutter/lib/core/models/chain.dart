@@ -50,6 +50,39 @@ enum Chain {
         Chain.sui => "m/44'/784'/0'/0'/0'",
       };
 
+  /// Whether the account number sits in the 4th path segment rather than the
+  /// last one.
+  ///
+  /// Solana and Sui harden the account segment and keep the trailing address
+  /// index at 0 (`m/44'/501'/{account}'/0'`); EVM and Tron vary the final
+  /// address index instead (`m/44'/60'/0'/0/{account}`). Reading "the last
+  /// segment" therefore reports 0 for every Solana/Sui account.
+  bool get _accountInFourthSegment => this == solana || this == sui;
+
+  /// The derivation path for account [index] on this chain — the inverse of
+  /// [accountIndexFromPath].
+  String accountPathForIndex(int index) {
+    final parts = defaultAccountPath.split('/');
+    if (_accountInFourthSegment) {
+      parts[3] = "$index'";
+    } else {
+      parts[parts.length - 1] = '$index';
+    }
+    return parts.join('/');
+  }
+
+  /// The account number encoded in a derivation [path] on this chain.
+  ///
+  /// Reads the segment that varies per account, not a list position: a list of
+  /// `[eth#0, eth#1, sol#0]` labels its rows 0/1/0, and Solana's second
+  /// account (`m/44'/501'/1'/0'`) reads 1, not 0.
+  int accountIndexFromPath(String path) {
+    final parts = path.split('/');
+    final pos = _accountInFourthSegment ? 3 : parts.length - 1;
+    if (pos < 0 || pos >= parts.length) return 0;
+    return int.tryParse(parts[pos].replaceAll("'", '')) ?? 0;
+  }
+
   /// The Ledger app this chain is exposed as over BLE.
   LedgerApp get ledgerApp => switch (this) {
         Chain.ethereum => LedgerApp.ethereum,

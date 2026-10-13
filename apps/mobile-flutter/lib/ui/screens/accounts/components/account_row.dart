@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/wallet_accounts.dart';
-import '../../../../utils/formatting.dart';
 import '../../../theme/color_tokens.dart';
 import '../../../widgets/common/neo_card.dart';
 
@@ -49,12 +48,19 @@ class AccountRow extends StatelessWidget {
                 height: 28,
                 child: Center(
                   child: Text(
-                    '${accountIndexInPath(account.derivationPath)}',
+                    '${account.accountIndex}',
                     style: TextStyle(
-                      color: c.text.withAlpha(150),
+                      // Light (neo) uses the brand ink — pure black, matching
+                      // the chip outline — with a heavy weight so the number
+                      // reads as bold; dark keeps the original translucent
+                      // muted tone.
+                      color: c.neobrutalism ? c.brandInk : c.text.withAlpha(150),
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
+                      // No monospace: the generic monospace family has no bold
+                      // face, so the weight collapsed to regular and the number
+                      // did not read as bold.
+                      fontWeight:
+                          c.neobrutalism ? FontWeight.w800 : FontWeight.w700,
                     ),
                   ),
                 ),

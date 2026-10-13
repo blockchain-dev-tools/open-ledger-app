@@ -91,8 +91,7 @@ class PrivateKeyListScreen extends StatelessWidget {
                     _AccountRow(
                       c: c,
                       account: visibleAccounts[i],
-                      accountIndex:
-                          accountIndexInPath(visibleAccounts[i].derivationPath),
+                      accountIndex: visibleAccounts[i].accountIndex,
                       enabled:
                           exportService != null || encodedKeyFor != null,
                       onTap: () => _openKey(context, visibleAccounts[i]),

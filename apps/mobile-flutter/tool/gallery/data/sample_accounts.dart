@@ -74,6 +74,15 @@ const ChainAccount btcAccount2 = ChainAccount(
   chain: 'bitcoin',
 );
 
+const ChainAccount solAccount2 = ChainAccount(
+  // Wrapped SOL mint — the canonical, widely documented Solana address, used
+  // here as a second, distinguishable base58 string.
+  address: 'So11111111111111111111111111111111111111112',
+  derivationPath: "m/44'/501'/1'/0'",
+  publicKey: _ed25519PubKey,
+  chain: 'solana',
+);
+
 /// Full wallet snapshot for the Main screen preview (Accounts tab).
 final WalletAccounts sampleWalletAccounts = WalletAccounts(
   mnemonicFingerprint: 'c0ffee12',
@@ -92,6 +101,10 @@ final WalletAccounts sampleWalletAccounts = WalletAccounts(
 const Map<String, ChainAccount> sampleAccounts = {
   'eth': ethAccount,
   'sol': solAccount,
+  // Solana's *second* account. Its number comes from the 4th path segment
+  // (`m/44'/501'/1'/0'`) rather than the list position — the account-index fix
+  // the `Account Detail · Solana #1` scenario exercises.
+  'sol1': solAccount2,
   'btc': btcAccount,
   'tron': tronAccount,
   'sui': suiAccount,

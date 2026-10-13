@@ -157,7 +157,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${l10n.accountWithIndex(accountIndexInPath(widget.account.derivationPath))} · '
+                '${l10n.accountWithIndex(widget.account.accountIndex)} · '
                 '${widget.account.derivationPath}',
                 style: TextStyle(
                   color: c.text.withAlpha(120),

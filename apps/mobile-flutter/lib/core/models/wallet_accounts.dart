@@ -3,6 +3,8 @@
 /// Includes 5 chains: Ethereum, Solana, Bitcoin, Tron, Sui.
 library;
 
+import 'chain.dart';
+
 /// A single chain account derived from the wallet's mnemonic.
 class ChainAccount {
   /// On-chain address (hex for ETH, base58 for Solana, bech32 for BTC, etc.)
@@ -16,6 +18,12 @@ class ChainAccount {
 
   /// Chain identifier: 'ethereum', 'solana', 'bitcoin', 'tron', or 'sui'.
   final String chain;
+
+  /// The account number this account represents on [chain] — e.g. `0` for the
+  /// default ETH path `m/44'/60'/0'/0/0`, or `1` for Solana's second account
+  /// `m/44'/501'/1'/0'`.
+  int get accountIndex =>
+      Chain.fromId(chain)?.accountIndexFromPath(derivationPath) ?? 0;
 
   const ChainAccount({
     required this.address,

@@ -60,6 +60,7 @@ scenarios=(
   "main-settings-theme-sheet|/screens/main?tab=2&themeSheet=1"
   "account-eth|/account/0?chain=eth"
   "account-sol|/account/0?chain=sol"
+  "account-sol-1|/account/1?chain=sol1"
   "account-btc|/account/0?chain=btc"
   "account-tron|/account/0?chain=tron"
   "account-sui|/account/0?chain=sui"
@@ -117,6 +118,13 @@ shoot tokens-light /tokens/light light zh
 shoot components /components light en
 shoot main-settings-theme-sheet "/screens/main?tab=2&themeSheet=1" light zh
 shoot account-eth /account/0?chain=eth light en
+# The neo chrome is light-only, so the History and Settings tabs need a light
+# capture too — the dark pass above never sees their neobrutalist styling.
+shoot main-history /screens/main?tab=1 light en
+shoot main-settings /screens/main?tab=2 light en
+# Solana's second account: the detail badge must read "Account 1" (from the
+# path's 4th segment), not the list position.
+shoot account-sol-1 /account/1?chain=sol1 light en
 # The Vault screen has its own light-mode risks (the idle FAB's neutral disc
 # sits on a white background), so the FAB states get a light cross-check too.
 shoot main-idle /screens/main?bleState=idle light en

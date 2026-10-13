@@ -321,6 +321,14 @@ const List<GalleryItem> _accountItems = [
     pushRoute: true,
   ),
   GalleryItem(
+    title: 'Account Detail · Solana #1',
+    subtitle: '第二个 Solana 账户 · 序号取路径第 4 段（索引 1，非列表位）',
+    icon: Icons.bubble_chart_outlined,
+    path: '/account/1?chain=sol1',
+    extra: solAccount2,
+    pushRoute: true,
+  ),
+  GalleryItem(
     title: 'Account Detail · Bitcoin',
     subtitle: 'bech32 地址 · m/84 native segwit',
     icon: Icons.token_outlined,

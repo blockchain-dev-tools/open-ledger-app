@@ -90,32 +90,16 @@ class _AccountsTabState extends State<AccountsTab> {
 
   // ── Account management ─────────────────────────────────────────────
 
+  /// The next free path for [chain] — `Chain.accountPathForIndex` owns the
+  /// per-chain rule (EVM/Tron vary the last segment, Solana/Sui the 4th).
   String _nextPathForChain(String chain, List<ChainAccount> accounts) {
-    final defaultPath = Chain.fromId(chain)!.defaultAccountPath;
-    final parts = defaultPath.split('/');
-
-    int maxIdx = -1;
+    final c = Chain.fromId(chain)!;
+    var maxIdx = -1;
     for (final acct in accounts) {
-      int idx;
-      if (chain == 'solana' || chain == 'sui') {
-        idx =
-            int.tryParse(
-              acct.derivationPath.split('/')[3].replaceAll("'", ''),
-            ) ??
-            -1;
-      } else {
-        idx = int.tryParse(acct.derivationPath.split('/').last) ?? -1;
-      }
+      final idx = c.accountIndexFromPath(acct.derivationPath);
       if (idx > maxIdx) maxIdx = idx;
     }
-
-    final nextIdx = maxIdx + 1;
-    if (chain == 'solana' || chain == 'sui') {
-      parts[3] = "$nextIdx'";
-    } else {
-      parts[parts.length - 1] = '$nextIdx';
-    }
-    return parts.join('/');
+    return c.accountPathForIndex(maxIdx + 1);
   }
 
   Future<void> _addAccount(String chain) async {

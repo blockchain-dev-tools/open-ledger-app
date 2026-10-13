@@ -40,15 +40,6 @@ extension ChainLabelL10n on AppLocalizations {
 String chainIconAssetPath(String chainId) =>
     Chain.fromId(chainId)?.iconAssetPath ?? Chain.ethereum.iconAssetPath;
 
-/// The account number encoded in a BIP-32 / SLIP-10 [path].
-///
-/// Reads the **last** path component, not a list position: a list of
-/// `[eth#0, eth#1, sol#0]` must label its rows 0/1/0, not 0/1/2.
-int accountIndexInPath(String path) {
-  final match = RegExp(r"(\d+)'?$").firstMatch(path);
-  return match == null ? 0 : int.tryParse(match.group(1)!) ?? 0;
-}
-
 /// Groups a raw [address] into space-separated 4-char chunks so it wraps
 /// naturally without splitting a group across lines. A leading `0x` prefix is
 /// attached to the first chunk.

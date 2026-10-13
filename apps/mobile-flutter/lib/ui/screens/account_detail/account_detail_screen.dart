@@ -38,7 +38,6 @@ class AccountDetailScreen extends StatelessWidget {
     final state = GoRouterState.of(context);
     final account =
         state.extra is ChainAccount ? state.extra as ChainAccount : null;
-    final accountIndex = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -77,7 +76,7 @@ class AccountDetailScreen extends StatelessWidget {
       ),
       body: account == null
           ? const AccountDetailPlaceholder()
-          : _buildContent(context, c, account, accountIndex),
+          : _buildContent(context, c, account),
     );
   }
 
@@ -86,7 +85,6 @@ class AccountDetailScreen extends StatelessWidget {
     BuildContext context,
     ColorTokens c,
     ChainAccount account,
-    int index,
   ) {
     final l10n = AppLocalizations.of(context)!;
 
@@ -96,7 +94,10 @@ class AccountDetailScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Identity header ──────────────────────────────────────
-          AccountIdentityHeader(chain: account.chain, index: index),
+          AccountIdentityHeader(
+            chain: account.chain,
+            index: account.accountIndex,
+          ),
 
           const SizedBox(height: 24),
 
