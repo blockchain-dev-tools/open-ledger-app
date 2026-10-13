@@ -10,6 +10,8 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 
 /// Account list tab — the Vault home.
 ///
@@ -156,15 +158,17 @@ class _AccountsTabState extends State<AccountsTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: c.text.withAlpha(12),
-                borderRadius: BorderRadius.circular(R.xl),
+            NeoCard(
+              // Dark falls back to the original translucent rounded tile.
+              legacyEdgeWidth: 0,
+              legacyRadius: R.xl,
+              legacyBackground: c.text.withAlpha(12),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: Icon(Icons.account_balance_wallet_outlined,
+                    size: 34, color: c.text.withAlpha(70)),
               ),
-              child: Icon(Icons.account_balance_wallet_outlined,
-                  size: 34, color: c.text.withAlpha(70)),
             ),
             const SizedBox(height: 20),
             Text(
@@ -199,7 +203,9 @@ class _AccountsTabState extends State<AccountsTab> {
       children: [
         for (final chain in _chainOrder) ...[
           _buildChainSection(c, chain, grouped[chain] ?? []),
-          const SizedBox(height: 10),
+          // Clears the block's own offset shadow (Neo.lift) plus a gap; the
+          // legacy card has no shadow, so it keeps the tighter original gap.
+          SizedBox(height: c.neobrutalism ? 14.0 : 10.0),
         ],
       ],
     );
@@ -217,16 +223,12 @@ class _AccountsTabState extends State<AccountsTab> {
     final expanded = _expandedChains.contains(chain);
     final count = accounts.length;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(
-          color: c.borderStrong,
-          width: expanded ? 2 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
+    return NeoCard(
+      clip: true,
+      // Light mode outlines the section in brand ink (black) at [Neo.edge] px;
+      // dark falls back to the original black-2px-while-expanded hairline.
+      edge: c.brandInk,
+      legacyEdgeWidth: expanded ? 2 : 1,
       child: Column(
         children: [
           // ── Header (tap anywhere to expand/collapse) ──────────────
@@ -243,24 +245,43 @@ class _AccountsTabState extends State<AccountsTab> {
               });
             },
             child: Padding(
+              // Deliberately no fill for the open section: the expanded body
+              // and the flipped chevron carry the state, not a colour block.
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: c.primary.withAlpha(expanded ? 30 : 18),
-                      borderRadius: BorderRadius.circular(R.lg),
+                  // Light mode: the logo sits unframed — a 2px outline around it
+                  // just doubled up on the section's own outline. Dark restores
+                  // the original translucent lime tile.
+                  if (c.neobrutalism)
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Center(
+                        child: SvgPicture.asset(
+                          iconPath,
+                          width: 26,
+                          height: 26,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: c.primary.withAlpha(expanded ? 30 : 18),
+                        borderRadius: BorderRadius.circular(R.lg),
+                      ),
+                      child: SvgPicture.asset(
+                        iconPath,
+                        width: 22,
+                        height: 22,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                    child: SvgPicture.asset(
-                      iconPath,
-                      width: 22,
-                      height: 22,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -271,7 +292,9 @@ class _AccountsTabState extends State<AccountsTab> {
                           style: TextStyle(
                             color: c.text,
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: c.neobrutalism
+                                ? FontWeight.w700
+                                : FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -307,7 +330,14 @@ class _AccountsTabState extends State<AccountsTab> {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Divider(height: 1, color: c.borderStrong),
+                      if (c.neobrutalism)
+                        Divider(
+                          height: Neo.edge,
+                          thickness: Neo.edge,
+                          color: c.neoEdge,
+                        )
+                      else
+                        Divider(height: 1, color: c.borderStrong),
                       if (accounts.isEmpty)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -337,9 +367,23 @@ class _AccountsTabState extends State<AccountsTab> {
   }
 
   Widget _buildAddAccountButton(ColorTokens c, String chain) {
+    if (c.neobrutalism) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+        child: NeoButton(
+          key: ValueKey('add-account-$chain'),
+          label: AppLocalizations.of(context)!.addAccount,
+          icon: Icons.add,
+          expanded: true,
+          onTap: () => _addAccount(chain),
+        ),
+      );
+    }
+    // Dark keeps the original bare label row: no fill, no outline.
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
       child: GestureDetector(
+        key: ValueKey('add-account-$chain'),
         onTap: () => _addAccount(chain),
         behavior: HitTestBehavior.opaque,
         child: Container(
@@ -378,21 +422,25 @@ class _AccountsTabState extends State<AccountsTab> {
         child: Row(
           children: [
             // ── Account number token ─────────────────────────────────
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: c.text.withAlpha(12),
-                borderRadius: BorderRadius.circular(R.sm),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${accountIndexInPath(acct.derivationPath)}',
-                style: TextStyle(
-                  color: c.text.withAlpha(150),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
+            NeoCard(
+              lifted: false,
+              // Dark falls back to the original translucent chip, no outline.
+              legacyEdgeWidth: 0,
+              legacyRadius: R.sm,
+              legacyBackground: c.text.withAlpha(12),
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: Center(
+                  child: Text(
+                    '${accountIndexInPath(acct.derivationPath)}',
+                    style: TextStyle(
+                      color: c.text.withAlpha(150),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                 ),
               ),
             ),

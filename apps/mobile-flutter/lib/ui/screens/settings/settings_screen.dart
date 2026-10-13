@@ -467,7 +467,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     // Inset grouped list: surface cards float on the tinted grouped
-    // background (iOS-style in light: white cards on #F2F2F7).
+    // background (white cards on the pale lime tint in light).
     final content = ColoredBox(
       color: c.groupedBg,
       child: ListView(

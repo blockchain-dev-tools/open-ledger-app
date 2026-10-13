@@ -11,6 +11,8 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/common/section_header.dart';
 
@@ -57,6 +59,14 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
         backgroundColor: c.bg,
         elevation: 0,
         scrolledUnderElevation: 0,
+        // Light mode separates the neo title bar from the body with a hard 2px
+        // rule instead of a soft elevation shadow; dark keeps the original
+        // seamless bar.
+        shape: c.neobrutalism
+            ? Border(
+                bottom: BorderSide(color: c.neoEdge, width: Neo.edge),
+              )
+            : null,
         // Pull the title closer to the back button (default leading width is
         // 56 + titleSpacing 16, which reads as a wide empty gap).
         titleSpacing: 0,
@@ -88,8 +98,18 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.qr_code, size: 64, color: c.text.withAlpha(60)),
-          const SizedBox(height: 16),
+          if (c.neobrutalism)
+            NeoCard(
+              child: SizedBox(
+                width: 88,
+                height: 88,
+                child:
+                    Icon(Icons.qr_code, size: 44, color: c.text.withAlpha(60)),
+              ),
+            )
+          else
+            Icon(Icons.qr_code, size: 64, color: c.text.withAlpha(60)),
+          SizedBox(height: c.neobrutalism ? 20 : 16),
           Text(
             AppLocalizations.of(context)!.noAccountSelected,
             style: TextStyle(
@@ -150,20 +170,23 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Material(
-          color: c.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.lg),
-            side: BorderSide(color: c.border.withAlpha(80)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
+        NeoCard(
+          clip: true,
+          // Dark restores the original hairline card.
+          legacyEdge: c.border.withAlpha(80),
+          child: GestureDetector(
+            key: const ValueKey('export-private-key'),
+            behavior: HitTestBehavior.opaque,
             onTap: () => context.push('/export-private-key', extra: account),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  Icon(Icons.vpn_key_outlined, size: 20, color: c.primary),
+                  Icon(
+                    Icons.vpn_key_outlined,
+                    size: 20,
+                    color: c.neobrutalism ? c.accent : c.primary,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -174,7 +197,9 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                           style: TextStyle(
                             color: c.text,
                             fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: c.neobrutalism
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -198,7 +223,9 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        // Clears the block's own offset shadow before the hint text; the legacy
+        // card has none, so it keeps the tighter original gap.
+        SizedBox(height: c.neobrutalism ? 14.0 : 10.0),
         Text(
           l10n.exportEntryHint,
           style: TextStyle(color: c.text.withAlpha(100), fontSize: 12),
@@ -207,29 +234,46 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
     );
   }
 
-  /// Left-aligned identity header: 40×40 circular tinted chain icon +
-  /// chain label + `Account <index>` subtitle.
+  /// Light mode: an outlined chain tile, a heavy chain label and an
+  /// `Account <index>` badge in the accent fill. Dark keeps the original
+  /// circular tinted icon, 16px label and plain subtitle.
   Widget _buildIdentityHeader(
       BuildContext context, ColorTokens c, String chain, int index) {
     final l10n = AppLocalizations.of(context)!;
+    final neo = c.neobrutalism;
 
     return Row(
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: c.primary.withAlpha(20),
-            borderRadius: BorderRadius.circular(20),
+        if (neo)
+          NeoCard(
+            lifted: false,
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: SvgPicture.asset(
+                chainIconAssetPath(chain),
+                width: 26,
+                height: 26,
+                fit: BoxFit.contain,
+              ),
+            ),
+          )
+        else
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: c.primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: SvgPicture.asset(
+              chainIconAssetPath(chain),
+              width: 22,
+              height: 22,
+              fit: BoxFit.contain,
+            ),
           ),
-          child: SvgPicture.asset(
-            chainIconAssetPath(chain),
-            width: 22,
-            height: 22,
-            fit: BoxFit.contain,
-          ),
-        ),
-        const SizedBox(width: 12),
+        SizedBox(width: neo ? 14.0 : 12.0),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -237,25 +281,62 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               AppLocalizations.of(context)!.chainLabel(chain),
               style: TextStyle(
                 color: c.text,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontSize: neo ? 20.0 : 16.0,
+                fontWeight: neo ? FontWeight.w800 : FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              l10n.accountWithIndex(index),
-              style: TextStyle(
-                color: c.text.withAlpha(120),
-                fontSize: 13,
+            SizedBox(height: neo ? 6.0 : 2.0),
+            if (neo)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: c.accent,
+                  borderRadius: BorderRadius.circular(Neo.radius),
+                  border: Border.all(color: c.neoEdge, width: Neo.edge),
+                ),
+                child: Text(
+                  l10n.accountWithIndex(index),
+                  style: TextStyle(
+                    color: c.onAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              )
+            else
+              Text(
+                l10n.accountWithIndex(index),
+                style: TextStyle(
+                  color: c.text.withAlpha(120),
+                  fontSize: 13,
+                ),
               ),
-            ),
           ],
         ),
       ],
     );
   }
 
-  /// One full-width "Address" card: QR + left-aligned grouped address +
+  /// Light mode wraps data in an outlined block so it reads as data to be
+  /// checked; dark restores the original bare text.
+  Widget _codeBlock(
+    ColorTokens c,
+    EdgeInsetsGeometry padding,
+    Widget child,
+  ) {
+    if (!c.neobrutalism) return child;
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: c.bg,
+        borderRadius: BorderRadius.circular(Neo.radius),
+        border: Border.all(color: c.neoEdge, width: Neo.edge),
+      ),
+      child: child,
+    );
+  }
+
+  /// One full-width "Address" card: QR + outlined address block +
   /// full-width copy button. The whole card is tappable to copy.
   Widget _buildReceiveCard(
       BuildContext context, ColorTokens c, String address) {
@@ -263,14 +344,13 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final qrSize = math.min(200.0, screenWidth - 96.0);
 
-    return Material(
-      color: c.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(R.lg),
-        side: BorderSide(color: c.border.withAlpha(80)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
+    return NeoCard(
+      clip: true,
+      // Dark restores the original hairline card.
+      legacyEdge: c.border.withAlpha(80),
+      child: GestureDetector(
+        key: const ValueKey('receive-card'),
+        behavior: HitTestBehavior.opaque,
         onTap: () => _copy(context, address),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -282,7 +362,9 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                 style: TextStyle(
                   color: c.text,
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: c.neobrutalism
+                      ? FontWeight.w700
+                      : FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -293,7 +375,12 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                     // Black-on-white is REQUIRED for QR scannability —
                     // the only literal colors allowed on this screen.
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(R.lg),
+                    borderRadius: BorderRadius.circular(
+                      c.neobrutalism ? Neo.radius : R.lg,
+                    ),
+                    border: c.neobrutalism
+                        ? Border.all(color: c.neoEdge, width: Neo.edge)
+                        : null,
                   ),
                   child: QrImageView(
                     data: address,
@@ -312,21 +399,37 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                _groupAddress(address),
-                style: TextStyle(
-                  color: c.text,
-                  fontSize: 15,
-                  fontFamily: 'monospace',
-                  height: 1.5,
+              // Light mode puts the address in its own outlined block so it
+              // reads as data to be checked, not prose to be skimmed.
+              _codeBlock(
+                c,
+                const EdgeInsets.all(12),
+                Text(
+                  _groupAddress(address),
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 15,
+                    fontFamily: 'monospace',
+                    height: 1.5,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              PrimaryButton(
-                label: l10n.copyAddress,
-                onTap: () => _copy(context, address),
-                outline: true,
-              ),
+              if (c.neobrutalism)
+                NeoButton(
+                  key: const ValueKey('copy-address'),
+                  label: l10n.copyAddress,
+                  icon: Icons.copy,
+                  quiet: true,
+                  expanded: true,
+                  onTap: () => _copy(context, address),
+                )
+              else
+                PrimaryButton(
+                  label: l10n.copyAddress,
+                  onTap: () => _copy(context, address),
+                  outline: true,
+                ),
             ],
           ),
         ),
@@ -340,13 +443,10 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
       BuildContext context, ColorTokens c, ChainAccount account) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Material(
-      color: c.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(R.lg),
-        side: BorderSide(color: c.border.withAlpha(80)),
-      ),
-      clipBehavior: Clip.antiAlias,
+    return NeoCard(
+      clip: true,
+      // Dark restores the original hairline card.
+      legacyEdge: c.border.withAlpha(80),
       child: Column(
         children: [
           _buildDetailRow(
@@ -354,7 +454,14 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
             label: l10n.derivationPath,
             value: account.derivationPath,
           ),
-          Divider(height: 1, color: c.border),
+          if (c.neobrutalism)
+            Divider(
+              height: Neo.edge,
+              thickness: Neo.edge,
+              color: c.neoEdge,
+            )
+          else
+            Divider(height: 1, color: c.border),
           if (account.publicKey.isNotEmpty)
             _buildPublicKeyRow(context, c, account.publicKey),
         ],
@@ -433,15 +540,24 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                   _copyIcon(context, c, pubKey),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.showMore,
-                style: TextStyle(
-                  color: c.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              SizedBox(height: c.neobrutalism ? 10.0 : 6.0),
+              if (c.neobrutalism)
+                NeoButton(
+                  key: const ValueKey('public-key-expand'),
+                  label: l10n.showMore,
+                  icon: Icons.unfold_more,
+                  quiet: true,
+                  onTap: () => setState(() => _publicKeyExpanded = true),
+                )
+              else
+                Text(
+                  l10n.showMore,
+                  style: TextStyle(
+                    color: c.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -464,27 +580,40 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          SelectableText(
-            pubKey,
-            style: TextStyle(
-              color: c.text.withAlpha(160),
-              fontSize: 12,
-              fontFamily: 'monospace',
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => setState(() => _publicKeyExpanded = false),
-            child: Text(
-              l10n.showLess,
+          _codeBlock(
+            c,
+            const EdgeInsets.all(10),
+            SelectableText(
+              pubKey,
               style: TextStyle(
-                color: c.primary,
+                color: c.text.withAlpha(180),
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace',
+                height: 1.4,
               ),
             ),
           ),
+          SizedBox(height: c.neobrutalism ? 10.0 : 8.0),
+          if (c.neobrutalism)
+            NeoButton(
+              key: const ValueKey('public-key-collapse'),
+              label: l10n.showLess,
+              icon: Icons.unfold_less,
+              quiet: true,
+              onTap: () => setState(() => _publicKeyExpanded = false),
+            )
+          else
+            InkWell(
+              onTap: () => setState(() => _publicKeyExpanded = false),
+              child: Text(
+                l10n.showLess,
+                style: TextStyle(
+                  color: c.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
         ],
       ),
     );
