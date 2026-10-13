@@ -12,6 +12,7 @@ import '../theme/color_tokens.dart';
 import '../widgets/ble/ble_control_sheet.dart';
 import '../widgets/ble/ble_fab.dart';
 import '../widgets/ble/ble_log_controller.dart';
+import '../widgets/common/grid_background.dart';
 import '../widgets/vault/vault_switcher.dart';
 import 'accounts/accounts_tab.dart';
 import 'history/history_screen.dart';
@@ -118,22 +119,22 @@ class _MainScreenState extends State<MainScreen> {
   // / add / remove. [IndexedStack] keeps every tab's State alive across
   // switches because the children stay in the tree (same position, same type).
   List<Widget> _buildTabs() => [
-        AccountsTab(walletService: widget.walletService),
-        HistoryScreen(
-          appState: widget.appState,
-          previewRecords: widget.previewHistory,
-        ),
-        Builder(
-          builder: (context) => SettingsScreen(
-            settingsService:
-                widget.appState?.settingsService ?? widget.settingsService,
-            walletService: widget.walletService,
-            appState: widget.appState,
-            isTab: true,
-            previewThemeSheet: widget.previewThemeSheet,
-          ),
-        ),
-      ];
+    AccountsTab(walletService: widget.walletService),
+    HistoryScreen(
+      appState: widget.appState,
+      previewRecords: widget.previewHistory,
+    ),
+    Builder(
+      builder: (context) => SettingsScreen(
+        settingsService:
+            widget.appState?.settingsService ?? widget.settingsService,
+        walletService: widget.walletService,
+        appState: widget.appState,
+        isTab: true,
+        previewThemeSheet: widget.previewThemeSheet,
+      ),
+    ),
+  ];
 
   /// Open the one BLE sheet. The APDU log is its second view, not a second
   /// sheet — house rule: never stack a sheet on a sheet.
@@ -162,8 +163,20 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: scaffoldBg,
+        // Light mode turns the title bar into a white block closed by a hard
+        // black rule, so it reads as the page's top edge rather than blending
+        // into the tinted body. Dark keeps the seamless bar (`groupedBg`
+        // equals `bg` there) with no rule and the theme's scroll-under shadow.
+        backgroundColor: c.neobrutalism ? c.surface : scaffoldBg,
+        scrolledUnderElevation: c.neobrutalism ? 0 : null,
         surfaceTintColor: Colors.transparent,
+        shape: c.neobrutalism
+            ? Border(
+                // Twice the standard edge so the title bar reads as a heavier
+                // page-top rule than the card outlines below it.
+                bottom: BorderSide(color: c.neoEdge, width: Neo.edge * 2),
+              )
+            : null,
         title: _currentIndex == 0 && widget.walletService != null
             ? VaultSwitcherTitle(
                 walletService: widget.walletService!,
@@ -173,17 +186,13 @@ class _MainScreenState extends State<MainScreen> {
                 _currentIndex == 0
                     ? l10n.accountsTitle
                     : _currentIndex == 1
-                        ? l10n.historyTab
-                        : l10n.settings,
-                style: TextStyle(
-                  color: c.text,
-                  fontWeight: FontWeight.w700,
-                ),
+                    ? l10n.historyTab
+                    : l10n.settings,
+                style: TextStyle(color: c.text, fontWeight: FontWeight.w700),
               ),
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _buildTabs(),
+      body: GridBackground(
+        child: IndexedStack(index: _currentIndex, children: _buildTabs()),
       ),
       // BLE is controlled from the Vault screen via a single floating
       // button (chain picker / stop / switch in its bottom sheet).

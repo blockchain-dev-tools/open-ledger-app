@@ -87,6 +87,14 @@ class ColorTokens {
   /// washes out against white.
   final Color brandInk;
 
+  /// Line colour of the reference grid painted behind the main tabs (see
+  /// `GridBackground`). Only read while [neobrutalism] is true.
+  ///
+  /// Mid grey at 20% — the value neobrutalism.dev uses (`#80808033`) — so the
+  /// lines register as paper ruling on [groupedBg] without competing with the
+  /// black card outlines.
+  final Color gridLine;
+
   const ColorTokens({
     required this.primary,
     required this.bg,
@@ -106,6 +114,7 @@ class ColorTokens {
     required this.neoShadow,
     required this.actionFill,
     required this.brandInk,
+    required this.gridLine,
   });
 
   static const dark = ColorTokens(
@@ -124,12 +133,13 @@ class ColorTokens {
     // Black text on the lime accent, matching `onPrimary`.
     onAccent: Color(0xFF000000),
     // Neo chrome is light-mode only; dark keeps the original flat cards. The
-    // four neo colours below mirror the light values and are never read.
+    // neo colours below mirror the light values and are never read.
     neobrutalism: false,
     neoEdge: Color(0xFF000000),
     neoShadow: Color(0xFF000000),
     actionFill: Color(0xFF7AE60F),
     brandInk: Color(0xFF000000),
+    gridLine: Color(0x33808080),
   );
 
   static const light = ColorTokens(
@@ -154,6 +164,8 @@ class ColorTokens {
     actionFill: Color(0xFF7AE60F),
     // Black outline/label: lime on white would wash out.
     brandInk: Color(0xFF000000),
+    // Mid grey at 20%, the reference grid value from neobrutalism.dev.
+    gridLine: Color(0x33808080),
   );
 }
 
@@ -194,4 +206,9 @@ class Neo {
 
   /// Corner radius for neo blocks — tighter than [R.lg].
   static const double radius = R.sm;
+
+  /// Cell size of the reference grid painted behind the main tabs — the
+  /// `70px 70px` step neobrutalism.dev uses. Both axes rule at this interval
+  /// in [ColorTokens.gridLine].
+  static const double gridStep = 70.0;
 }

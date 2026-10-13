@@ -5,6 +5,8 @@ import '../../../core/models/signature_record.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/tx_details_card.dart';
 
 /// History tab — lists all completed signing operations.
@@ -54,7 +56,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       itemCount: history.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      // Neo blocks carry an offset shadow (Neo.lift), so they need a wider gap
+      // than the legacy cards to clear it.
+      separatorBuilder: (_, _) =>
+          SizedBox(height: c.neobrutalism ? 14.0 : 8.0),
       itemBuilder: (context, index) {
         final record = history[history.length - 1 - index]; // newest first
         final isExpanded = _expandedIndex == index;
@@ -111,16 +116,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ? AppLocalizations.of(context)!.signed
             : AppLocalizations.of(context)!.failedStatus;
 
-    return GestureDetector(
-      onTap: () => setState(() {
-        _expandedIndex = isExpanded ? null : index;
-      }),
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: c.border.withAlpha(80)),
-        ),
+    return NeoCard(
+      clip: true,
+      // Dark restores the original hairline card.
+      legacyEdge: c.border.withAlpha(80),
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _expandedIndex = isExpanded ? null : index;
+        }),
+        behavior: HitTestBehavior.opaque,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -129,7 +133,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Row(
                 children: [
-                  // Status icon
+                  // Status icon — a plain tinted chip, no outline in either mode.
                   Container(
                     width: 36,
                     height: 36,
@@ -158,7 +162,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         Text(
                           _truncateAddress(record.signingAddress),
                           style: TextStyle(
-                            color: c.text.withAlpha(120),
+                            color: c.neobrutalism
+                                ? c.text
+                                : c.text.withAlpha(120),
                             fontSize: 12,
                             fontFamily: 'monospace',
                           ),
@@ -167,32 +173,43 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
 
-                  // Status badge
+                  // Status badge — light mode: pastel status fill with a black
+                  // label; dark keeps the original translucent tinted chip.
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: statusColor.withAlpha(25),
-                      borderRadius: BorderRadius.circular(6),
+                      color: c.neobrutalism
+                          ? statusColor.withAlpha(70)
+                          : statusColor.withAlpha(25),
+                      borderRadius: BorderRadius.circular(
+                          c.neobrutalism ? Neo.radius : 6),
+                      border: c.neobrutalism
+                          ? Border.all(color: c.neoEdge, width: Neo.edge)
+                          : null,
                     ),
                     child: Text(
                       statusLabel,
                       style: TextStyle(
-                        color: statusColor,
+                        color: c.neobrutalism ? c.text : statusColor,
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: c.neobrutalism
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                       ),
                     ),
                   ),
                   const SizedBox(width: 4),
 
                   // Expand chevron
-                  Icon(
-                    isExpanded
-                        ? Icons.expand_less
-                        : Icons.expand_more,
-                    color: c.text.withAlpha(100),
-                    size: 20,
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: c.text.withAlpha(100),
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -204,7 +221,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Text(
                 _formatTimestamp(record.timestamp),
                 style: TextStyle(
-                  color: c.text.withAlpha(80),
+                  color: c.neobrutalism ? c.text : c.text.withAlpha(80),
                   fontSize: 11,
                 ),
               ),
@@ -212,11 +229,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             // ── Expanded detail ────────────────────────────────────
             if (isExpanded) ...[
-              Container(
-                height: 1,
-                color: c.border.withAlpha(60),
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-              ),
+              // Light mode rules off the expanded body with a full-bleed brand
+              // rule; dark keeps the original inset hairline.
+              if (c.neobrutalism)
+                Divider(
+                  height: Neo.edge,
+                  thickness: Neo.edge,
+                  color: c.neoEdge,
+                )
+              else
+                Container(
+                  height: 1,
+                  color: c.border.withAlpha(60),
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -234,6 +260,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       parsedData: record.parsedData,
                       payloadHex: record.payloadHex,
                       c: c,
+                      neo: c.neobrutalism,
                     ),
                     const SizedBox(height: 10),
 
@@ -268,30 +295,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final truncated = hex.length > 48
         ? '${hex.substring(0, 48)}...'
         : hex;
+    final content = SelectableText(
+      '0x$truncated',
+      style: TextStyle(
+        color: c.text.withAlpha(180),
+        fontSize: 11,
+        fontFamily: 'monospace',
+        height: 1.3,
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
             style: TextStyle(
-                color: c.text.withAlpha(130), fontSize: 12)),
+              color: c.neobrutalism ? c.text : c.text.withAlpha(130),
+              fontSize: 12,
+              fontWeight:
+                  c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
+            )),
         const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: c.bg,
-            borderRadius: BorderRadius.circular(R.sm),
-          ),
-          child: SelectableText(
-            '0x$truncated',
-            style: TextStyle(
-              color: c.text.withAlpha(180),
-              fontSize: 11,
-              fontFamily: 'monospace',
-              height: 1.3,
+        // Light mode outlines the hex as data to be checked; dark keeps the
+        // original plain filled block.
+        if (c.neobrutalism)
+          SizedBox(
+            width: double.infinity,
+            child: NeoCodeBlock(
+              padding: const EdgeInsets.all(10),
+              child: content,
             ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: c.bg,
+              borderRadius: BorderRadius.circular(R.sm),
+            ),
+            child: content,
           ),
-        ),
       ],
     );
   }
@@ -305,8 +348,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
           width: 100,
           child: Text(
             label,
-            style:
-                TextStyle(color: c.text.withAlpha(130), fontSize: 12),
+            style: TextStyle(
+              color: c.neobrutalism ? c.text : c.text.withAlpha(130),
+              fontSize: 12,
+              fontWeight:
+                  c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
+            ),
           ),
         ),
         const SizedBox(width: 8),

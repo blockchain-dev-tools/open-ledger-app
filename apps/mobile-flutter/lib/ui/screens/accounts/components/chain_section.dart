@@ -68,21 +68,16 @@ class ChainSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
-                  // Light mode: the logo sits unframed — a 2px outline around it
-                  // just doubled up on the section's own outline. Dark restores
-                  // the original translucent lime tile.
+                  // The logo fills a 40px slot in both themes, so it reads the
+                  // same size either way. Light leaves it unframed — a 2px
+                  // outline around it just doubled up on the section's own
+                  // outline. Dark restores the original translucent lime tile.
                   if (c.neobrutalism)
-                    SizedBox(
+                    SvgPicture.asset(
+                      iconPath,
                       width: 40,
                       height: 40,
-                      child: Center(
-                        child: SvgPicture.asset(
-                          iconPath,
-                          width: 26,
-                          height: 26,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+                      fit: BoxFit.contain,
                     )
                   else
                     Container(
@@ -94,8 +89,8 @@ class ChainSection extends StatelessWidget {
                       ),
                       child: SvgPicture.asset(
                         iconPath,
-                        width: 22,
-                        height: 22,
+                        width: 40,
+                        height: 40,
                         fit: BoxFit.contain,
                       ),
                     ),

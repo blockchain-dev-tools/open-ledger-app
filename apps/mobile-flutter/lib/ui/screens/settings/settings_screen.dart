@@ -464,29 +464,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     // Inset grouped list: surface cards float on the tinted grouped
-    // background (white cards on the pale lime tint in light).
-    final content = ColoredBox(
-      color: c.groupedBg,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          // ── Section: Appearance ──────────────────────────────────
-          _buildAppearanceGroup(c, l10n, isDark),
-          const SizedBox(height: 26),
+    // background (white cards on the pale lime tint in light). Nothing paints
+    // that background here — the parent does (MainScreen's Scaffold as a tab,
+    // this screen's own Scaffold standalone), so the neo grid behind the tabs
+    // shows through.
+    final content = ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      children: [
+        // ── Section: Appearance ──────────────────────────────────
+        _buildAppearanceGroup(c, l10n, isDark),
+        const SizedBox(height: 26),
 
-          // ── Section: Security ────────────────────────────────────
-          _buildSecurityGroup(c, l10n),
-          const SizedBox(height: 26),
+        // ── Section: Security ────────────────────────────────────
+        _buildSecurityGroup(c, l10n),
+        const SizedBox(height: 26),
 
-          // ── Section: BLE ─────────────────────────────────────────
-          _buildBleGroup(c, l10n),
-          const SizedBox(height: 26),
+        // ── Section: BLE ─────────────────────────────────────────
+        _buildBleGroup(c, l10n),
+        const SizedBox(height: 26),
 
-          // ── Section: About ───────────────────────────────────────
-          GroupHeader(c: c, title: l10n.about),
-          AboutCard(c: c),
-        ],
-      ),
+        // ── Section: About ───────────────────────────────────────
+        GroupHeader(c: c, title: l10n.about),
+        AboutCard(c: c),
+      ],
     );
 
     // When used as a tab, render content directly (no Scaffold/AppBar).

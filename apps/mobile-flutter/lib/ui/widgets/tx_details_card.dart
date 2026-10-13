@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../../utils/formatting.dart';
 import '../theme/color_tokens.dart';
+import 'common/neo_card.dart';
 
 /// Read-only card that renders decoded transaction details.
 ///
@@ -23,11 +24,17 @@ class TxDetailsCard extends StatefulWidget {
   /// Colour tokens for the active theme.
   final ColorTokens c;
 
+  /// Draws the neo chrome (black outline, flat fill) instead of the flat
+  /// hairline card. Set by surfaces already on the neo language (History in
+  /// light mode); the sign screen leaves it false so its chrome is unchanged.
+  final bool neo;
+
   const TxDetailsCard({
     super.key,
     required this.parsedData,
     required this.payloadHex,
     required this.c,
+    this.neo = false,
   });
 
   /// Cached chain name map loaded from assets/chains.json.
@@ -64,6 +71,15 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
   bool _dataExpanded = false;
 
   ColorTokens get c => widget.c;
+
+  /// Detail-row label style. The neo chrome renders labels black and bold so
+  /// they read as keys against their values; the legacy chrome keeps them
+  /// muted grey.
+  TextStyle _labelStyle(double size) => TextStyle(
+        color: widget.neo ? c.text : c.text.withAlpha(130),
+        fontSize: size,
+        fontWeight: widget.neo ? FontWeight.w600 : FontWeight.normal,
+      );
 
   /// Track current method name for decimals override key.
   String get _currentMethod {
@@ -109,6 +125,18 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
   }
 
   Widget _card(Widget child) {
+    if (widget.neo) {
+      // Outline only: the record card around it already carries the shadow,
+      // and the inner rules stay hairlines so a dense table reads calmly.
+      return SizedBox(
+        width: double.infinity,
+        child: NeoCard(
+          lifted: false,
+          padding: const EdgeInsets.all(20),
+          child: child,
+        ),
+      );
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -273,9 +301,9 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
           Text(
             _paramLabel(name),
             style: TextStyle(
-              color: c.text.withAlpha(150),
+              color: widget.neo ? c.text : c.text.withAlpha(150),
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: widget.neo ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
           const SizedBox(height: 4),
@@ -328,9 +356,9 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
           Text(
             '${_paramLabel(name)} (${arr.length})',
             style: TextStyle(
-              color: c.text.withAlpha(150),
+              color: widget.neo ? c.text : c.text.withAlpha(150),
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: widget.neo ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
           const SizedBox(height: 4),
@@ -367,7 +395,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
             width: 60,
             child: Text(
               _paramLabel(name),
-              style: TextStyle(color: c.text.withAlpha(130), fontSize: 13),
+              style: _labelStyle(13),
             ),
           ),
           const SizedBox(width: 4),
@@ -430,7 +458,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
                   width: 72,
                   child: Text(
                     'Data',
-                    style: TextStyle(color: c.text.withAlpha(130), fontSize: 13),
+                    style: _labelStyle(13),
                   ),
                 ),
                 const Spacer(),
@@ -479,7 +507,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
             width: 60,
             child: Text(
               _paramLabel(name),
-              style: TextStyle(color: c.text.withAlpha(130), fontSize: 13),
+              style: _labelStyle(13),
             ),
           ),
           const SizedBox(width: 4),
@@ -566,9 +594,9 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
           Text(
             AppLocalizations.of(context)!.messageToSign,
             style: TextStyle(
-              color: c.text.withAlpha(130),
+              color: widget.neo ? c.text : c.text.withAlpha(130),
               fontSize: 13,
-              fontWeight: FontWeight.w500,
+              fontWeight: widget.neo ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
           const SizedBox(height: 10),
@@ -610,7 +638,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
           const SizedBox(height: 14),
           Text(
             AppLocalizations.of(context)!.domainHash,
-            style: TextStyle(color: c.text.withAlpha(130), fontSize: 12),
+            style: _labelStyle(12),
           ),
           const SizedBox(height: 4),
           SelectableText(
@@ -624,7 +652,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
           const SizedBox(height: 12),
           Text(
             AppLocalizations.of(context)!.structHash,
-            style: TextStyle(color: c.text.withAlpha(130), fontSize: 12),
+            style: _labelStyle(12),
           ),
           const SizedBox(height: 4),
           SelectableText(
@@ -658,7 +686,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     );
   }
 
-  static Widget _detailRow(ColorTokens c, String label, String value) {
+  Widget _detailRow(ColorTokens c, String label, String value) {
     final truncated = value.length > 50
         ? '${value.substring(0, 50)}...'
         : value;
@@ -669,7 +697,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
           width: 72,
           child: Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(130), fontSize: 13),
+            style: _labelStyle(13),
           ),
         ),
         const SizedBox(width: 8),
@@ -688,13 +716,13 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     );
   }
 
-  static Widget _rawDataRow(ColorTokens c, String label, String value) {
+  Widget _rawDataRow(ColorTokens c, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: TextStyle(color: c.text.withAlpha(130), fontSize: 13),
+          style: _labelStyle(13),
         ),
         Flexible(
           child: Text(
