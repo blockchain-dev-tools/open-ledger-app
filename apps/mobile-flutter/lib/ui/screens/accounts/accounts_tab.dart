@@ -11,11 +11,12 @@ import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
 
-/// Account list tab — displays wallet accounts grouped by chain.
+/// Account list tab — the Vault home.
 ///
-/// Extracted from the original vault screen, stripped of BLE controls
-/// and settings navigation. Shows expandable chain sections with
-/// account addresses and copy-to-clipboard.
+/// Present the active vault as a set of chain sections. Each section is an
+/// accordion: collapsed it shows the chain and its account count, expanded it
+/// lists the derived accounts (address + derivation path) and an "Add Account"
+/// action.
 ///
 /// Navigation:
 /// - Account tap → `context.push('/account/:id', extra: ChainAccount)`
@@ -156,15 +157,23 @@ class _AccountsTabState extends State<AccountsTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.account_balance_wallet_outlined,
-                size: 64, color: c.text.withAlpha(60)),
-            const SizedBox(height: 16),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: c.text.withAlpha(12),
+                borderRadius: BorderRadius.circular(R.xl),
+              ),
+              child: Icon(Icons.account_balance_wallet_outlined,
+                  size: 34, color: c.text.withAlpha(70)),
+            ),
+            const SizedBox(height: 20),
             Text(
               AppLocalizations.of(context)!.noAccounts,
               style: TextStyle(
-                color: c.text.withAlpha(120),
+                color: c.text.withAlpha(140),
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
@@ -172,8 +181,9 @@ class _AccountsTabState extends State<AccountsTab> {
               'Create or import a wallet to get started.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: c.text.withAlpha(80),
+                color: c.text.withAlpha(90),
                 fontSize: 14,
+                height: 1.4,
               ),
             ),
           ],
@@ -186,38 +196,13 @@ class _AccountsTabState extends State<AccountsTab> {
     final grouped = _groupByChain(accounts);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        _buildFingerprintBanner(c, accounts),
-        const SizedBox(height: 12),
-        for (final chain in _chainOrder)
+        for (final chain in _chainOrder) ...[
           _buildChainSection(c, chain, grouped[chain] ?? []),
-      ],
-    );
-  }
-
-  Widget _buildFingerprintBanner(ColorTokens c, WalletAccounts accounts) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: c.primary.withAlpha(12),
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.primary.withAlpha(40)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.fingerprint, size: 20, color: c.primary.withAlpha(160)),
-          const SizedBox(width: 10),
-          Text(
-            'Wallet: ${accounts.mnemonicFingerprint}',
-            style: TextStyle(
-              color: c.text.withAlpha(160),
-              fontSize: 13,
-              fontFamily: 'monospace',
-            ),
-          ),
+          const SizedBox(height: 10),
         ],
-      ),
+      ],
     );
   }
 
@@ -233,146 +218,154 @@ class _AccountsTabState extends State<AccountsTab> {
     final expanded = _expandedChains.contains(chain);
     final count = accounts.length;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: c.border.withAlpha(80)),
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(
+          color: expanded ? c.accent : c.borderStrong,
+          width: expanded ? 2 : 1,
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            // ── Header ──────────────────────────────────────────────
-            GestureDetector(
-              key: ValueKey('chain-header-$chain'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                setState(() {
-                  if (expanded) {
-                    _expandedChains.remove(chain);
-                  } else {
-                    _expandedChains.add(chain);
-                  }
-                });
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: c.primary.withAlpha(20),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: SvgPicture.asset(
-                        iconPath,
-                        width: 22,
-                        height: 22,
-                        fit: BoxFit.contain,
-                      ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // ── Header (tap anywhere to expand/collapse) ──────────────
+          GestureDetector(
+            key: ValueKey('chain-header-$chain'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              setState(() {
+                if (expanded) {
+                  _expandedChains.remove(chain);
+                } else {
+                  _expandedChains.add(chain);
+                }
+              });
+            },
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: c.primary.withAlpha(expanded ? 30 : 18),
+                      borderRadius: BorderRadius.circular(R.lg),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            label,
-                            style: TextStyle(
-                              color: c.text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                    child: SvgPicture.asset(
+                      iconPath,
+                      width: 22,
+                      height: 22,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: c.text,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$count account${count == 1 ? '' : 's'}',
-                            style: TextStyle(
-                              color: c.text.withAlpha(120),
-                              fontSize: 13,
-                            ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$count account${count == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            color: c.text.withAlpha(115),
+                            fontSize: 13,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    AnimatedRotation(
-                      turns: expanded ? 0.25 : 0.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Icon(
-                        Icons.chevron_right,
-                        color: c.text.withAlpha(100),
-                      ),
+                  ),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: c.text.withAlpha(100),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+          ),
 
-            // ── Expanded account list ────────────────────────────────
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              alignment: Alignment.topCenter,
-              child: expanded
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Divider(height: 1),
+          // ── Expanded body: accounts + add action ─────────────────
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: expanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Divider(height: 1, color: c.border),
+                      if (accounts.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                          child: Text(
+                            l10n.noAccounts,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: c.text.withAlpha(110),
+                              fontSize: 14,
+                            ),
+                          ),
+                        )
+                      else
                         ...accounts.asMap().entries.map((entry) {
                           final idx = entry.key;
                           final acct = entry.value;
                           return _buildAccountRow(
                               c, chain, idx, acct, count);
                         }),
-                        // "Add Account" button
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          child: GestureDetector(
-                            onTap: () => _addAccount(chain),
-                            child: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: c.primary.withAlpha(60),
-                                ),
-                                borderRadius:
-                                    BorderRadius.circular(R.sm),
-                              ),
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add,
-                                      size: 18,
-                                      color: c.primary.withAlpha(180)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    AppLocalizations.of(context)!.addAccount,
-                                    style: TextStyle(
-                                      color: c.primary.withAlpha(200),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
+                      _buildAddAccountButton(c, chain),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddAccountButton(ColorTokens c, String chain) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+      child: GestureDetector(
+        onTap: () => _addAccount(chain),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            border: Border.all(color: c.accent.withAlpha(120)),
+            borderRadius: BorderRadius.circular(R.lg),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, size: 18, color: c.accent),
+              const SizedBox(width: 6),
+              Text(
+                AppLocalizations.of(context)!.addAccount,
+                style: TextStyle(
+                  color: c.accent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -380,12 +373,14 @@ class _AccountsTabState extends State<AccountsTab> {
 
   Widget _buildAccountRow(ColorTokens c, String chain, int localIndex,
       ChainAccount acct, int totalCount) {
+    final l10n = AppLocalizations.of(context)!;
     final isLast = localIndex == totalCount - 1;
 
     return GestureDetector(
       onTap: () => _goToAccount(chain, localIndex),
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
         decoration: BoxDecoration(
           border: isLast
               ? null
@@ -393,49 +388,67 @@ class _AccountsTabState extends State<AccountsTab> {
         ),
         child: Row(
           children: [
-            // ── Derivation path badge ────────────────────────────────
+            // ── Account number token ─────────────────────────────────
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 color: c.text.withAlpha(12),
                 borderRadius: BorderRadius.circular(R.sm),
               ),
+              alignment: Alignment.center,
               child: Text(
-                acct.derivationPath.split('/').last,
+                '${accountIndexInPath(acct.derivationPath)}',
                 style: TextStyle(
-                  color: c.text.withAlpha(140),
-                  fontSize: 11,
+                  color: c.text.withAlpha(150),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   fontFamily: 'monospace',
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            // ── Address ──────────────────────────────────────────────
+            const SizedBox(width: 12),
+            // ── Address + derivation path ────────────────────────────
             Expanded(
-              child: Text(
-                _truncateAddress(acct.address),
-                style: TextStyle(
-                  color: c.text.withAlpha(180),
-                  fontSize: 13,
-                  fontFamily: 'monospace',
-                ),
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _truncateAddress(acct.address),
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: c.text.withAlpha(210),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    l10n.accountWithIndex(
+                        accountIndexInPath(acct.derivationPath)),
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: c.text.withAlpha(105),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
             ),
-            // ── Copy button ──────────────────────────────────────────
+            // ── Copy ────────────────────────────────────────────────
             GestureDetector(
               onTap: () => _copyAddress(acct.address),
+              behavior: HitTestBehavior.opaque,
               child: Padding(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(8),
                 child: Icon(
                   Icons.copy,
                   size: 16,
-                  color: c.text.withAlpha(100),
+                  color: c.text.withAlpha(110),
                 ),
               ),
             ),
-            const SizedBox(width: 2),
             Icon(Icons.chevron_right,
                 size: 18, color: c.text.withAlpha(60)),
           ],

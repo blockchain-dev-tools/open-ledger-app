@@ -190,32 +190,55 @@ class _MainScreenState extends State<MainScreen> {
       floatingActionButton: _currentIndex == 0 && _chainBleControl != null
           ? BleFab(control: _chainBleControl!, onTap: _openBleSheet)
           : null,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: c.surface,
-        selectedItemColor: c.primary,
-        unselectedItemColor: c.text.withAlpha(120),
-        selectedFontSize: 9,
-        unselectedFontSize: 9,
-        items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.account_balance_wallet_outlined),
-            activeIcon: const Icon(Icons.account_balance_wallet),
-            label: l10n.accountsTitle,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.history_outlined),
-            activeIcon: const Icon(Icons.history),
-            label: l10n.historyTab,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.settings_outlined),
-            activeIcon: const Icon(Icons.settings),
-            label: l10n.settings,
-          ),
-        ],
+      // A top-edge shadow lifts the tab bar off the page. In light mode
+      // `surface` and `bg` are both white, so without it the bar melts into
+      // the body; in dark mode `shadow` is transparent and the surface/bg
+      // contrast already does the separating. `elevation: 0` keeps the bar's
+      // own (theme-shadow-colored) elevation shadow out of the way so this
+      // one controls the depth.
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: c.shadow,
+              blurRadius: 3,
+              offset: const Offset(0, -1),
+            ),
+            BoxShadow(
+              color: c.shadow,
+              blurRadius: 12,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          backgroundColor: c.surface,
+          selectedItemColor: c.accent,
+          unselectedItemColor: c.text.withAlpha(120),
+          selectedFontSize: 9,
+          unselectedFontSize: 9,
+          items: [
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              activeIcon: const Icon(Icons.account_balance_wallet),
+              label: l10n.accountsTitle,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.history_outlined),
+              activeIcon: const Icon(Icons.history),
+              label: l10n.historyTab,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.settings_outlined),
+              activeIcon: const Icon(Icons.settings),
+              label: l10n.settings,
+            ),
+          ],
+        ),
       ),
     );
   }

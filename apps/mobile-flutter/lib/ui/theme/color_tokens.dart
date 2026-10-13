@@ -22,6 +22,23 @@ class ColorTokens {
   final Color onBg;
   final Color border;
 
+  /// Higher-contrast border for unselected grouped cards (e.g. the chain
+  /// sections in Accounts). Light mode uses pure black so card edges read
+  /// crisply against white; dark mode keeps the neutral [border].
+  final Color borderStrong;
+
+  /// Ambient shadow that lifts floating chrome (e.g. the bottom tab bar) off
+  /// the page. Transparent in dark mode — there the `surface`/`bg` contrast
+  /// already separates the bar, and a black shadow is invisible on black.
+  final Color shadow;
+
+  /// Green for accents drawn *on top of* a surface as text, icons or outlines
+  /// (e.g. the Add-Account button, the selected bottom-tab item). Light
+  /// [primary] is a bright lime that washes out on white, so light mode uses a
+  /// darker, more saturated green here instead; dark mode matches [primary],
+  /// which already reads on the dark surface.
+  final Color accent;
+
   const ColorTokens({
     required this.primary,
     required this.bg,
@@ -32,6 +49,9 @@ class ColorTokens {
     required this.onPrimary,
     required this.onBg,
     required this.border,
+    required this.borderStrong,
+    required this.shadow,
+    required this.accent,
   });
 
   static const dark = ColorTokens(
@@ -44,6 +64,9 @@ class ColorTokens {
     onPrimary: Color(0xFF000000),
     onBg: Color(0xFFFFFFFF),
     border: Color(0xFF333333),
+    borderStrong: Color(0xFF333333),
+    shadow: Color(0x00000000),
+    accent: Color(0xFFA1F44E),
   );
 
   static const light = ColorTokens(
@@ -55,7 +78,10 @@ class ColorTokens {
     error: Color(0xFFB00020),
     onPrimary: Color(0xFF000000),
     onBg: Color(0xFF212121),
-    border: Color(0xFFE0E0E0),
+    border: Color(0xFFD1D1D6),
+    borderStrong: Color(0xFF000000),
+    shadow: Color(0x0C000000),
+    accent: Color(0xFF15803D),
   );
 }
 
