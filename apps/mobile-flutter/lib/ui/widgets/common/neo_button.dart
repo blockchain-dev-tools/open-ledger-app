@@ -52,49 +52,63 @@ class NeoButton extends StatelessWidget {
     final foreground = quiet ? c.text : c.brandInk;
     final edge = quiet ? c.neoEdge : c.brandInk;
 
-    final content = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(Neo.radius),
-        border: Border.all(color: edge, width: Neo.edge),
-        boxShadow: neoShadow(c),
-      ),
-      child: Row(
-        mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: foreground),
-            const SizedBox(width: 8),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              color: foreground,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-
     return _NeoPress(
       onTap: onTap,
-      child: expanded
-          ? SizedBox(width: double.infinity, child: content)
-          : content,
+      builder: (pressed) {
+        final content = AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          curve: Curves.easeOut,
+          // Pressing drops the shadow and slides the block [Neo.lift] down-right
+          // — exactly where the shadow sat — so the two read as one flat,
+          // sunken block. Removing the shadow in the same frame is what stops
+          // it from riding along with the translation.
+          transform: Matrix4.translationValues(
+            pressed ? Neo.lift : 0,
+            pressed ? Neo.lift : 0,
+            0,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(Neo.radius),
+            border: Border.all(color: edge, width: Neo.edge),
+            boxShadow: pressed ? null : neoShadow(c),
+          ),
+          child: Row(
+            mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: foreground),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        );
+
+        return expanded
+            ? SizedBox(width: double.infinity, child: content)
+            : content;
+      },
     );
   }
 }
 
-/// Pushes its child [Neo.lift] px toward its own shadow while held down.
+/// Reports the down/up state of a tap so its [builder] can render the pressed
+/// chrome. Layout is untouched — the builder changes only paint-time chrome.
 class _NeoPress extends StatefulWidget {
-  final Widget child;
+  final Widget Function(bool pressed) builder;
   final VoidCallback onTap;
 
-  const _NeoPress({required this.child, required this.onTap});
+  const _NeoPress({required this.builder, required this.onTap});
 
   @override
   State<_NeoPress> createState() => _NeoPressState();
@@ -115,16 +129,7 @@ class _NeoPressState extends State<_NeoPress> {
       onTapUp: (_) => _setDown(false),
       onTapCancel: () => _setDown(false),
       onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        curve: Curves.easeOut,
-        transform: Matrix4.translationValues(
-          _down ? Neo.lift : 0,
-          _down ? Neo.lift : 0,
-          0,
-        ),
-        child: widget.child,
-      ),
+      child: widget.builder(_down),
     );
   }
 }
