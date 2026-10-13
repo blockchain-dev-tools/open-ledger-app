@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/models/wallet_accounts.dart';
+import '../../../../utils/formatting.dart';
+import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
+
+/// One account row: number chip, truncated address, a copy affordance and a
+/// trailing chevron.
+///
+/// Purely presentational — tapping the row or the copy icon reports through
+/// [onTap] / [onCopy]; the parent decides what happens.
+class AccountRow extends StatelessWidget {
+  final ChainAccount account;
+  final VoidCallback onTap;
+  final VoidCallback onCopy;
+
+  const AccountRow({
+    super.key,
+    required this.account,
+    required this.onTap,
+    required this.onCopy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = isDark ? ColorTokens.dark : ColorTokens.light;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: c.borderStrong)),
+        ),
+        child: Row(
+          children: [
+            // ── Account number token ─────────────────────────────────
+            NeoCard(
+              lifted: false,
+              // Dark falls back to the original translucent chip, no outline.
+              legacyEdgeWidth: 0,
+              legacyRadius: R.sm,
+              legacyBackground: c.text.withAlpha(12),
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: Center(
+                  child: Text(
+                    '${accountIndexInPath(account.derivationPath)}',
+                    style: TextStyle(
+                      color: c.text.withAlpha(150),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // ── Address ─────────────────────────────────────────────
+            Expanded(
+              child: Text(
+                _truncateAddress(account.address),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: c.text.withAlpha(210),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+            // ── Copy ────────────────────────────────────────────────
+            GestureDetector(
+              onTap: onCopy,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(Icons.copy, size: 16, color: c.text.withAlpha(110)),
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: c.text.withAlpha(60)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Middle-truncates an [address] to `first7…last5` for the row.
+String _truncateAddress(String address) {
+  if (address.length <= 14) return address;
+  return '${address.substring(0, 7)}…${address.substring(address.length - 5)}';
+}

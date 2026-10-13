@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/pin/pin_number_pad.dart';
-import '../../widgets/pin/pin_dot_indicator.dart';
-import '../../widgets/pin/pin_shake_wrapper.dart';
 import '../../../core/interfaces/wallet_service.dart';
 import '../../../core/models/vault.dart';
 import '../../../app/app_state.dart';
+import 'components/pin_cancel_button.dart';
+import 'components/pin_dots.dart';
+import 'components/pin_error_banner.dart';
+import 'components/pin_header.dart';
 
 /// Two-phase 6-digit PIN entry for wallet creation or PIN change.
 ///
@@ -21,6 +23,9 @@ import '../../../app/app_state.dart';
 ///   [walletService]. On success → `context.go('/')`.
 ///
 /// The 3×4 number pad and 6-dot indicators mirror [UnlockScreen] styling.
+///
+/// Each visual block lives in `components/`; this file owns the state, the
+/// async handlers and the step transitions.
 ///
 /// Ported from the original TypeScript implementation.
 class SetPinScreen extends StatefulWidget {
@@ -250,8 +255,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       final message = switch (e.message) {
-        'Incorrect PIN' || 'PIN does not match the current wallet.' =>
-          l10n.incorrectPin,
+        'Incorrect PIN' ||
+        'PIN does not match the current wallet.' => l10n.incorrectPin,
         'This wallet is already in this tier.' => l10n.vaultAlreadyInTier,
         _ => e.message,
       };
@@ -376,55 +381,22 @@ class _SetPinScreenState extends State<SetPinScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ── Icon ────────────────────────────────────────────
-                    Icon(
-                      Icons.lock_outline,
-                      size: 64,
-                      color: c.primary.withAlpha(120),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ── Title ───────────────────────────────────────────
-                    Text(
-                      _title(l10n),
-                      style: TextStyle(
-                        color: c.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // ── Subtitle ────────────────────────────────────────
-                    Text(
-                      _subtitle(l10n),
-                      style: TextStyle(
-                        color: c.text.withAlpha(140),
-                        fontSize: 14,
-                      ),
-                    ),
+                    // ── Icon / Title / Subtitle ─────────────────────────
+                    PinHeader(title: _title(l10n), subtitle: _subtitle(l10n)),
 
                     const SizedBox(height: 28),
 
                     // ── PIN Dots (with shake) ───────────────────────────
-                    PinShakeWrapper(
+                    PinDots(
                       shaking: _shaking,
-                      child: PinDotIndicator(
-                        length: _pinLength,
-                        filledCount: _pin.length,
-                      ),
+                      length: _pinLength,
+                      filledCount: _pin.length,
                     ),
 
                     const SizedBox(height: 10),
 
                     // ── Error Indicator ─────────────────────────────────
-                    if (_error != null)
-                      Text(
-                        _error!,
-                        style: TextStyle(color: c.error, fontSize: 14),
-                      ),
+                    if (_error != null) PinErrorBanner(message: _error!),
 
                     const SizedBox(height: 32),
 
@@ -438,22 +410,12 @@ class _SetPinScreenState extends State<SetPinScreen> {
                     const SizedBox(height: 24),
 
                     // ── Cancel → go back ────────────────────────────────
-                    GestureDetector(
-                      key: const Key('pin-cancel'),
+                    PinCancelButton(
                       onTap: () {
                         if (context.canPop()) {
                           context.pop();
                         }
                       },
-                      child: Text(
-                        l10n.cancel,
-                        style: TextStyle(
-                          color: c.text.withAlpha(120),
-                          fontSize: 14,
-                          decoration: TextDecoration.underline,
-                          decorationColor: c.text.withAlpha(80),
-                        ),
-                      ),
                     ),
                   ],
                 ),

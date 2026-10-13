@@ -49,6 +49,38 @@ int accountIndexInPath(String path) {
   return match == null ? 0 : int.tryParse(match.group(1)!) ?? 0;
 }
 
+/// Groups a raw [address] into space-separated 4-char chunks so it wraps
+/// naturally without splitting a group across lines. A leading `0x` prefix is
+/// attached to the first chunk.
+///
+/// Example: `0x742d35Cc…` → `0x742d 35Cc…`
+String groupAddress(String address) {
+  var prefix = '';
+  var body = address;
+  if (body.startsWith('0x') || body.startsWith('0X')) {
+    prefix = body.substring(0, 2);
+    body = body.substring(2);
+  }
+
+  final chunks = <String>[];
+  for (var i = 0; i < body.length; i += 4) {
+    final end = (i + 4 <= body.length) ? i + 4 : body.length;
+    chunks.add(body.substring(i, end));
+  }
+
+  if (chunks.isEmpty) return prefix;
+  chunks[0] = prefix + chunks[0];
+  return chunks.join(' ');
+}
+
+/// Middle-truncates [value] to `first8…last6` for compact display.
+///
+/// Values of 14 characters or fewer are returned unchanged.
+String truncateMiddle(String value) {
+  if (value.length <= 14) return value;
+  return '${value.substring(0, 8)}…${value.substring(value.length - 6)}';
+}
+
 /// Convert a wei decimal string to an ETH display string.
 ///
 /// Example: "1000000000000000000" → "1"

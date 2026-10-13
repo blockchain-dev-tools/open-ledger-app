@@ -8,7 +8,10 @@ import '../../../core/models/launcher_disguise.dart';
 import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
-import '../../theme/widgets/brand_mark.dart';
+import 'components/about_card.dart';
+import 'components/group_header.dart';
+import 'components/settings_group.dart';
+import 'components/settings_row.dart';
 
 /// App settings: theme toggle, language selection, security options,
 /// BLE device name configuration, and about section.
@@ -114,10 +117,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Localized name of the current theme mode, shown as the row value.
   String _themeModeLabel(AppLocalizations l10n) => switch (_themeMode) {
-        ThemeMode.system => l10n.themeSystem,
-        ThemeMode.light => l10n.lightMode,
-        ThemeMode.dark => l10n.darkMode,
-      };
+    ThemeMode.system => l10n.themeSystem,
+    ThemeMode.light => l10n.lightMode,
+    ThemeMode.dark => l10n.darkMode,
+  };
 
   /// Shows the theme picker sheet: system / light / dark.
   void _showThemePicker() {
@@ -134,14 +137,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         (
           label: l10n.lightMode,
           selected: _themeMode == ThemeMode.light,
-          onSelect: () =>
-              widget.settingsService?.setThemeMode(ThemeMode.light),
+          onSelect: () => widget.settingsService?.setThemeMode(ThemeMode.light),
         ),
         (
           label: l10n.darkMode,
           selected: _themeMode == ThemeMode.dark,
-          onSelect: () =>
-              widget.settingsService?.setThemeMode(ThemeMode.dark),
+          onSelect: () => widget.settingsService?.setThemeMode(ThemeMode.dark),
         ),
       ],
     );
@@ -152,7 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showOptionsSheet({
     required String title,
     required List<({String label, bool selected, VoidCallback onSelect})>
-        options,
+    options,
   }) {
     final c = Theme.of(context).brightness == Brightness.dark
         ? ColorTokens.dark
@@ -199,7 +200,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 13),
+                      horizontal: 20,
+                      vertical: 13,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -213,8 +216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         if (opt.selected)
-                          Icon(Icons.check_rounded,
-                              color: c.primary, size: 22),
+                          Icon(Icons.check_rounded, color: c.primary, size: 22),
                       ],
                     ),
                   ),
@@ -289,10 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
                 if (mounted) setState(() => _bleName = value);
               },
-              child: Text(
-                l10n.done,
-                style: TextStyle(color: c.primary),
-              ),
+              child: Text(l10n.done, style: TextStyle(color: c.primary)),
             ),
           ],
         );
@@ -374,8 +373,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.surface,
-        title:
-            Text(l10n.disguiseConfirmTitle, style: TextStyle(color: c.text)),
+        title: Text(l10n.disguiseConfirmTitle, style: TextStyle(color: c.text)),
         content: Text(
           l10n.disguiseConfirmBody(_disguiseName(l10n, target)),
           style: TextStyle(color: c.text.withAlpha(200), fontSize: 14),
@@ -390,8 +388,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.disguiseConfirmButton,
-                style: TextStyle(color: c.primary)),
+            child: Text(
+              l10n.disguiseConfirmButton,
+              style: TextStyle(color: c.primary),
+            ),
           ),
         ],
       ),
@@ -429,10 +429,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.of(ctx).pop();
                 _resetWallet();
               },
-              child: Text(
-                l10n.reset,
-                style: TextStyle(color: c.error),
-              ),
+              child: Text(l10n.reset, style: TextStyle(color: c.error)),
             ),
           ],
         );
@@ -474,105 +471,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           // ── Section: Appearance ──────────────────────────────────
-          _SettingsGroup(
-            c: c,
-            header: l10n.appearance,
-            rows: [
-              _SettingsRow(
-                c: c,
-                icon: isDark
-                    ? Icons.dark_mode_outlined
-                    : Icons.light_mode_outlined,
-                title: l10n.theme,
-                value: _themeModeLabel(l10n),
-                onTap: _showThemePicker,
-              ),
-              _SettingsRow(
-                c: c,
-                icon: Icons.language,
-                title: l10n.language,
-                value: _currentLanguageName(context),
-                onTap: _showLanguagePicker,
-              ),
-            ],
-          ),
+          _buildAppearanceGroup(c, l10n, isDark),
           const SizedBox(height: 26),
 
           // ── Section: Security ────────────────────────────────────
-          _SettingsGroup(
-            c: c,
-            header: l10n.security,
-            rows: [
-              _SettingsRow(
-                c: c,
-                icon: Icons.vpn_key_outlined,
-                title: l10n.backupAndExport,
-                onTap: () => context.push('/backup-export'),
-              ),
-              // Stand-in wallet (ADR-009). Always tappable and always showing
-              // its real, session-relative status: a primary session shows the
-              // top-level stand-in, a stand-in session shows its own nested one
-              // (a stand-in may itself configure a stand-in one tier deeper).
-              // No session ever makes this row behave "differently" — that
-              // asymmetry was itself an observable tell.
-              _SettingsRow(
-                c: c,
-                icon: Icons.switch_account_outlined,
-                title: l10n.standInTitle,
-                value: _standInConfigured
-                    ? l10n.standInConfigured
-                    : l10n.standInNotSetUp,
-                onTap: _openStandIn,
-              ),
-              // Launcher disguise (ADR-012): device-level icon/label swap.
-              // Present in every session with identical behaviour (I14) —
-              // it only changes what the desktop shows.
-              _SettingsRow(
-                c: c,
-                icon: Icons.theater_comedy_outlined,
-                title: l10n.disguiseTitle,
-                value: _disguiseName(l10n, _launcherDisguise),
-                onTap: _showDisguisePicker,
-              ),
-              _SettingsRow(
-                c: c,
-                icon: Icons.lock_outline,
-                title: l10n.changePin,
-                onTap: () => context.go('/set-pin'),
-              ),
-              _SettingsRow(
-                c: c,
-                icon: Icons.delete_outline,
-                title: l10n.resetWalletTitle,
-                iconColor: c.error,
-                titleColor: c.error,
-                showChevron: false,
-                onTap: _confirmResetWallet,
-              ),
-            ],
-          ),
+          _buildSecurityGroup(c, l10n),
           const SizedBox(height: 26),
 
           // ── Section: BLE ─────────────────────────────────────────
-          _SettingsGroup(
-            c: c,
-            header: l10n.bluetooth,
-            rows: [
-              _SettingsRow(
-                c: c,
-                icon: Icons.bluetooth,
-                title: l10n.bleName,
-                value: _bleName,
-                actionIcon: Icons.edit_outlined,
-                onTap: _editBleName,
-              ),
-            ],
-          ),
+          _buildBleGroup(c, l10n),
           const SizedBox(height: 26),
 
           // ── Section: About ───────────────────────────────────────
-          _GroupHeader(c: c, title: l10n.about),
-          _AboutCard(c: c),
+          GroupHeader(c: c, title: l10n.about),
+          AboutCard(c: c),
         ],
       ),
     );
@@ -599,232 +511,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-}
 
-// ═══════════════════════════════════════════════════════════════════════
-// Inset grouped settings list — one borderless surface card per section on
-// the tinted grouped background, hairline dividers between rows.
-// ═══════════════════════════════════════════════════════════════════════
-
-/// A section of the settings list: an uppercase label above a single
-/// rounded card containing [rows] separated by indented hairline dividers.
-class _SettingsGroup extends StatelessWidget {
-  final ColorTokens c;
-  final String header;
-  final List<Widget> rows;
-
-  const _SettingsGroup({
-    required this.c,
-    required this.header,
-    required this.rows,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _GroupHeader(c: c, title: header),
-        // No border: the card edge is defined by surface vs. groupedBg.
-        // Corner radius 10 matches the iOS inset-grouped card.
-        Container(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < rows.length; i++) ...[
-                rows[i],
-                if (i < rows.length - 1)
-                  Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    // Align the divider with the title text (after the icon).
-                    indent: 52,
-                    color: c.border.withAlpha(140),
-                  ),
-              ],
-            ],
-          ),
+  /// Appearance section: the theme-mode and language rows.
+  Widget _buildAppearanceGroup(
+    ColorTokens c,
+    AppLocalizations l10n,
+    bool isDark,
+  ) {
+    return SettingsGroup(
+      c: c,
+      header: l10n.appearance,
+      rows: [
+        SettingsRow(
+          c: c,
+          icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+          title: l10n.theme,
+          value: _themeModeLabel(l10n),
+          onTap: _showThemePicker,
+        ),
+        SettingsRow(
+          c: c,
+          icon: Icons.language,
+          title: l10n.language,
+          value: _currentLanguageName(context),
+          onTap: _showLanguagePicker,
         ),
       ],
     );
   }
-}
 
-/// A single settings row: leading icon, title, optional right-aligned
-/// [value] and a chevron.
-///
-/// Tapping calls [onTap]. Rows without [onTap] render muted and inert.
-/// [iconColor]/[titleColor] override the neutral defaults (use [c.error]
-/// for the destructive Reset Wallet row).
-class _SettingsRow extends StatelessWidget {
-  final ColorTokens c;
-  final IconData icon;
-  final String title;
-  final String? value;
-  final VoidCallback? onTap;
-  final Color? iconColor;
-  final Color? titleColor;
-  final bool showChevron;
-
-  /// Trailing icon override (e.g. an edit affordance for the BLE name row).
-  /// Takes precedence over the default chevron.
-  final IconData? actionIcon;
-
-  const _SettingsRow({
-    required this.c,
-    required this.icon,
-    required this.title,
-    this.value,
-    this.onTap,
-    this.iconColor,
-    this.titleColor,
-    this.showChevron = true,
-    this.actionIcon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final iconEffective =
-        enabled ? (iconColor ?? c.text.withAlpha(160)) : c.text.withAlpha(80);
-    final titleEffective =
-        enabled ? (titleColor ?? c.text) : c.text.withAlpha(120);
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: iconEffective),
-            const SizedBox(width: 14),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: titleEffective,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            // iOS-style trailing value: pinned to the right edge, ahead of
-            // the chevron. The title keeps its natural width; the value
-            // takes the remaining space and ellipsizes when too long.
-            if (value != null)
-              Expanded(
-                child: Text(
-                  value!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: c.text.withAlpha(enabled ? 120 : 80),
-                    fontSize: 15,
-                  ),
-                ),
-              )
-            else
-              const Spacer(),
-            if (enabled && actionIcon != null) ...[
-              const SizedBox(width: 4),
-              Icon(
-                actionIcon,
-                size: 16,
-                color: c.text.withAlpha(80),
-              ),
-            ] else if (enabled && showChevron) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right,
-                size: 16,
-                color: c.text.withAlpha(80),
-              ),
-            ],
-          ],
+  /// Security section: backup/export, stand-in, launcher disguise, change PIN
+  /// and the destructive reset-wallet row.
+  Widget _buildSecurityGroup(ColorTokens c, AppLocalizations l10n) {
+    return SettingsGroup(
+      c: c,
+      header: l10n.security,
+      rows: [
+        SettingsRow(
+          c: c,
+          icon: Icons.vpn_key_outlined,
+          title: l10n.backupAndExport,
+          onTap: () => context.push('/backup-export'),
         ),
-      ),
+        // Stand-in wallet (ADR-009). Always tappable and always showing
+        // its real, session-relative status: a primary session shows the
+        // top-level stand-in, a stand-in session shows its own nested one
+        // (a stand-in may itself configure a stand-in one tier deeper).
+        // No session ever makes this row behave "differently" — that
+        // asymmetry was itself an observable tell.
+        SettingsRow(
+          c: c,
+          icon: Icons.switch_account_outlined,
+          title: l10n.standInTitle,
+          value: _standInConfigured
+              ? l10n.standInConfigured
+              : l10n.standInNotSetUp,
+          onTap: _openStandIn,
+        ),
+        // Launcher disguise (ADR-012): device-level icon/label swap.
+        // Present in every session with identical behaviour (I14) —
+        // it only changes what the desktop shows.
+        SettingsRow(
+          c: c,
+          icon: Icons.theater_comedy_outlined,
+          title: l10n.disguiseTitle,
+          value: _disguiseName(l10n, _launcherDisguise),
+          onTap: _showDisguisePicker,
+        ),
+        SettingsRow(
+          c: c,
+          icon: Icons.lock_outline,
+          title: l10n.changePin,
+          onTap: () => context.go('/set-pin'),
+        ),
+        SettingsRow(
+          c: c,
+          icon: Icons.delete_outline,
+          title: l10n.resetWalletTitle,
+          iconColor: c.error,
+          titleColor: c.error,
+          showChevron: false,
+          onTap: _confirmResetWallet,
+        ),
+      ],
     );
   }
-}
 
-/// About section: app identity block (icon, name, version, tagline).
-///
-/// Replaces the old pair of pseudo-rows (a "Version" row that looked
-/// tappable and a redundant "Ledger compatible" check row) with one
-/// non-interactive card.
-class _AboutCard extends StatelessWidget {
-  final ColorTokens c;
-
-  const _AboutCard({required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-      child: Column(
-        children: [
-          const BrandMark(size: 56),
-          const SizedBox(height: 14),
-          Text(
-            l10n.appTitle,
-            style: TextStyle(
-              color: c.text,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${l10n.version} 1.0.0',
-            style: TextStyle(color: c.text.withAlpha(120), fontSize: 13),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            l10n.welcomeSubtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: c.text.withAlpha(140),
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// iOS-style group label above a settings card: 12pt regular,
-/// secondary-label gray, sentence case.
-///
-/// Flush with the card's left edge (the parent list already applies the
-/// 16pt gutter) — an extra 16pt here pushed the label to x=32, off the
-/// grid shared by the app-bar title and the card edge.
-class _GroupHeader extends StatelessWidget {
-  final ColorTokens c;
-  final String title;
-
-  const _GroupHeader({required this.c, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 12, color: c.text.withAlpha(110)),
-      ),
+  /// BLE section: the editable device-name row.
+  Widget _buildBleGroup(ColorTokens c, AppLocalizations l10n) {
+    return SettingsGroup(
+      c: c,
+      header: l10n.bluetooth,
+      rows: [
+        SettingsRow(
+          c: c,
+          icon: Icons.bluetooth,
+          title: l10n.bleName,
+          value: _bleName,
+          actionIcon: Icons.edit_outlined,
+          onTap: _editBleName,
+        ),
+      ],
     );
   }
 }
