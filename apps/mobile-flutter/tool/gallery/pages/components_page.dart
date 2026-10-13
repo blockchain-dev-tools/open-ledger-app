@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:open_ledger_app/ui/screens/accounts/components/account_row.dart';
 import 'package:open_ledger_app/ui/theme/color_tokens.dart';
 import 'package:open_ledger_app/utils/formatting.dart';
 import 'package:open_ledger_app/ui/widgets/common/copy_button.dart';
+import 'package:open_ledger_app/ui/widgets/common/neo_button.dart';
+import 'package:open_ledger_app/ui/widgets/common/neo_card.dart';
+import 'package:open_ledger_app/ui/widgets/common/neo_code_block.dart';
 import 'package:open_ledger_app/ui/widgets/common/primary_button.dart';
 import 'package:open_ledger_app/ui/widgets/common/section_header.dart';
 import 'package:open_ledger_app/ui/widgets/mnemonic/warning_banner.dart';
 import 'package:open_ledger_app/ui/widgets/pin/pin_dot_indicator.dart';
 import 'package:open_ledger_app/ui/widgets/pin/pin_number_pad.dart';
+
+import '../data/sample_accounts.dart';
 
 class ComponentsPage extends StatelessWidget {
   const ComponentsPage({super.key});
@@ -112,6 +118,76 @@ class ComponentsPage extends StatelessWidget {
             const WarningBanner(
               message: '任何人不会向你索要助记词。切勿截屏或分享给任何人。',
             ),
+            const SizedBox(height: 28),
+
+            // ── Neobrutalist chrome (light only) ─────────────────────
+            //
+            // The neo primitives only paint in light mode — in dark NeoCard
+            // falls back to the legacy chrome and NeoButton is not meant to be
+            // built at all — so the whole block is gated on the token.
+            if (c.neobrutalism) ...[
+              const SectionHeader(title: 'NeoCard / NeoButton / NeoCodeBlock'),
+              const SizedBox(height: 10),
+              NeoCard(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'NeoCard — 2px 黑描边 · 6px 圆角 · 零模糊 4px 偏移阴影',
+                  style: TextStyle(color: c.text, fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: NeoButton(
+                      label: 'Brand',
+                      icon: Icons.add,
+                      expanded: true,
+                      onTap: _noop,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: NeoButton(
+                      label: 'Quiet',
+                      quiet: true,
+                      expanded: true,
+                      onTap: _noop,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              NeoCodeBlock(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Account number chip (the real AccountRow) ──────────
+              const SectionHeader(title: 'AccountRow · 序号方块'),
+              const SizedBox(height: 10),
+              NeoCard(
+                clip: true,
+                child: Column(
+                  children: [
+                    AccountRow(account: ethAccount, onTap: _noop, onCopy: _noop),
+                    AccountRow(
+                      account: solAccount2,
+                      onTap: _noop,
+                      onCopy: _noop,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

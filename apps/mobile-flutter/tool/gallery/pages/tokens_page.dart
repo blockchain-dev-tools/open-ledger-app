@@ -41,6 +41,15 @@ class _TokenSection extends StatelessWidget {
       _Swatch('onBg', tokens.onBg, '背景上的内容色'),
       _Swatch('error', tokens.error, '错误 / 销毁性操作'),
       _Swatch('border', tokens.border, '描边 / 分隔'),
+      // Neo palette — light only (the dark tokens mirror these values but the
+      // chrome is never painted there).
+      if (tokens.neobrutalism) ...[
+        _Swatch('neoEdge', tokens.neoEdge, '硬描边'),
+        _Swatch('neoShadow', tokens.neoShadow, '零模糊偏移阴影'),
+        _Swatch('actionFill', tokens.actionFill, '主行动填充（柠檬绿）'),
+        _Swatch('brandInk', tokens.brandInk, '品牌墨黑 · 描边 / 文字'),
+        _Swatch('gridLine', tokens.gridLine, '背景参考网格线'),
+      ],
     ];
 
     // Material (not ColoredBox) so text inherits a proper DefaultTextStyle;
@@ -81,6 +90,55 @@ class _TokenSection extends StatelessWidget {
               ),
             ],
           ),
+          if (tokens.neobrutalism) ...[
+            const SizedBox(height: 16),
+            Text(
+              'NEO METRICS',
+              style: TextStyle(
+                color: tokens.brandInk,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: tokens.surface,
+                borderRadius: BorderRadius.circular(Neo.radius),
+                border: Border.all(color: tokens.neoEdge, width: Neo.edge),
+              ),
+              child: Column(
+                children: [
+                  _MetricLine(
+                    tokens: tokens,
+                    name: 'Neo.edge',
+                    value: Neo.edge,
+                    usage: '硬描边宽度 px',
+                  ),
+                  _MetricLine(
+                    tokens: tokens,
+                    name: 'Neo.lift',
+                    value: Neo.lift,
+                    usage: '零模糊偏移阴影位移 px',
+                  ),
+                  _MetricLine(
+                    tokens: tokens,
+                    name: 'Neo.radius',
+                    value: Neo.radius,
+                    usage: 'neo 圆角',
+                  ),
+                  _MetricLine(
+                    tokens: tokens,
+                    name: 'Neo.gridStep',
+                    value: Neo.gridStep,
+                    usage: '背景参考网格步长 px',
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -200,6 +258,64 @@ class _RadiusSample extends StatelessWidget {
           style: TextStyle(color: tokens.text.withAlpha(110), fontSize: 10),
         ),
       ],
+    );
+  }
+}
+
+/// One row of the neo metric table: constant name, value, what it drives.
+class _MetricLine extends StatelessWidget {
+  final ColorTokens tokens;
+  final String name;
+  final double value;
+  final String usage;
+
+  const _MetricLine({
+    required this.tokens,
+    required this.name,
+    required this.value,
+    required this.usage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              name,
+              style: TextStyle(
+                color: tokens.text,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: Text(
+              value.toStringAsFixed(0),
+              style: TextStyle(
+                color: tokens.brandInk,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              usage,
+              style: TextStyle(
+                color: tokens.text.withAlpha(120),
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

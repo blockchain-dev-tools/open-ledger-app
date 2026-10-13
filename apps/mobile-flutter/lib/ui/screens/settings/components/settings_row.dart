@@ -8,6 +8,9 @@ import '../../../theme/color_tokens.dart';
 /// Tapping calls [onTap]. Rows without [onTap] render muted and inert.
 /// [iconColor]/[titleColor] override the neutral defaults (use [c.error]
 /// for the destructive Reset Wallet row).
+///
+/// In neo (light) the neutral text/icon/trailing tones go full black and the
+/// title gains weight; dark keeps the original muted greys.
 class SettingsRow extends StatelessWidget {
   final ColorTokens c;
   final IconData icon;
@@ -37,18 +40,20 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = c.neobrutalism;
     final enabled = onTap != null;
     final iconEffective = enabled
-        ? (iconColor ?? c.text.withAlpha(160))
+        ? (iconColor ?? (neo ? c.text : c.text.withAlpha(160)))
         : c.text.withAlpha(80);
     final titleEffective = enabled
         ? (titleColor ?? c.text)
-        : c.text.withAlpha(120);
+        : c.text.withAlpha(neo ? 90 : 120);
+    final trailingEffective = neo ? c.text : c.text.withAlpha(80);
 
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: neo ? 14 : 12),
         child: Row(
           children: [
             Icon(icon, size: 22, color: iconEffective),
@@ -60,7 +65,7 @@ class SettingsRow extends StatelessWidget {
               style: TextStyle(
                 color: titleEffective,
                 fontSize: 16,
-                fontWeight: FontWeight.w500,
+                fontWeight: neo ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
             // iOS-style trailing value: pinned to the right edge, ahead of
@@ -74,8 +79,11 @@ class SettingsRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: c.text.withAlpha(enabled ? 120 : 80),
+                    color: neo
+                        ? c.text
+                        : c.text.withAlpha(enabled ? 120 : 80),
                     fontSize: 15,
+                    fontWeight: neo ? FontWeight.w500 : FontWeight.normal,
                   ),
                 ),
               )
@@ -83,10 +91,10 @@ class SettingsRow extends StatelessWidget {
               const Spacer(),
             if (enabled && actionIcon != null) ...[
               const SizedBox(width: 4),
-              Icon(actionIcon, size: 16, color: c.text.withAlpha(80)),
+              Icon(actionIcon, size: 16, color: trailingEffective),
             ] else if (enabled && showChevron) ...[
               const SizedBox(width: 4),
-              Icon(Icons.chevron_right, size: 16, color: c.text.withAlpha(80)),
+              Icon(Icons.chevron_right, size: 16, color: trailingEffective),
             ],
           ],
         ),

@@ -8,6 +8,9 @@ import '../../../theme/color_tokens.dart';
 /// Flush with the card's left edge (the parent list already applies the
 /// 16pt gutter) — an extra 16pt here pushed the label to x=32, off the
 /// grid shared by the app-bar title and the card edge.
+///
+/// In neo (light) the label turns black and bold, matching the chunky
+/// section labels elsewhere on the grouped background.
 class GroupHeader extends StatelessWidget {
   final ColorTokens c;
   final String title;
@@ -16,11 +19,19 @@ class GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = c.neobrutalism;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
+      padding: EdgeInsets.only(bottom: neo ? 8 : 7),
       child: Text(
         title,
-        style: TextStyle(fontSize: 12, color: c.text.withAlpha(110)),
+        style: neo
+            ? TextStyle(
+                fontSize: 12,
+                color: c.text,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              )
+            : TextStyle(fontSize: 12, color: c.text.withAlpha(110)),
       ),
     );
   }

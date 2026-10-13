@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
 import '../../../theme/widgets/brand_mark.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// About section: app identity block (icon, name, version, tagline).
 ///
 /// Replaces the old pair of pseudo-rows (a "Version" row that looked
 /// tappable and a redundant "Ledger compatible" check row) with one
-/// non-interactive card.
+/// non-interactive card. In neo (light) the card is a [NeoCard]; dark keeps
+/// the flat pre-neo surface card.
 class AboutCard extends StatelessWidget {
   final ColorTokens c;
 
@@ -17,12 +19,9 @@ class AboutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-      ),
+    return NeoCard(
+      legacyEdgeWidth: 0,
+      legacyRadius: R.lg,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       child: Column(
         children: [

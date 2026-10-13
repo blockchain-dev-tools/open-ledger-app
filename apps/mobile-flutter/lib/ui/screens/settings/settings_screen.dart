@@ -473,15 +473,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         // ── Section: Appearance ──────────────────────────────────
         _buildAppearanceGroup(c, l10n, isDark),
-        const SizedBox(height: 26),
+        SizedBox(height: c.neobrutalism ? 30 : 26),
 
         // ── Section: Security ────────────────────────────────────
         _buildSecurityGroup(c, l10n),
-        const SizedBox(height: 26),
+        SizedBox(height: c.neobrutalism ? 30 : 26),
 
         // ── Section: BLE ─────────────────────────────────────────
         _buildBleGroup(c, l10n),
-        const SizedBox(height: 26),
+        SizedBox(height: c.neobrutalism ? 30 : 26),
 
         // ── Section: About ───────────────────────────────────────
         GroupHeader(c: c, title: l10n.about),
