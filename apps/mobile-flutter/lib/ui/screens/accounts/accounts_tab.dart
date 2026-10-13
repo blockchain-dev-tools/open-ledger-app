@@ -15,8 +15,7 @@ import '../../widgets/common/app_toast.dart';
 ///
 /// Present the active vault as a set of chain sections. Each section is an
 /// accordion: collapsed it shows the chain and its account count, expanded it
-/// lists the derived accounts (address + derivation path) and an "Add Account"
-/// action.
+/// lists the derived account addresses and an "Add Account" action.
 ///
 /// Navigation:
 /// - Account tap → `context.push('/account/:id', extra: ChainAccount)`
@@ -223,7 +222,7 @@ class _AccountsTabState extends State<AccountsTab> {
         color: c.surface,
         borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(
-          color: expanded ? c.accent : c.borderStrong,
+          color: c.borderStrong,
           width: expanded ? 2 : 1,
         ),
       ),
@@ -308,7 +307,7 @@ class _AccountsTabState extends State<AccountsTab> {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Divider(height: 1, color: c.border),
+                      Divider(height: 1, color: c.borderStrong),
                       if (accounts.isEmpty)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -325,8 +324,7 @@ class _AccountsTabState extends State<AccountsTab> {
                         ...accounts.asMap().entries.map((entry) {
                           final idx = entry.key;
                           final acct = entry.value;
-                          return _buildAccountRow(
-                              c, chain, idx, acct, count);
+                          return _buildAccountRow(c, chain, idx, acct);
                         }),
                       _buildAddAccountButton(c, chain),
                     ],
@@ -340,16 +338,12 @@ class _AccountsTabState extends State<AccountsTab> {
 
   Widget _buildAddAccountButton(ColorTokens c, String chain) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
       child: GestureDetector(
         onTap: () => _addAccount(chain),
         behavior: HitTestBehavior.opaque,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            border: Border.all(color: c.accent.withAlpha(120)),
-            borderRadius: BorderRadius.circular(R.lg),
-          ),
           alignment: Alignment.center,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -372,19 +366,14 @@ class _AccountsTabState extends State<AccountsTab> {
   }
 
   Widget _buildAccountRow(ColorTokens c, String chain, int localIndex,
-      ChainAccount acct, int totalCount) {
-    final l10n = AppLocalizations.of(context)!;
-    final isLast = localIndex == totalCount - 1;
-
+      ChainAccount acct) {
     return GestureDetector(
       onTap: () => _goToAccount(chain, localIndex),
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
         decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : Border(bottom: BorderSide(color: c.border)),
+          border: Border(bottom: BorderSide(color: c.borderStrong)),
         ),
         child: Row(
           children: [
@@ -408,32 +397,17 @@ class _AccountsTabState extends State<AccountsTab> {
               ),
             ),
             const SizedBox(width: 12),
-            // ── Address + derivation path ────────────────────────────
+            // ── Address ─────────────────────────────────────────────
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _truncateAddress(acct.address),
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: c.text.withAlpha(210),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    l10n.accountWithIndex(
-                        accountIndexInPath(acct.derivationPath)),
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: c.text.withAlpha(105),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+              child: Text(
+                _truncateAddress(acct.address),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: c.text.withAlpha(210),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
             // ── Copy ────────────────────────────────────────────────

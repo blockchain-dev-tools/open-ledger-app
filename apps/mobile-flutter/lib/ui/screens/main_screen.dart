@@ -154,10 +154,10 @@ class _MainScreenState extends State<MainScreen> {
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
 
-    // Settings uses the tinted inset-grouped background; the AppBar tints
-    // with it so the title area flows into the list.
-    final scaffoldBg =
-        _currentIndex == 2 ? c.groupedBg : c.bg;
+    // Every tab sits on the tinted inset-grouped background; the AppBar tints
+    // with it so the title area flows into the list. Dark mode's `groupedBg`
+    // equals `bg`, so this only changes light mode.
+    final scaffoldBg = c.groupedBg;
 
     return Scaffold(
       backgroundColor: scaffoldBg,
