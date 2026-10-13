@@ -34,6 +34,8 @@ Crypto FFI uses null-terminated encoded strings and matching Rust allocation/fre
 
 Use `ColorTokens` and `R` from `ui/theme/`; no hardcoded theme colors/radii. Localize user-visible strings. Every new interactive widget needs a stable `ValueKey`. Do not stack a bottom sheet on another bottom sheet; switch views within one modal.
 
+Light mode speaks a neobrutalist chrome (per neobrutalism.dev): a hard `Neo.edge`-px black outline, flat fills and a blur-free `Neo.lift`-px offset shadow. It is opt-in per surface and light-only: gate every neo branch on `ColorTokens.neobrutalism` so dark keeps the flat grouped-list chrome. Reuse the shared `NeoCard` / `NeoButton` / `NeoCodeBlock` (`lib/ui/widgets/common/neo_*.dart`), the `Neo` metrics and the `ColorTokens.neo*` tokens (`lib/ui/theme/color_tokens.dart`) — never hardcode the black edge, shadow or lime fill. New screens render neo in light mode and fall back to the legacy chrome in dark (shared widgets expose an explicit `neo` flag, e.g. `TxDetailsCard`). How the mechanism is wired is documented in [docs/reference/ui-neobrutalism.md](docs/reference/ui-neobrutalism.md).
+
 The device uses tag-first BLE framing: first header 5 bytes (`tag + seq + length`), continuation 3 bytes. There is no `0x0101` channel prefix. App identity selects the CLA `0xE0` INS table; keep `LedgerApp` and `apdu_constants.dart` authoritative. Service discovery must use live advertisement events; do not interpret a stale BlueZ cache as evidence of missing UUIDs.
 
 The native Android application ID is `app.openledger.mobile`. Use the existing router's `go()` behavior to clear authentication/reset navigation history. Startup must remain empty/splash until wallet existence resolves.
