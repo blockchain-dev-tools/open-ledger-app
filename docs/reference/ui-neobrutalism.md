@@ -34,21 +34,55 @@ Shared primitives live in `apps/mobile-flutter/lib/ui/widgets/common/`:
   for machine-readable data (addresses, payload hex); a no-op in dark.
 - [GridBackground](../../apps/mobile-flutter/lib/ui/widgets/common/grid_background.dart) — the
   `Neo.gridStep` reference grid; also light-only.
+- [neoAppBar](../../apps/mobile-flutter/lib/ui/widgets/common/neo_app_bar.dart) — the title bar (see
+  below); every neo surface with an AppBar goes through it.
 
 ## Where it is applied
 
-Neo chrome currently covers the Vault home ([accounts](../../apps/mobile-flutter/lib/ui/screens/accounts/)),
-[Account Detail](../../apps/mobile-flutter/lib/ui/screens/account_detail/) and
-[History](../../apps/mobile-flutter/lib/ui/screens/history/history_screen.dart). `MainScreen` paints the
-`GridBackground` behind all tabs.
+Neo chrome covers the Vault home ([accounts](../../apps/mobile-flutter/lib/ui/screens/accounts/)),
+[Account Detail](../../apps/mobile-flutter/lib/ui/screens/account_detail/),
+[History](../../apps/mobile-flutter/lib/ui/screens/history/history_screen.dart),
+[Settings](../../apps/mobile-flutter/lib/ui/screens/settings/), and the whole onboarding / signing flow:
+[Welcome](../../apps/mobile-flutter/lib/ui/screens/welcome/),
+[Unlock](../../apps/mobile-flutter/lib/ui/screens/unlock/) + Set PIN, the mnemonic flows
+(`generate_mnemonic`, `import_mnemonic`, `verify_mnemonic`, `verify`, `enigma`, `enigma_mnemonic`,
+`entropy`, `backup_seed`, `seed_export`), the [Stand-in](../../apps/mobile-flutter/lib/ui/screens/stand_in/)
+harness, and the [transaction](../../apps/mobile-flutter/lib/ui/screens/transaction/) screens.
 
-[TxDetailsCard](../../apps/mobile-flutter/lib/ui/widgets/tx_details_card.dart) is shared with the non-neo
-signing screen, so it does **not** read `neobrutalism` itself — it takes an explicit `neo` flag. A neo
-surface passes `neo: c.neobrutalism`; every other caller leaves it `false`.
+Every neo surface sits on the pale-lime page tint with the reference grid behind its body. `MainScreen`
+paints that grid for all three tabs; **every other full-screen route wraps its own body**:
+
+```dart
+Scaffold(
+  // `groupedBg` is the pale-lime page tint in light and equals `bg` in dark,
+  // so this only affects light mode.
+  backgroundColor: c.groupedBg,
+  appBar: neoAppBar(c: c, title: Text(/* … */)),
+  body: GridBackground(
+    child: /* the screen body */,
+  ),
+)
+```
+
+`neoAppBar` ([neo_app_bar.dart](../../apps/mobile-flutter/lib/ui/widgets/common/neo_app_bar.dart)) builds
+the title bar: a white block closed by a hard `Neo.edge` rule in light, the theme's own seamless bar in
+dark. Pass `darkBackground:` only when dark must keep a bar colour other than the theme's `surface`, and
+`ruleWidth:` for the app shell's heavier rule.
+
+The app's default `ThemeMode` is `system`, so a device in light mode lands on the neo chrome out of the
+box, and [Welcome](../../apps/mobile-flutter/lib/ui/screens/welcome/welcome_screen.dart) carries the
+display-mode switch (top-left) so the mode can be chosen before a wallet exists.
+
+[TxDetailsCard](../../apps/mobile-flutter/lib/ui/widgets/tx_details_card.dart) is shared with the signing
+screen, so it does **not** read `neobrutalism` itself — it takes an explicit `neo` flag. A neo surface
+passes `neo: c.neobrutalism`; every other caller leaves it `false`.
 
 ## Building a new neo surface
 
 - Gate every branch on `c.neobrutalism`; keep the legacy chrome for the `else`.
+- Set the page background to `c.groupedBg` and wrap the `body` in `GridBackground` (see the snippet
+  above). Component-level chrome alone is not enough.
+- Build the title bar with `neoAppBar` instead of hand-rolling the `neobrutalism ? … : …` branches.
 - Reuse `NeoCard` / `NeoButton` / `NeoCodeBlock` and the `Neo` metrics rather than re-deriving the look.
 - Leave room for the offset shadow: stacked blocks need at least `Neo.lift` on the right/bottom (the Vault
   list uses a 14px gap in light, 10px in dark).
@@ -59,5 +93,5 @@ surface passes `neo: c.neobrutalism`; every other caller leaves it `false`.
 
 The design gallery (`tool/gallery/`, ADR-005) renders screens against the real theme and is the place to
 eyeball a neo surface. Run it with `flutter run -t tool/gallery/main.dart -d chrome`
-(see [BUILDING.md](../../BUILDING.md)). Its tokens page lists the core palette; the `neo*` tokens are not
-shown there yet.
+(see [BUILDING.md](../../BUILDING.md)). Its tokens page lists the core palette, the `neo*` tokens and the
+`Neo` metrics.
