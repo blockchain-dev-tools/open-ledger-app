@@ -9,6 +9,7 @@ import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_note.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../verify/verify_backup_enigma_screen.dart';
 import '../verify/verify_backup_mnemonic_screen.dart';
@@ -134,7 +135,7 @@ class BackupExportScreen extends StatelessWidget {
                 ),
                 if (showPassphraseNote) ...[
                   const SizedBox(height: 12),
-                  _PassphraseNote(c: c, message: l10n.passphraseNotIncluded),
+                  NeoNote(message: l10n.passphraseNotIncluded),
                 ],
                 const SizedBox(height: 24),
                 _NavCard(
@@ -163,7 +164,7 @@ class BackupExportScreen extends StatelessWidget {
                 Text(
                   l10n.privateKeysRareNote,
                   style: TextStyle(
-                    color: c.text.withAlpha(110),
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(110),
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -274,7 +275,7 @@ class _NavCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: c.text.withAlpha(120),
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(120),
                     fontSize: 12,
                   ),
                 ),
@@ -308,41 +309,6 @@ class _NavCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: content,
-      ),
-    );
-  }
-}
-
-/// Green-tinted note mirroring the one on [SeedQrScreen] — the passphrase
-/// gap is an awareness item, not a misuse warning, so it uses primary rather
-/// than the red [WarningBanner].
-class _PassphraseNote extends StatelessWidget {
-  const _PassphraseNote({required this.c, required this.message});
-
-  final ColorTokens c;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: c.primary.withAlpha(18),
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.primary.withAlpha(60)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: c.primary, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: c.primary, fontSize: 13, height: 1.4),
-            ),
-          ),
-        ],
       ),
     );
   }

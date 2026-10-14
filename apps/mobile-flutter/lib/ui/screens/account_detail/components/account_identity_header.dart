@@ -4,14 +4,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../../utils/formatting.dart';
 import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_card.dart';
 
 /// The top-of-page identity block: chain icon, chain label and the
 /// `Account <index>` badge.
 ///
-/// Light mode renders an outlined chain tile, a heavy label and an accent
-/// badge; dark keeps the original circular tinted icon, 16px label and plain
-/// subtitle.
+/// Light mode renders the chain logo bare on the page tint, a heavy label and
+/// a lime badge; dark keeps the original circular tinted icon, 16px label and
+/// plain subtitle.
 class AccountIdentityHeader extends StatelessWidget {
   final String chain;
   final int index;
@@ -32,17 +31,17 @@ class AccountIdentityHeader extends StatelessWidget {
     return Row(
       children: [
         if (neo)
-          NeoCard(
-            lifted: false,
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: SvgPicture.asset(
-                chainIconAssetPath(chain),
-                width: 26,
-                height: 26,
-                fit: BoxFit.contain,
-              ),
+          // No outline and no fill in light/neo: the logo sits bare on the
+          // pale-lime page tint. The 48px slot and 26px glyph keep the row's
+          // height and the following 14px gap unchanged.
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: SvgPicture.asset(
+              chainIconAssetPath(chain),
+              width: 26,
+              height: 26,
+              fit: BoxFit.contain,
             ),
           )
         else
@@ -77,14 +76,16 @@ class AccountIdentityHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: c.accent,
+                  // Light/neo: lime fill so the badge reads as a brand chip.
+                  color: c.actionFill,
                   borderRadius: BorderRadius.circular(Neo.radius),
                   border: Border.all(color: c.neoEdge, width: Neo.edge),
                 ),
                 child: Text(
                   l10n.accountWithIndex(index),
                   style: TextStyle(
-                    color: c.onAccent,
+                    // Black label on the lime fill.
+                    color: c.brandInk,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),

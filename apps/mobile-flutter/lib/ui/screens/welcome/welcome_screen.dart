@@ -275,6 +275,7 @@ class WelcomeScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final neo = c.neobrutalism;
     final currentLocale = settingsService?.locale ?? const Locale('en');
     final currentThemeMode = settingsService?.themeMode ?? ThemeMode.system;
 
@@ -329,7 +330,7 @@ class WelcomeScreen extends StatelessWidget {
                               l10n.welcomeSubtitle,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: c.text.withAlpha(180),
+                                color: neo ? c.text : c.text.withAlpha(180),
                                 fontSize: 14,
                                 height: 1.4,
                               ),
@@ -362,7 +363,7 @@ class WelcomeScreen extends StatelessWidget {
                                 EntryCard(
                                   key: const Key('entry-enigma'),
                                   iconBuilder: (color) =>
-                                      EnigmaLogoIcon(color: color),
+                                      EnigmaLogoIcon(color: color, size: 32),
                                   title: l10n.enigmaWallet,
                                   description: l10n.advancedEnigma,
                                   onTap: () => context.go('/enigma'),

@@ -167,11 +167,12 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   if (c.neobrutalism)
                     Center(
                       child: NeoCard(
+                        fill: c.actionFill,
                         child: SizedBox(
-                          width: 72,
-                          height: 72,
+                          width: 56,
+                          height: 56,
                           child: Center(
-                            child: EnigmaLogoIcon(color: c.brandInk, size: 36),
+                            child: EnigmaLogoIcon(color: c.brandInk, size: 48),
                           ),
                         ),
                       ),
@@ -203,40 +204,13 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   Text(
                     AppLocalizations.of(context)!.enigmaDescription,
                     style: TextStyle(
-                      color: c.text.withAlpha(160),
+                      color: c.neobrutalism ? c.text : c.text.withAlpha(160),
                       fontSize: 14,
                       height: 1.5,
                     ),
                   ),
 
                   const SizedBox(height: 32),
-
-                  // ── Riddle Input ────────────────────────────────────
-                  Text(
-                    AppLocalizations.of(context)!.yourRiddle,
-                    style: TextStyle(
-                      color: c.text.withAlpha(200),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _neoField(
-                    c,
-                    TextField(
-                      controller: _riddleController,
-                      maxLines: 3,
-                      style: TextStyle(color: c.text, fontSize: 15),
-                      onChanged: (_) => setState(() {}),
-                      decoration: _fieldDecoration(
-                        c,
-                        hintText:
-                            AppLocalizations.of(context)!.enterMemorablePhrase,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
 
                   // ── Language Selector ──────────────────────────────
                   Text(
@@ -275,6 +249,33 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                           setState(() => _selectedLanguage = value);
                         }
                       },
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Riddle Input ────────────────────────────────────
+                  Text(
+                    AppLocalizations.of(context)!.yourRiddle,
+                    style: TextStyle(
+                      color: c.text.withAlpha(200),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _neoField(
+                    c,
+                    TextField(
+                      controller: _riddleController,
+                      maxLines: 3,
+                      style: TextStyle(color: c.text, fontSize: 15),
+                      onChanged: (_) => setState(() {}),
+                      decoration: _fieldDecoration(
+                        c,
+                        hintText:
+                            AppLocalizations.of(context)!.enterMemorablePhrase,
+                      ),
                     ),
                   ),
 

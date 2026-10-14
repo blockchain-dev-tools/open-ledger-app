@@ -113,7 +113,11 @@ class ChainSection extends StatelessWidget {
                         Text(
                           '$count account${count == 1 ? '' : 's'}',
                           style: TextStyle(
-                            color: c.text.withAlpha(115),
+                            // Light (neo) prints the count in solid text black;
+                            // dark keeps the original muted tone.
+                            color: c.neobrutalism
+                                ? c.text
+                                : c.text.withAlpha(115),
                             fontSize: 13,
                           ),
                         ),
@@ -125,7 +129,11 @@ class ChainSection extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
                       Icons.expand_more,
-                      color: c.text.withAlpha(100),
+                      // Light (neo) draws the chevron in solid brand ink; dark
+                      // keeps the original muted tone.
+                      color: c.neobrutalism
+                          ? c.brandInk
+                          : c.text.withAlpha(100),
                     ),
                   ),
                 ],

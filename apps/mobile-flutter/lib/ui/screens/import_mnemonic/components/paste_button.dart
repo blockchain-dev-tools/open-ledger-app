@@ -24,7 +24,6 @@ class PasteButton extends StatelessWidget {
         key: const Key('paste-btn'),
         label: l10n.pasteFromClipboard,
         icon: Icons.content_paste,
-        quiet: true,
         expanded: true,
         onTap: onPressed,
       );

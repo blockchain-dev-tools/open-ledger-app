@@ -11,6 +11,7 @@ import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_note.dart';
 import 'private_key_qr_screen.dart';
 
 /// Per-account private-key list — the second hub destination.
@@ -78,7 +79,12 @@ class PrivateKeyListScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             children: [
-              _RareNote(c: c, message: l10n.privateKeysRareNote),
+              // Primary-tinted note: exporting keys is usually redundant, so
+              // the list leads with why you probably do not need it.
+              NeoNote(
+                message: l10n.privateKeysRareNote,
+                fontSize: 12.5,
+              ),
               const SizedBox(height: 20),
               NeoCard(
                 clip: true,
@@ -226,40 +232,6 @@ class _AccountRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Primary-tinted note: exporting keys is usually redundant, so the list
-/// leads with why you probably do not need it.
-class _RareNote extends StatelessWidget {
-  const _RareNote({required this.c, required this.message});
-
-  final ColorTokens c;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: c.primary.withAlpha(14),
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.primary.withAlpha(50)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: c.primary, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: c.primary, fontSize: 12.5, height: 1.45),
-            ),
-          ),
-        ],
       ),
     );
   }

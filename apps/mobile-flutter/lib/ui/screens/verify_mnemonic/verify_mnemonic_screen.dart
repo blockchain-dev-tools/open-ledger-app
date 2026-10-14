@@ -208,7 +208,7 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
                 Text(
                   'Confirm you\'ve saved the correct words',
                   style: TextStyle(
-                    color: c.text.withAlpha(150),
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(150),
                     fontSize: 14,
                   ),
                 ),
@@ -257,7 +257,7 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
                 Text(
                   l10n.verifyWordPosition(_currentPosition),
                   style: TextStyle(
-                    color: c.primary,
+                    color: c.neobrutalism ? c.text : c.primary,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -268,7 +268,7 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
                 Text(
                   l10n.whichWord,
                   style: TextStyle(
-                    color: c.text.withAlpha(130),
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(130),
                     fontSize: 14,
                   ),
                 ),

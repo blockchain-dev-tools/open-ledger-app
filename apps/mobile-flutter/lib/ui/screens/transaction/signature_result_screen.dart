@@ -120,30 +120,33 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                       child: NeoCard(
                         // Dark restores the original hairline card.
                         legacyEdge: c.border.withAlpha(80),
-                        padding: const EdgeInsets.all(20),
+                        // No horizontal padding in neo — each row carries its own
+                        // via [_hpad] so the row rules span the card edge to
+                        // edge. Vertical padding stays on the card.
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Signing address
-                            _resultRow(
+                            _hpad(c, _resultRow(
                               c, AppLocalizations.of(context)!.signingAddress,
                               signingAddress.length > 14
                                   ? '${signingAddress.substring(0, 8)}...${signingAddress.substring(signingAddress.length - 6)}'
                                   : signingAddress,
-                            ),
+                            )),
                             const SizedBox(height: 10),
                             _separator(c),
                             const SizedBox(height: 10),
 
                             // Derivation path
-                            _resultRow(c, AppLocalizations.of(context)!.derivationPath, derivationPath),
+                            _hpad(c, _resultRow(c, AppLocalizations.of(context)!.derivationPath, derivationPath)),
                             const SizedBox(height: 10),
                             _separator(c),
                             const SizedBox(height: 10),
 
                             // To address (ETH/PERSONAL)
                             if (txType == 'eth_tx' && toAddr != null) ...[
-                              _resultRow(c, AppLocalizations.of(context)!.to, toAddr),
+                              _hpad(c, _resultRow(c, AppLocalizations.of(context)!.to, toAddr)),
                               const SizedBox(height: 10),
                               _separator(c),
                               const SizedBox(height: 10),
@@ -151,7 +154,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
 
                             // Value (ETH)
                             if (txType == 'eth_tx' && value != null) ...[
-                              _resultRow(c, AppLocalizations.of(context)!.value, '${weiToEth(value)} ETH'),
+                              _hpad(c, _resultRow(c, AppLocalizations.of(context)!.value, '${weiToEth(value)} ETH')),
                               const SizedBox(height: 10),
                               _separator(c),
                               const SizedBox(height: 10),
@@ -159,12 +162,12 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
 
                             // Personal message
                             if (txType == 'personal_msg')
-                              _resultRow(
+                              _hpad(c, _resultRow(
                                 c, AppLocalizations.of(context)!.messageLabel,
                                 (result['message'] as String? ?? '').length > 40
                                     ? '${(result['message'] as String? ?? '').substring(0, 40)}...'
                                     : result['message'] as String? ?? '',
-                              ),
+                              )),
                             if (txType == 'personal_msg') ...[
                               const SizedBox(height: 10),
                               _separator(c),
@@ -172,7 +175,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                             ],
 
                             // Signature hex (expandable)
-                            _buildSignatureSection(c, signatureHex),
+                            _hpad(c, _buildSignatureSection(c, signatureHex)),
                           ],
                         ),
                       ),
@@ -288,6 +291,20 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
         height: 1.5,
       ),
     );
+  }
+
+  /// Horizontal inset for a top-level row. The neo card carries no horizontal
+  /// padding of its own, so each row adds the inset here, leaving the
+  /// [Neo.edge] rules between rows edge to edge. No-op in the legacy chrome,
+  /// where the card still owns the inset.
+  Widget _hpad(ColorTokens c, Widget child) {
+    if (c.neobrutalism) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: child,
+      );
+    }
+    return child;
   }
 
   /// Hairline rule between detail rows. In neo (light) it becomes the

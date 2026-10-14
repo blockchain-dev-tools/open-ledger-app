@@ -168,6 +168,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       parsedData: req.parsedData,
                       payloadHex: req.payloadHex,
                       c: c,
+                      neo: c.neobrutalism,
                     ),
                   ),
                 ),
@@ -272,7 +273,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 const SizedBox(width: 6),
                 Text(
                   AppLocalizations.of(context)!.from,
-                  style: TextStyle(color: c.text.withAlpha(150), fontSize: 13),
+                  style: TextStyle(
+                    // Light (neo) prints the label black and bold so it reads as
+                    // a key; dark keeps the original muted grey.
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                    fontSize: 13,
+                    fontWeight:
+                        c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
+                  ),
                 ),
               ],
             ),
@@ -285,7 +293,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
             Text(
               _pendingRequest?.derivationPath ?? '',
               style: TextStyle(
-                color: c.text.withAlpha(100),
+                // Light (neo) prints the derivation path in solid text black;
+                // dark keeps the original muted tone.
+                color: c.neobrutalism ? c.text : c.text.withAlpha(100),
                 fontSize: 11,
                 fontFamily: 'monospace',
               ),

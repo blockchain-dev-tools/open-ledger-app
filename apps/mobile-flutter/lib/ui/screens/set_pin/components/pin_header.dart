@@ -29,6 +29,7 @@ class PinHeader extends StatelessWidget {
         if (neo)
           NeoCard(
             lifted: false,
+            fill: c.actionFill,
             child: SizedBox(
               width: 64,
               height: 64,

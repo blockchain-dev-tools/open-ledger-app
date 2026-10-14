@@ -183,16 +183,21 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
     final lockIcon = Icon(
       _lockedOut ? Icons.lock : Icons.lock_outline,
       size: 30,
-      color: _lockedOut ? c.error : c.text.withAlpha(150),
+      // Light fills the tile with the brand lime, so the glyph turns black to
+      // stay readable on it; dark keeps the original error / neutral glyph.
+      color: c.neobrutalism
+          ? c.brandInk
+          : (_lockedOut ? c.error : c.text.withAlpha(150)),
     );
 
     return Column(
       children: [
-        // Light mode frames the lock as an outlined block; dark restores the
-        // original circular tinted tile.
+        // Light mode frames the lock as a lime-filled neo block; dark restores
+        // the original circular tinted tile.
         if (c.neobrutalism)
           NeoCard(
             lifted: false,
+            fill: c.actionFill,
             child: SizedBox(
               width: 64,
               height: 64,

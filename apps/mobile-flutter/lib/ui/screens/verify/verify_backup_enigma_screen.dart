@@ -103,57 +103,63 @@ class _VerifyBackupEnigmaScreenState extends State<VerifyBackupEnigmaScreen> {
         ),
       ),
       body: GridBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(Icons.auto_awesome_outlined, size: 44, color: c.primary),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.verifyEnigmaHint,
-                  style: TextStyle(
-                      color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
-                ),
-                const SizedBox(height: 20),
-                _label(c, l10n.enigmaRiddleLabel),
-                const SizedBox(height: 8),
-                _field(
-                  c: c,
-                  key: const Key('verify-enigma-riddle'),
-                  controller: _riddleController,
-                  minLines: 2,
-                  maxLines: 4,
-                  hint: null,
-                ),
-                const SizedBox(height: 20),
-                _label(c, l10n.enigmaSecretLabel),
-                const SizedBox(height: 8),
-                _field(
-                  c: c,
-                  key: const Key('verify-enigma-secret'),
-                  controller: _secretController,
-                  obscure: _obscure,
-                  suffix: IconButton(
-                    icon: Icon(
-                      _obscure ? Icons.visibility_off : Icons.visibility,
-                      color: c.text.withAlpha(150),
-                    ),
-                    onPressed: () => setState(() => _obscure = !_obscure),
+        // `SizedBox.expand` forces the body to the viewport height so the grid
+        // painter (which sizes itself to its child) covers the whole page. A
+        // bare `SingleChildScrollView` shrink-wraps to short content, which
+        // leaves the grid stopping part-way down. Scrolling is unaffected.
+        child: SizedBox.expand(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.auto_awesome_outlined, size: 44, color: c.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.verifyEnigmaHint,
+                    style: TextStyle(
+                        color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
                   ),
-                ),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: l10n.verifyAction,
-                  loading: _checking,
-                  onTap: _verify,
-                ),
-                if (result != null) ...[
                   const SizedBox(height: 20),
-                  VerifyResultCard(result: result),
+                  _label(c, l10n.enigmaRiddleLabel),
+                  const SizedBox(height: 8),
+                  _field(
+                    c: c,
+                    key: const Key('verify-enigma-riddle'),
+                    controller: _riddleController,
+                    minLines: 2,
+                    maxLines: 4,
+                    hint: null,
+                  ),
+                  const SizedBox(height: 20),
+                  _label(c, l10n.enigmaSecretLabel),
+                  const SizedBox(height: 8),
+                  _field(
+                    c: c,
+                    key: const Key('verify-enigma-secret'),
+                    controller: _secretController,
+                    obscure: _obscure,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _obscure ? Icons.visibility_off : Icons.visibility,
+                        color: c.text.withAlpha(150),
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  PrimaryButton(
+                    label: l10n.verifyAction,
+                    loading: _checking,
+                    onTap: _verify,
+                  ),
+                  if (result != null) ...[
+                    const SizedBox(height: 20),
+                    VerifyResultCard(result: result),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

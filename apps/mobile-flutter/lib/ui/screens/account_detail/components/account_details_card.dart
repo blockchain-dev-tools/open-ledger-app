@@ -24,6 +24,14 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
   /// Whether the public key hex is expanded (default: collapsed).
   bool _publicKeyExpanded = false;
 
+  /// Row-label style. The neo chrome renders labels black and bold so they
+  /// read as keys against their values; the legacy chrome keeps them muted grey.
+  TextStyle _labelStyle(ColorTokens c) => TextStyle(
+        color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+        fontSize: 13,
+        fontWeight: c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
+      );
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -66,7 +74,7 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
         children: [
           Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(120), fontSize: 13),
+            style: _labelStyle(c),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -107,8 +115,7 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
                 children: [
                   Text(
                     l10n.publicKey,
-                    style:
-                        TextStyle(color: c.text.withAlpha(120), fontSize: 13),
+                    style: _labelStyle(c),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -132,7 +139,7 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
                   key: const ValueKey('public-key-expand'),
                   label: l10n.showMore,
                   icon: Icons.unfold_more,
-                  quiet: true,
+                  // Brand tone: lime fill with a black label.
                   onTap: () => setState(() => _publicKeyExpanded = true),
                 )
               else
@@ -159,7 +166,7 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
             children: [
               Text(
                 l10n.publicKey,
-                style: TextStyle(color: c.text.withAlpha(120), fontSize: 13),
+                style: _labelStyle(c),
               ),
               const Spacer(),
               _copyIcon(context, c, pubKey),

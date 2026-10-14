@@ -52,6 +52,7 @@ class EntryCard extends StatelessWidget {
                 if (neo)
                   NeoCard(
                     lifted: false,
+                    fill: c.actionFill,
                     child: SizedBox(
                       width: 44,
                       height: 44,
@@ -93,7 +94,7 @@ class EntryCard extends StatelessWidget {
                       Text(
                         description,
                         style: TextStyle(
-                          color: c.text.withAlpha(140),
+                          color: neo ? c.text : c.text.withAlpha(140),
                           fontSize: 13,
                           height: 1.3,
                         ),

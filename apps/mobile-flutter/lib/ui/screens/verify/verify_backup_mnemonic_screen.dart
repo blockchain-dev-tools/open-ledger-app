@@ -103,37 +103,43 @@ class _VerifyBackupMnemonicScreenState
         ),
       ),
       body: GridBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(Icons.spellcheck, size: 44, color: c.primary),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.verifySeedHint,
-                  style: TextStyle(color: c.text.withAlpha(150), fontSize: 13,
-                      height: 1.5),
-                ),
-                const SizedBox(height: 20),
-                _PhraseField(c: c, controller: _controller),
-                const SizedBox(height: 24),
-                // Rebuild on every keystroke so the button enables as soon as
-                // the field is non-empty (the screen has no other text input).
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _controller,
-                  builder: (context, value, _) => PrimaryButton(
-                    label: l10n.verifyAction,
-                    loading: _checking,
-                    onTap: value.text.trim().isEmpty ? null : _verify,
+        // `SizedBox.expand` forces the body to the viewport height so the grid
+        // painter (which sizes itself to its child) covers the whole page. A
+        // bare `SingleChildScrollView` shrink-wraps to short content, which
+        // leaves the grid stopping part-way down. Scrolling is unaffected.
+        child: SizedBox.expand(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.spellcheck, size: 44, color: c.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.verifySeedHint,
+                    style: TextStyle(color: c.text.withAlpha(150), fontSize: 13,
+                        height: 1.5),
                   ),
-                ),
-                if (result != null) ...[
                   const SizedBox(height: 20),
-                  VerifyResultCard(result: result),
+                  _PhraseField(c: c, controller: _controller),
+                  const SizedBox(height: 24),
+                  // Rebuild on every keystroke so the button enables as soon as
+                  // the field is non-empty (the screen has no other text input).
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, _) => PrimaryButton(
+                      label: l10n.verifyAction,
+                      loading: _checking,
+                      onTap: value.text.trim().isEmpty ? null : _verify,
+                    ),
+                  ),
+                  if (result != null) ...[
+                    const SizedBox(height: 20),
+                    VerifyResultCard(result: result),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

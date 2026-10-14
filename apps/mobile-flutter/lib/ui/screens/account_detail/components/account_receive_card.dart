@@ -103,7 +103,7 @@ class AccountReceiveCard extends StatelessWidget {
                   key: const ValueKey('copy-address'),
                   label: l10n.copyAddress,
                   icon: Icons.copy,
-                  quiet: true,
+                  // Brand tone: lime fill with a black label.
                   expanded: true,
                   onTap: copy,
                 )

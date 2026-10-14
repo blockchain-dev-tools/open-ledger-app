@@ -235,7 +235,14 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                 const SizedBox(width: 6),
                 Text(
                   AppLocalizations.of(context)!.address,
-                  style: TextStyle(color: c.text.withAlpha(150), fontSize: 13),
+                  style: TextStyle(
+                    // Light (neo) prints the label black and bold so it reads as
+                    // a key; dark keeps the original muted grey.
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                    fontSize: 13,
+                    fontWeight:
+                        c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
+                  ),
                 ),
               ],
             ),
@@ -248,7 +255,9 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
             Text(
               path,
               style: TextStyle(
-                color: c.text.withAlpha(100),
+                // Light (neo) prints the derivation path in solid text black;
+                // dark keeps the original muted tone.
+                color: c.neobrutalism ? c.text : c.text.withAlpha(100),
                 fontSize: 11,
                 fontFamily: 'monospace',
               ),

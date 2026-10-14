@@ -93,12 +93,21 @@ class OptionCard extends StatelessWidget {
         onTap: onTap,
         child: NeoCard(
           clip: true,
-          // Destructive option outlines in the error colour; the rest in brand
-          // ink.
-          edge: danger ? c.error : c.brandInk,
+          // The destructive option keeps the plain black outline so its hard
+          // black shadow reads as one edge with it; the error signal moves to
+          // the fill instead of the border. Non-destructive cards stay brand
+          // ink (the same black in light).
+          edge: danger ? c.neoEdge : c.brandInk,
           child: Container(
             padding: const EdgeInsets.all(16),
-            color: selected ? c.actionFill : c.surface,
+            // Destructive cards flatten the translucent error tint into an
+            // opaque pale-red fill (the `WarningBanner` trick) so the page grid
+            // cannot show through; selection still fills with the brand lime.
+            color: selected
+                ? c.actionFill
+                : (danger
+                    ? Color.alphaBlend(c.error.withAlpha(18), c.surface)
+                    : c.surface),
             child: content,
           ),
         ),

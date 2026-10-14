@@ -86,10 +86,22 @@ class AccountRow extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: Icon(Icons.copy, size: 16, color: c.text.withAlpha(110)),
+                child: Icon(
+                  Icons.copy,
+                  size: 16,
+                  // Light (neo) draws the copy glyph in solid brand ink; dark
+                  // keeps the original muted tone.
+                  color: c.neobrutalism ? c.brandInk : c.text.withAlpha(110),
+                ),
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: c.text.withAlpha(60)),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              // Light (neo) draws the trailing chevron in solid brand ink; dark
+              // keeps the original muted tone.
+              color: c.neobrutalism ? c.brandInk : c.text.withAlpha(60),
+            ),
           ],
         ),
       ),

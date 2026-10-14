@@ -89,59 +89,65 @@ class _VerifyBackupPassphraseScreenState
         ),
       ),
       body: GridBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(Icons.password_outlined, size: 44, color: c.primary),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.verifyPassphraseHint,
-                  style: TextStyle(
-                      color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
-                ),
-                const SizedBox(height: 20),
-                NeoCard(
-                  // Light outlines the field as a neo block; dark falls back to
-                  // the original hairline box.
-                  legacyRadius: R.lg,
-                  legacyEdge: c.border,
-                  child: TextField(
-                    key: const Key('verify-passphrase-input'),
-                    controller: _controller,
-                    obscureText: _obscure,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    style: TextStyle(color: c.text, fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText: l10n.enterPassphraseOptional,
-                      hintStyle: TextStyle(color: c.text.withAlpha(80)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility_off : Icons.visibility,
-                          color: c.text.withAlpha(150),
+        // `SizedBox.expand` forces the body to the viewport height so the grid
+        // painter (which sizes itself to its child) covers the whole page. A
+        // bare `SingleChildScrollView` shrink-wraps to short content, which
+        // leaves the grid stopping part-way down. Scrolling is unaffected.
+        child: SizedBox.expand(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.password_outlined, size: 44, color: c.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.verifyPassphraseHint,
+                    style: TextStyle(
+                        color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 20),
+                  NeoCard(
+                    // Light outlines the field as a neo block; dark falls back
+                    // to the original hairline box.
+                    legacyRadius: R.lg,
+                    legacyEdge: c.border,
+                    child: TextField(
+                      key: const Key('verify-passphrase-input'),
+                      controller: _controller,
+                      obscureText: _obscure,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      style: TextStyle(color: c.text, fontSize: 15),
+                      decoration: InputDecoration(
+                        hintText: l10n.enterPassphraseOptional,
+                        hintStyle: TextStyle(color: c.text.withAlpha(80)),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscure ? Icons.visibility_off : Icons.visibility,
+                            color: c.text.withAlpha(150),
+                          ),
+                          onPressed: () => setState(() => _obscure = !_obscure),
                         ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: l10n.verifyAction,
-                  loading: _checking,
-                  onTap: _verify,
-                ),
-                if (result != null) ...[
-                  const SizedBox(height: 20),
-                  VerifyResultCard(result: result),
+                  const SizedBox(height: 24),
+                  PrimaryButton(
+                    label: l10n.verifyAction,
+                    loading: _checking,
+                    onTap: _verify,
+                  ),
+                  if (result != null) ...[
+                    const SizedBox(height: 20),
+                    VerifyResultCard(result: result),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

@@ -147,10 +147,11 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              // Light outlines the empty box in brand ink.
-                              color: _confirmed
-                                  ? c.primary
-                                  : (c.neobrutalism ? c.neoEdge : c.border),
+                              // Light keeps the black neo outline in every
+                              // state; dark keeps its primary/border colouring.
+                              color: c.neobrutalism
+                                  ? c.neoEdge
+                                  : (_confirmed ? c.primary : c.border),
                               width: 2,
                             ),
                             color: _confirmed
@@ -241,7 +242,9 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                           'phrase. If you use one, you MUST remember it — '
                           'there is no way to recover it.',
                           style: TextStyle(
-                            color: c.text.withAlpha(120),
+                            color: c.neobrutalism
+                                ? c.text
+                                : c.text.withAlpha(120),
                             fontSize: 12,
                             height: 1.5,
                           ),
@@ -257,31 +260,50 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                           ),
                           decoration: InputDecoration(
                             filled: true,
-                            fillColor: c.bg,
+                            // Light fills with the neo surface (white-on-page);
+                            // dark keeps its original `bg` fill.
+                            fillColor: c.neobrutalism ? c.surface : c.bg,
                             hintText: l10n.enterPassphraseOptional,
                             hintStyle: TextStyle(
-                              color: c.text.withAlpha(80),
+                              color: c.neobrutalism
+                                  ? c.text
+                                  : c.text.withAlpha(80),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 14,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(R.lg),
+                              borderRadius: BorderRadius.circular(
+                                c.neobrutalism ? Neo.radius : R.lg,
+                              ),
                               borderSide: BorderSide(
-                                color: c.border.withAlpha(100),
+                                color: c.neobrutalism
+                                    ? c.neoEdge
+                                    : c.border.withAlpha(100),
+                                width: c.neobrutalism ? Neo.edge : 1,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(R.lg),
+                              borderRadius: BorderRadius.circular(
+                                c.neobrutalism ? Neo.radius : R.lg,
+                              ),
                               borderSide: BorderSide(
-                                color: c.border.withAlpha(100),
+                                color: c.neobrutalism
+                                    ? c.neoEdge
+                                    : c.border.withAlpha(100),
+                                width: c.neobrutalism ? Neo.edge : 1,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(R.lg),
+                              borderRadius: BorderRadius.circular(
+                                c.neobrutalism ? Neo.radius : R.lg,
+                              ),
                               borderSide: BorderSide(
-                                color: c.primary,
+                                color: c.neobrutalism
+                                    ? c.neoEdge
+                                    : c.primary,
+                                width: c.neobrutalism ? Neo.edge : 1,
                               ),
                             ),
                             suffixIcon: IconButton(
