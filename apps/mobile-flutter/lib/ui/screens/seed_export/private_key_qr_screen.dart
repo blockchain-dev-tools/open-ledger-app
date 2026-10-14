@@ -14,6 +14,7 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
@@ -66,6 +67,10 @@ class PrivateKeyQrScreen extends StatefulWidget {
 
 class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
   static const int _autoHideSeconds = 60;
+
+  /// Whether the encoded key is shown in the clear. Hidden by default; the
+  /// eye button toggles it. The QR already carries the same value.
+  bool _keyVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +176,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
                 '${l10n.accountWithIndex(widget.account.accountIndex)} · '
                 '${widget.account.derivationPath}',
                 style: TextStyle(
-                  color: c.text.withAlpha(120),
+                  color: c.neobrutalism ? c.text : c.text.withAlpha(120),
                   fontSize: 12,
                   fontFamily: 'monospace',
                 ),
@@ -224,6 +229,9 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
         ),
         const SizedBox(height: 20),
         _buildMetaCard(c, l10n, encodingLabel),
+        const SizedBox(height: 16),
+        // The key itself, as text: obscured by default, revealed by the eye.
+        _buildKeyReveal(c, key),
         const SizedBox(height: 20),
         AutoHideCountdown(
           seconds: _autoHideSeconds,
@@ -279,7 +287,12 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(120), fontSize: 13),
+            style: TextStyle(
+              color: c.text.withAlpha(120),
+              fontSize: 13,
+              fontWeight:
+                  c.neobrutalism ? FontWeight.w700 : FontWeight.normal,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -295,6 +308,45 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// The encoded key, obscured until the eye button reveals it.
+  ///
+  /// Light frames it as a neo code block (the same treatment addresses and hex
+  /// get elsewhere), dark keeps the original bare, selectable text. Lives
+  /// inside the [PrivacyShield] body, so the lifecycle cover hides it too.
+  Widget _buildKeyReveal(ColorTokens c, String key) {
+    // A fixed run of bullets, so the ciphertext length is not leaked.
+    final display = _keyVisible ? key : List<String>.filled(24, '●').join();
+
+    final value = SelectableText(
+      display,
+      style: TextStyle(
+        color: c.text,
+        fontSize: 12,
+        fontFamily: 'monospace',
+        height: 1.4,
+      ),
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: c.neobrutalism
+              ? NeoCodeBlock(
+                  padding: const EdgeInsets.all(10),
+                  child: value,
+                )
+              : value,
+        ),
+        const SizedBox(width: 10),
+        _KeyRevealToggle(
+          visible: _keyVisible,
+          onTap: () => setState(() => _keyVisible = !_keyVisible),
+        ),
+      ],
     );
   }
 
@@ -318,5 +370,46 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
   static String _truncate(String value) {
     if (value.length <= 20) return value;
     return '${value.substring(0, 10)}…${value.substring(value.length - 6)}';
+  }
+}
+
+/// Eye button for the private-key reveal, in the neo idiom.
+///
+/// Light draws a small outlined block with a black glyph; dark keeps the plain
+/// icon button. Follows the app's reveal convention: a struck eye while the
+/// value is obscured, a plain eye once it is shown.
+class _KeyRevealToggle extends StatelessWidget {
+  const _KeyRevealToggle({required this.visible, required this.onTap});
+
+  final bool visible;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final icon = visible ? Icons.visibility : Icons.visibility_off;
+
+    if (!c.neobrutalism) {
+      return IconButton(
+        icon: Icon(icon),
+        color: c.text.withAlpha(150),
+        onPressed: onTap,
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: c.bg,
+          borderRadius: BorderRadius.circular(Neo.radius),
+          border: Border.all(color: c.neoEdge, width: Neo.edge),
+        ),
+        child: Icon(icon, size: 18, color: c.brandInk),
+      ),
+    );
   }
 }

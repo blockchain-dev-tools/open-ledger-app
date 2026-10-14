@@ -11,6 +11,8 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_code_block.dart';
+import '../../widgets/common/neo_note.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
@@ -188,6 +190,10 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
             ),
           ),
         const SizedBox(height: 20),
+        // The phrase itself, as text, right under the QR chip. Same payload
+        // as the QR, so a user can read or re-type the words directly.
+        _buildMnemonicBlock(c, mnemonic),
+        const SizedBox(height: 20),
         AutoHideCountdown(
           seconds: _autoHideSeconds,
           previewSeconds: widget.previewSeconds,
@@ -215,35 +221,61 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
         ),
         if (hasPassphrase) ...[
           const SizedBox(height: 20),
-          _buildPassphraseNote(c, l10n),
+          // Awareness note (not the red [WarningBanner]) — the passphrase is a
+          // gap to be aware of, not a misuse.
+          NeoNote(message: l10n.passphraseNotIncluded),
         ],
       ],
     );
   }
 
-  /// Green-tinted note (not the red [WarningBanner]) — the passphrase is a
-  /// gap to be aware of, not a misuse.
-  Widget _buildPassphraseNote(ColorTokens c, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: c.primary.withAlpha(18),
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.primary.withAlpha(60)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: c.primary, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              l10n.passphraseNotIncluded,
-              style: TextStyle(color: c.primary, fontSize: 13, height: 1.4),
-            ),
+  /// The phrase rendered as machine-readable data, in the same neo idiom the
+  /// hex/keys use elsewhere: numbered words wrapped across lines inside an
+  /// outlined block in light, the original bare wording in dark.
+  ///
+  /// Lives inside the [PrivacyShield] body, so the lifecycle cover hides the
+  /// words together with the QR.
+  Widget _buildMnemonicBlock(ColorTokens c, String mnemonic) {
+    final words = mnemonic.trim().split(RegExp(r'\s+'));
+
+    final content = Wrap(
+      spacing: 18,
+      runSpacing: 10,
+      children: [
+        for (var i = 0; i < words.length; i++)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${i + 1}',
+                style: TextStyle(
+                  color: c.neobrutalism
+                      ? c.text.withAlpha(120)
+                      : c.text.withAlpha(70),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                words[i],
+                style: TextStyle(
+                  color: c.neobrutalism ? c.text : c.text.withAlpha(180),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+      ],
+    );
+
+    if (!c.neobrutalism) return content;
+
+    return NeoCodeBlock(
+      padding: const EdgeInsets.all(14),
+      child: content,
     );
   }
 
