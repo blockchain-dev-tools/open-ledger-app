@@ -8,6 +8,10 @@ import '../../../core/models/apdu_message.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/tx_details_card.dart';
 
@@ -108,14 +112,23 @@ class _TransactionScreenState extends State<TransactionScreen> {
     // If no pending request, show a spinner or redirect.
     if (req == null) {
       return Scaffold(
-        backgroundColor: c.bg,
-        body: const Center(child: CircularProgressIndicator()),
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        body: GridBackground(
+          child: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(AppLocalizations.of(context)!.signTransaction),
         actions: [
           // Countdown timer
@@ -134,57 +147,74 @@ class _TransactionScreenState extends State<TransactionScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              // ── Header ──────────────────────────────────────────
-              _buildHeader(c, req),
-              const SizedBox(height: 20),
+      body: GridBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // ── Header ──────────────────────────────────────────
+                _buildHeader(c, req),
+                const SizedBox(height: 20),
 
-              // ── Signing address ─────────────────────────────────
-              _buildAddressCard(c, req.signingAddress, req.chain),
-              const SizedBox(height: 16),
+                // ── Signing address ─────────────────────────────────
+                _buildAddressCard(c, req.signingAddress, req.chain),
+                const SizedBox(height: 16),
 
-              // ── Transaction details ─────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  child: TxDetailsCard(
-                    parsedData: req.parsedData,
-                    payloadHex: req.payloadHex,
-                    c: c,
+                // ── Transaction details ─────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: TxDetailsCard(
+                      parsedData: req.parsedData,
+                      payloadHex: req.payloadHex,
+                      c: c,
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // ── Approve / Reject ────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: PrimaryButton(
-                      key: const Key('sign-reject'),
-                      label: AppLocalizations.of(context)!.reject,
-                      onTap: _onReject,
-                      outline: true,
-                      outlineColor: c.error,
-                      textColor: c.error,
+                // ── Approve / Reject ────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: c.neobrutalism
+                          ? NeoButton(
+                              key: const Key('sign-reject'),
+                              label: AppLocalizations.of(context)!.reject,
+                              quiet: true,
+                              expanded: true,
+                              onTap: _onReject,
+                            )
+                          : PrimaryButton(
+                              key: const Key('sign-reject'),
+                              label: AppLocalizations.of(context)!.reject,
+                              onTap: _onReject,
+                              outline: true,
+                              outlineColor: c.error,
+                              textColor: c.error,
+                            ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: PrimaryButton(
-                      key: const Key('sign-approve'),
-                      label: AppLocalizations.of(context)!.approve,
-                      onTap: _onApprove,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: c.neobrutalism
+                          ? NeoButton(
+                              key: const Key('sign-approve'),
+                              label: AppLocalizations.of(context)!.approve,
+                              expanded: true,
+                              onTap: _onApprove,
+                            )
+                          : PrimaryButton(
+                              key: const Key('sign-approve'),
+                              label: AppLocalizations.of(context)!.approve,
+                              onTap: _onApprove,
+                            ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -194,68 +224,82 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget _buildHeader(ColorTokens c, PendingSignRequest req) {
     return Column(
       children: [
-        Icon(Icons.shield_outlined, size: 48, color: c.primary),
+        Icon(
+          Icons.shield_outlined,
+          size: 48,
+          // Light's lime washes out on the white neo page; the deeper accent
+          // green reads there. Dark keeps the brand lime.
+          color: c.neobrutalism ? c.accent : c.primary,
+        ),
         const SizedBox(height: 12),
         Text(
           AppLocalizations.of(context)!.transactionDetails,
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w600,
             color: c.text,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           AppLocalizations.of(context)!.chainLabel(req.chain),
-          style: TextStyle(color: c.primary, fontSize: 14),
+          style: TextStyle(
+            color: c.neobrutalism ? c.accent : c.primary,
+            fontSize: 14,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildAddressCard(ColorTokens c, String address, String chain) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.border.withAlpha(80)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.key, size: 16, color: c.primary.withAlpha(200)),
-              const SizedBox(width: 6),
-              Text(
-                AppLocalizations.of(context)!.from,
-                style: TextStyle(color: c.text.withAlpha(150), fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SelectableText.rich(
-            _highlightedAddress(address, c),
-            style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _pendingRequest?.derivationPath ?? '',
-            style: TextStyle(
-              color: c.text.withAlpha(100),
-              fontSize: 11,
-              fontFamily: 'monospace',
+      child: NeoCard(
+        // Dark restores the original hairline card.
+        legacyEdge: c.border.withAlpha(80),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.key,
+                  size: 16,
+                  color: c.neobrutalism ? c.accent : c.primary.withAlpha(200),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  AppLocalizations.of(context)!.from,
+                  style: TextStyle(color: c.text.withAlpha(150), fontSize: 13),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            SelectableText.rich(
+              _highlightedAddress(address, c),
+              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _pendingRequest?.derivationPath ?? '',
+              style: TextStyle(
+                color: c.text.withAlpha(100),
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   /// Build a [TextSpan] with first 6 and last 6 chars bold+primary.
   TextSpan _highlightedAddress(String address, ColorTokens c) {
+    // Light's lime highlights wash out on white; the accent green stands in.
+    final highlight = c.neobrutalism ? c.accent : c.primary;
     if (address.length <= 12) {
       return TextSpan(text: address, style: TextStyle(color: c.text));
     }
@@ -266,12 +310,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
       children: [
         TextSpan(
           text: prefix,
-          style: TextStyle(color: c.primary, fontWeight: FontWeight.bold),
+          style: TextStyle(color: highlight, fontWeight: FontWeight.bold),
         ),
         TextSpan(text: middle, style: TextStyle(color: c.text)),
         TextSpan(
           text: suffix,
-          style: TextStyle(color: c.primary, fontWeight: FontWeight.bold),
+          style: TextStyle(color: highlight, fontWeight: FontWeight.bold),
         ),
       ],
     );

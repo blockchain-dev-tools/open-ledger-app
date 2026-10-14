@@ -29,8 +29,10 @@ class SettingsRepositoryImpl implements ISettingsRepository {
       final themeStr = prefs.getString(_keyThemeMode);
       final themeMode = switch (themeStr) {
         'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
         'system' => ThemeMode.system,
-        _ => ThemeMode.dark,
+        // Nothing stored yet → follow the system (fresh-install default).
+        _ => ThemeMode.system,
       };
 
       final localeStr = prefs.getString(_keyLocale);

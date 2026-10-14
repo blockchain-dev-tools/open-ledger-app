@@ -7,6 +7,11 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/common/primary_button.dart';
 
 /// Signature result screen — shown after a transaction is signed.
@@ -39,8 +44,13 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
     // If no result, show redirect to vault.
     if (result == null) {
       return Scaffold(
-        backgroundColor: c.bg,
-        body: const Center(child: CircularProgressIndicator()),
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        body: GridBackground(
+          child: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -54,123 +64,145 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
     final value = result['value'] as String?;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(AppLocalizations.of(context)!.signatureResult),
         leading: IconButton(
           icon: Icon(Icons.close, color: c.text),
           onPressed: () => context.go('/'),
         ),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              // ── Status icon ──────────────────────────────────────
-              Icon(
-                isSuccess ? Icons.check_circle : Icons.error,
-                size: 64,
-                color: isSuccess ? c.primary : c.error,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                isSuccess ? AppLocalizations.of(context)!.transactionApproved : 'Signing Failed',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: c.text,
+      body: GridBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // ── Status icon ──────────────────────────────────────
+                Icon(
+                  isSuccess ? Icons.check_circle : Icons.error,
+                  size: 64,
+                  // Light's lime washes out on the white neo page; the deeper
+                  // accent green reads there. Dark keeps the brand lime.
+                  color: isSuccess
+                      ? (c.neobrutalism ? c.accent : c.primary)
+                      : c.error,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                AppLocalizations.of(context)!.chainLabel(chain),
-                style: TextStyle(color: c.primary, fontSize: 14),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  isSuccess ? AppLocalizations.of(context)!.transactionApproved : 'Signing Failed',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w600,
+                    color: c.text,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppLocalizations.of(context)!.chainLabel(chain),
+                  style: TextStyle(
+                    color: c.neobrutalism ? c.accent : c.primary,
+                    fontSize: 14,
+                  ),
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // ── Details card ─────────────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(R.lg),
-                      border: Border.all(color: c.border.withAlpha(80)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Signing address
-                        _resultRow(
-                          c, AppLocalizations.of(context)!.signingAddress,
-                          signingAddress.length > 14
-                              ? '${signingAddress.substring(0, 8)}...${signingAddress.substring(signingAddress.length - 6)}'
-                              : signingAddress,
+                // ── Details card ─────────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: NeoCard(
+                        // Dark restores the original hairline card.
+                        legacyEdge: c.border.withAlpha(80),
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Signing address
+                            _resultRow(
+                              c, AppLocalizations.of(context)!.signingAddress,
+                              signingAddress.length > 14
+                                  ? '${signingAddress.substring(0, 8)}...${signingAddress.substring(signingAddress.length - 6)}'
+                                  : signingAddress,
+                            ),
+                            const SizedBox(height: 10),
+                            _separator(c),
+                            const SizedBox(height: 10),
+
+                            // Derivation path
+                            _resultRow(c, AppLocalizations.of(context)!.derivationPath, derivationPath),
+                            const SizedBox(height: 10),
+                            _separator(c),
+                            const SizedBox(height: 10),
+
+                            // To address (ETH/PERSONAL)
+                            if (txType == 'eth_tx' && toAddr != null) ...[
+                              _resultRow(c, AppLocalizations.of(context)!.to, toAddr),
+                              const SizedBox(height: 10),
+                              _separator(c),
+                              const SizedBox(height: 10),
+                            ],
+
+                            // Value (ETH)
+                            if (txType == 'eth_tx' && value != null) ...[
+                              _resultRow(c, AppLocalizations.of(context)!.value, '${weiToEth(value)} ETH'),
+                              const SizedBox(height: 10),
+                              _separator(c),
+                              const SizedBox(height: 10),
+                            ],
+
+                            // Personal message
+                            if (txType == 'personal_msg')
+                              _resultRow(
+                                c, AppLocalizations.of(context)!.messageLabel,
+                                (result['message'] as String? ?? '').length > 40
+                                    ? '${(result['message'] as String? ?? '').substring(0, 40)}...'
+                                    : result['message'] as String? ?? '',
+                              ),
+                            if (txType == 'personal_msg') ...[
+                              const SizedBox(height: 10),
+                              _separator(c),
+                              const SizedBox(height: 10),
+                            ],
+
+                            // Signature hex (expandable)
+                            _buildSignatureSection(c, signatureHex),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                        Container(height: 1, color: c.border.withAlpha(60)),
-                        const SizedBox(height: 10),
-
-                        // Derivation path
-                        _resultRow(c, AppLocalizations.of(context)!.derivationPath, derivationPath),
-                        const SizedBox(height: 10),
-                        Container(height: 1, color: c.border.withAlpha(60)),
-                        const SizedBox(height: 10),
-
-                        // To address (ETH/PERSONAL)
-                        if (txType == 'eth_tx' && toAddr != null) ...[
-                          _resultRow(c, AppLocalizations.of(context)!.to, toAddr),
-                          const SizedBox(height: 10),
-                          Container(height: 1, color: c.border.withAlpha(60)),
-                          const SizedBox(height: 10),
-                        ],
-
-                        // Value (ETH)
-                        if (txType == 'eth_tx' && value != null) ...[
-                          _resultRow(c, AppLocalizations.of(context)!.value, '${weiToEth(value)} ETH'),
-                          const SizedBox(height: 10),
-                          Container(height: 1, color: c.border.withAlpha(60)),
-                          const SizedBox(height: 10),
-                        ],
-
-                        // Personal message
-                        if (txType == 'personal_msg')
-                          _resultRow(
-                            c, AppLocalizations.of(context)!.messageLabel,
-                            (result['message'] as String? ?? '').length > 40
-                                ? '${(result['message'] as String? ?? '').substring(0, 40)}...'
-                                : result['message'] as String? ?? '',
-                          ),
-                        if (txType == 'personal_msg') ...[
-                          const SizedBox(height: 10),
-                          Container(height: 1, color: c.border.withAlpha(60)),
-                          const SizedBox(height: 10),
-                        ],
-
-                        // Signature hex (expandable)
-                        _buildSignatureSection(c, signatureHex),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // ── Done button ──────────────────────────────────────
-              PrimaryButton(
-                label: AppLocalizations.of(context)!.done,
-                onTap: () {
-                  widget.appState?.clearLastSignResult();
-                  context.go('/');
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
+                // ── Done button ──────────────────────────────────────
+                if (c.neobrutalism)
+                  NeoButton(
+                    label: AppLocalizations.of(context)!.done,
+                    expanded: true,
+                    onTap: () {
+                      widget.appState?.clearLastSignResult();
+                      context.go('/');
+                    },
+                  )
+                else
+                  PrimaryButton(
+                    label: AppLocalizations.of(context)!.done,
+                    onTap: () {
+                      widget.appState?.clearLastSignResult();
+                      context.go('/');
+                    },
+                  ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -188,15 +220,16 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
               Icon(
                 _expanded ? Icons.expand_less : Icons.expand_more,
                 size: 18,
-                color: c.text.withAlpha(150),
+                color: c.neobrutalism ? c.text : c.text.withAlpha(150),
               ),
               const SizedBox(width: 4),
               Text(
                 AppLocalizations.of(context)!.rawSignature,
                 style: TextStyle(
-                  color: c.text.withAlpha(150),
+                  color: c.neobrutalism ? c.text : c.text.withAlpha(150),
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight:
+                      c.neobrutalism ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
               const Spacer(),
@@ -209,34 +242,59 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                     message: AppLocalizations.of(context)!.copiedToClipboard,
                   );
                 },
-                child: Icon(Icons.copy, size: 16, color: c.primary),
+                child: Icon(
+                  Icons.copy,
+                  size: 16,
+                  color: c.neobrutalism ? c.accent : c.primary,
+                ),
               ),
             ],
           ),
         ),
         if (_expanded) ...[
           const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: c.bg,
-              borderRadius: BorderRadius.circular(R.sm),
-            ),
-            child: SelectableText(
-              '0x$signatureHex',
-              style: TextStyle(
-                color: c.text.withAlpha(200),
-                fontSize: 11,
-                fontFamily: 'monospace',
-                height: 1.5,
+          // Light outlines the hex as data to be checked; dark keeps the
+          // original plain filled block.
+          if (c.neobrutalism)
+            SizedBox(
+              width: double.infinity,
+              child: NeoCodeBlock(
+                padding: const EdgeInsets.all(12),
+                child: _signatureText(c, signatureHex),
               ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: c.bg,
+                borderRadius: BorderRadius.circular(R.sm),
+              ),
+              child: _signatureText(c, signatureHex),
             ),
-          ),
         ],
       ],
     );
   }
+
+  Widget _signatureText(ColorTokens c, String signatureHex) {
+    return SelectableText(
+      '0x$signatureHex',
+      style: TextStyle(
+        color: c.text.withAlpha(200),
+        fontSize: 11,
+        fontFamily: 'monospace',
+        height: 1.5,
+      ),
+    );
+  }
+
+  /// Hairline rule between detail rows. In neo (light) it becomes the
+  /// full-weight brand rule used elsewhere; dark keeps the inset hairline.
+  Widget _separator(ColorTokens c) => c.neobrutalism
+      ? Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
+      : Container(height: 1, color: c.border.withAlpha(60));
 
   static Widget _resultRow(ColorTokens c, String label, String value) {
     return Row(
@@ -246,7 +304,12 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
           width: 100,
           child: Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(130), fontSize: 13),
+            style: TextStyle(
+              color: c.neobrutalism ? c.text : c.text.withAlpha(130),
+              fontSize: 13,
+              fontWeight:
+                  c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -264,6 +327,4 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
       ],
     );
   }
-
-
 }

@@ -38,7 +38,7 @@ class SettingsData {
   final String bleName;
 
   const SettingsData({
-    this.themeMode = ThemeMode.dark,
+    this.themeMode = ThemeMode.system,
     this.locale = const Locale('en'),
     this.storePassphrase = false,
     this.launcherDisguise = LauncherDisguise.standard,

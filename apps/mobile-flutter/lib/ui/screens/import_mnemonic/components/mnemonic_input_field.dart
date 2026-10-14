@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// The 12-word mnemonic input box, with a clear button in the corner.
 ///
 /// Uses a fixed height instead of `Expanded`: inside the page's
 /// `SingleChildScrollView` the height is unbounded, so `Expanded` would throw.
-/// The border colour reflects the current validation state.
+/// In dark the border colour reflects the current validation state; light uses
+/// the neo black outline (validation reads from the status row instead).
 class MnemonicInputField extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -29,15 +31,14 @@ class MnemonicInputField extends StatelessWidget {
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
 
     return SizedBox(
+      width: double.infinity,
       height: 200,
-      child: Container(
-        width: double.infinity,
+      child: NeoCard(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: _borderColor(c), width: 1.5),
-        ),
+        // Dark keeps the original validation-coloured hairline card.
+        legacyEdge: _borderColor(c),
+        legacyEdgeWidth: 1.5,
+        legacyRadius: R.lg,
         child: Stack(
           children: [
             TextField(

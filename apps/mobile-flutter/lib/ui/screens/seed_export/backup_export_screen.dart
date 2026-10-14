@@ -6,6 +6,9 @@ import '../../../core/interfaces/screen_security.dart';
 import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../verify/verify_backup_enigma_screen.dart';
 import '../verify/verify_backup_mnemonic_screen.dart';
@@ -86,129 +89,137 @@ class BackupExportScreen extends StatelessWidget {
     final showEnigma = verifier?.isEnigma ?? isEnigma;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(l10n.backupAndExport),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+        darkBackground: c.bg,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              WarningBanner(message: l10n.backupSeedWarning),
-              const SizedBox(height: 24),
-              _NavCard(
-                c: c,
-                icon: Icons.qr_code_2_outlined,
-                title: l10n.exportSeedQrRow,
-                subtitle: l10n.exportSeedQrRowSubtitle,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => service != null
-                        ? SeedQrScreen(
-                            exportService: service,
-                            screenSecurity: screenSecurity,
-                          )
-                        : SeedQrScreen(
-                            previewMnemonic: previewMnemonic,
-                            previewFingerprint: previewFingerprint,
-                            hasPassphrase: hasPassphrase,
-                            previewSeconds: 58,
-                          ),
+      body: GridBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                WarningBanner(message: l10n.backupSeedWarning),
+                const SizedBox(height: 24),
+                _NavCard(
+                  c: c,
+                  icon: Icons.qr_code_2_outlined,
+                  title: l10n.exportSeedQrRow,
+                  subtitle: l10n.exportSeedQrRowSubtitle,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => service != null
+                          ? SeedQrScreen(
+                              exportService: service,
+                              screenSecurity: screenSecurity,
+                            )
+                          : SeedQrScreen(
+                              previewMnemonic: previewMnemonic,
+                              previewFingerprint: previewFingerprint,
+                              hasPassphrase: hasPassphrase,
+                              previewSeconds: 58,
+                            ),
+                    ),
                   ),
                 ),
-              ),
-              if (showPassphraseNote) ...[
-                const SizedBox(height: 12),
-                _PassphraseNote(c: c, message: l10n.passphraseNotIncluded),
-              ],
-              const SizedBox(height: 24),
-              _NavCard(
-                c: c,
-                icon: Icons.vpn_key_outlined,
-                title: l10n.privateKeysRow,
-                subtitle: l10n.privateKeysRowSubtitle,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => service != null
-                        ? PrivateKeyListScreen(
-                            accounts: service.accounts,
-                            exportService: service,
-                            screenSecurity: screenSecurity,
-                          )
-                        : PrivateKeyListScreen(
-                            accounts: previewAccounts,
-                            encodedKeyFor: encodedKeyFor,
-                            encodingLabelFor: encodingLabelFor,
-                            previewSeconds: 58,
-                          ),
+                if (showPassphraseNote) ...[
+                  const SizedBox(height: 12),
+                  _PassphraseNote(c: c, message: l10n.passphraseNotIncluded),
+                ],
+                const SizedBox(height: 24),
+                _NavCard(
+                  c: c,
+                  icon: Icons.vpn_key_outlined,
+                  title: l10n.privateKeysRow,
+                  subtitle: l10n.privateKeysRowSubtitle,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => service != null
+                          ? PrivateKeyListScreen(
+                              accounts: service.accounts,
+                              exportService: service,
+                              screenSecurity: screenSecurity,
+                            )
+                          : PrivateKeyListScreen(
+                              accounts: previewAccounts,
+                              encodedKeyFor: encodedKeyFor,
+                              encodingLabelFor: encodingLabelFor,
+                              previewSeconds: 58,
+                            ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                l10n.privateKeysRareNote,
-                style: TextStyle(
-                  color: c.text.withAlpha(110),
-                  fontSize: 12,
-                  height: 1.5,
+                const SizedBox(height: 10),
+                Text(
+                  l10n.privateKeysRareNote,
+                  style: TextStyle(
+                    color: c.text.withAlpha(110),
+                    fontSize: 12,
+                    height: 1.5,
+                  ),
                 ),
-              ),
 
-              // ── Verification (ADR-011 §5) ────────────────────────
-              const SizedBox(height: 28),
-              Text(
-                l10n.verifySectionHeader,
-                style: TextStyle(
-                  color: c.text.withAlpha(170),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
+                // ── Verification (ADR-011 §5) ────────────────────────
+                const SizedBox(height: 28),
+                Text(
+                  l10n.verifySectionHeader,
+                  style: TextStyle(
+                    color: c.neobrutalism ? c.text : c.text.withAlpha(170),
+                    fontSize: 13,
+                    fontWeight:
+                        c.neobrutalism ? FontWeight.w700 : FontWeight.w600,
+                    letterSpacing: 0.4,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _NavCard(
-                c: c,
-                icon: Icons.spellcheck,
-                title: l10n.verifySeedTitle,
-                subtitle: l10n.verifyRowSubtitle,
-                onTap: () => _openVerify(
-                  context,
-                  () => VerifyBackupMnemonicScreen(verifier: verifier),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Always offered: a mismatch is also how the user discovers a
-              // wallet has *no* passphrase (ADR-011 §5, bidirectional copy).
-              _NavCard(
-                c: c,
-                icon: Icons.password_outlined,
-                title: l10n.verifyPassphraseTitle,
-                subtitle: l10n.verifyRowSubtitle,
-                onTap: () => _openVerify(
-                  context,
-                  () => VerifyBackupPassphraseScreen(verifier: verifier),
-                ),
-              ),
-              if (showEnigma) ...[
                 const SizedBox(height: 12),
                 _NavCard(
                   c: c,
-                  icon: Icons.auto_awesome_outlined,
-                  title: l10n.verifyEnigmaTitle,
+                  icon: Icons.spellcheck,
+                  title: l10n.verifySeedTitle,
                   subtitle: l10n.verifyRowSubtitle,
                   onTap: () => _openVerify(
                     context,
-                    () => VerifyBackupEnigmaScreen(verifier: verifier),
+                    () => VerifyBackupMnemonicScreen(verifier: verifier),
                   ),
                 ),
+                const SizedBox(height: 12),
+                // Always offered: a mismatch is also how the user discovers a
+                // wallet has *no* passphrase (ADR-011 §5, bidirectional copy).
+                _NavCard(
+                  c: c,
+                  icon: Icons.password_outlined,
+                  title: l10n.verifyPassphraseTitle,
+                  subtitle: l10n.verifyRowSubtitle,
+                  onTap: () => _openVerify(
+                    context,
+                    () => VerifyBackupPassphraseScreen(verifier: verifier),
+                  ),
+                ),
+                if (showEnigma) ...[
+                  const SizedBox(height: 12),
+                  _NavCard(
+                    c: c,
+                    icon: Icons.auto_awesome_outlined,
+                    title: l10n.verifyEnigmaTitle,
+                    subtitle: l10n.verifyRowSubtitle,
+                    onTap: () => _openVerify(
+                      context,
+                      () => VerifyBackupEnigmaScreen(verifier: verifier),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -238,6 +249,55 @@ class _NavCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Row(
+        children: [
+          // The lime [primary] washes out on the light surface, so the glyph
+          // uses the deeper accent there.
+          Icon(icon, size: 22, color: c.neobrutalism ? c.accent : c.primary),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 15,
+                    fontWeight:
+                        c.neobrutalism ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: c.text.withAlpha(120),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 20, color: c.text.withAlpha(100)),
+        ],
+      ),
+    );
+
+    // Light mode renders a neo block; dark keeps the original Material card
+    // (and its ripple).
+    if (c.neobrutalism) {
+      return NeoCard(
+        clip: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: content,
+        ),
+      );
+    }
     return Material(
       color: c.surface,
       shape: RoundedRectangleBorder(
@@ -247,39 +307,7 @@ class _NavCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              Icon(icon, size: 22, color: c.primary),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: c.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: c.text.withAlpha(120),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, size: 20, color: c.text.withAlpha(100)),
-            ],
-          ),
-        ),
+        child: content,
       ),
     );
   }

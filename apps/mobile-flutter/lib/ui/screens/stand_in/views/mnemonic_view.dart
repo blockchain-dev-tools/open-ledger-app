@@ -29,10 +29,13 @@ class MnemonicView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = c.neobrutalism;
     return Column(
       children: [
+        // Neo tabs carry an offset shadow, so light mode leaves room below the
+        // row for it; dark keeps the original flush spacing.
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          padding: EdgeInsets.fromLTRB(20, 16, 20, neo ? 6 : 0),
           child: Row(
             children: [
               TabButton(

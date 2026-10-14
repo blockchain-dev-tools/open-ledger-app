@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../../services/mnemonic_service.dart';
 
 /// Collect 200 touch points from the user to generate entropy for a
@@ -84,190 +88,213 @@ class _EntropyScreenState extends State<EntropyScreen> {
         if (!didPop) context.go('/welcome');
       },
       child: Scaffold(
-        backgroundColor: c.bg,
-        appBar: AppBar(
-          backgroundColor: c.bg,
-          elevation: 0,
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        appBar: neoAppBar(
+          c: c,
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: c.text),
             onPressed: () => context.go('/welcome'),
           ),
+          darkBackground: c.bg,
         ),
-        body: SafeArea(
-        child: GestureDetector(
-          onTapDown: _onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ── Icon ───────────────────────────────────────
-                    Icon(
-                      Icons.touch_app,
-                      size: 72,
-                      color: c.primary,
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // ── Title ─────────────────────────────────────
-                    Text(
-                      l10n.entropyTitle,
-                      style: TextStyle(
-                        color: c.text,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ── Instruction ───────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        l10n.tapRandomly,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: c.text.withAlpha(160),
-                          fontSize: 14,
-                          height: 1.5,
+        body: GridBackground(
+          child: SafeArea(
+            child: GestureDetector(
+              onTapDown: _onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ── Icon ───────────────────────────────────────
+                        Icon(
+                          Icons.touch_app,
+                          size: 72,
+                          color: c.primary,
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 40),
+                        const SizedBox(height: 28),
 
-                    // ── Counter ───────────────────────────────────
-                    Text(
-                      '$_tapCount / $_requiredTaps touches',
-                      style: TextStyle(
-                        color: progress >= 1.0
-                            ? c.primary
-                            : c.text.withAlpha(180),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ── Progress bar ──────────────────────────────
-                    Container(
-                      width: 260,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: c.border.withAlpha(100),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: progress.clamp(0.0, 1.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: c.primary,
-                            borderRadius: BorderRadius.circular(5),
+                        // ── Title ─────────────────────────────────────
+                        Text(
+                          l10n.entropyTitle,
+                          style: TextStyle(
+                            color: c.text,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 44),
-
-                    // ── Tap area hint ─────────────────────────────
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: c.surface,
-                        borderRadius: BorderRadius.circular(R.lg),
-                        border: Border.all(color: c.border.withAlpha(100)),
-                      ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.gesture,
-                        size: 32,
-                        color: _error != null
-                            ? c.error
-                            : c.primary,
-                      ),
-                      const SizedBox(height: 10),
-                      if (_isGenerating)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: c.primary,
-                            ),
-                          ),
-                        ),
-                      Text(
-                        _error != null
-                            ? _error!
-                            : _isGenerating
-                                ? l10n.processing
-                                : _tapCount >= _requiredTaps
-                                    ? l10n.processing
-                                    : l10n.entropyInstruction,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: _error != null
-                              ? c.error.withAlpha(220)
-                              : c.text.withAlpha(160),
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (_error != null) ...[
                         const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () {
-                            if (!_isGenerating) _finalize();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+
+                        // ── Instruction ───────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            l10n.tapRandomly,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: c.text.withAlpha(160),
+                              fontSize: 14,
+                              height: 1.5,
                             ),
-                            decoration: BoxDecoration(
-                              color: c.primary.withAlpha(30),
-                              borderRadius: BorderRadius.circular(R.sm),
-                              border: Border.all(
-                                color: c.primary.withAlpha(100),
-                              ),
-                            ),
-                            child: Text(
-                              l10n.retry,
-                              style: TextStyle(
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // ── Counter ───────────────────────────────────
+                        Text(
+                          '$_tapCount / $_requiredTaps touches',
+                          style: TextStyle(
+                            color: progress >= 1.0
+                                ? c.primary
+                                : c.text.withAlpha(180),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // ── Progress bar ──────────────────────────────
+                        Container(
+                          width: 260,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            // Light outlines the empty track in brand ink; dark
+                            // keeps the original grey-filled track.
+                            color: c.neobrutalism
+                                ? c.surface
+                                : c.border.withAlpha(100),
+                            borderRadius: BorderRadius.circular(
+                                c.neobrutalism ? Neo.radius : 5),
+                            border: c.neobrutalism
+                                ? Border.all(color: c.neoEdge, width: Neo.edge)
+                                : null,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: progress.clamp(0.0, 1.0),
+                            child: Container(
+                              decoration: BoxDecoration(
                                 color: c.primary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                                borderRadius: BorderRadius.circular(5),
                               ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 44),
+
+                        // ── Tap area hint ─────────────────────────────
+                        SizedBox(
+                          width: double.infinity,
+                          child: NeoCard(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            // Dark keeps the original hairline-outlined surface card.
+                            legacyEdge: c.border.withAlpha(100),
+                            legacyEdgeWidth: 1,
+                            legacyRadius: R.lg,
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.gesture,
+                                  size: 32,
+                                  color: _error != null ? c.error : c.primary,
+                                ),
+                                const SizedBox(height: 10),
+                                if (_isGenerating)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: c.primary,
+                                      ),
+                                    ),
+                                  ),
+                                Text(
+                                  _error != null
+                                      ? _error!
+                                      : _isGenerating
+                                          ? l10n.processing
+                                          : _tapCount >= _requiredTaps
+                                              ? l10n.processing
+                                              : l10n.entropyInstruction,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: _error != null
+                                        ? c.error.withAlpha(220)
+                                        : c.text.withAlpha(160),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                if (_error != null) ...[
+                                  const SizedBox(height: 12),
+                                  if (c.neobrutalism)
+                                    NeoButton(
+                                      label: l10n.retry,
+                                      quiet: true,
+                                      onTap: () {
+                                        if (!_isGenerating) _finalize();
+                                      },
+                                    )
+                                  else
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (!_isGenerating) _finalize();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: c.primary.withAlpha(30),
+                                          borderRadius:
+                                              BorderRadius.circular(R.sm),
+                                          border: Border.all(
+                                            color: c.primary.withAlpha(100),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          l10n.retry,
+                                          style: TextStyle(
+                                            color: c.primary,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
                       ],
-                    ],
-                  ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

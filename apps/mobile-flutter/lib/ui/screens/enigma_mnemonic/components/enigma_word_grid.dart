@@ -25,6 +25,7 @@ class EnigmaWordGrid extends StatelessWidget {
         fontSize: 12,
         childAspectRatio: 2.0,
         cellSpacing: 6.0,
+        neo: c.neobrutalism,
       );
     }
 

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// Row under the mnemonic input: word counter on the left, validation
 /// indicator on the right (shown only once a check has run).
+///
+/// In neo (light) the counter becomes an outlined chip and the validation
+/// indicator an outlined pastel pill (mirroring the History status badge);
+/// dark keeps the original muted chrome.
 class MnemonicStatusRow extends StatelessWidget {
   final String wordCount;
   final bool hasChecked;
@@ -22,23 +27,26 @@ class MnemonicStatusRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
+    final statusColor = isValid ? c.primary : c.error;
 
     return Row(
       children: [
         // Word counter
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(R.sm),
-            border: Border.all(color: c.border.withAlpha(100)),
-          ),
-          child: Text(
-            l10n.wordsCount(int.parse(wordCount)),
-            style: TextStyle(
-              color: c.text.withAlpha(180),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+        NeoCard(
+          lifted: false,
+          // Dark keeps the original surface chip with a hairline border.
+          legacyEdge: c.border.withAlpha(100),
+          legacyEdgeWidth: 1,
+          legacyRadius: R.sm,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Text(
+              l10n.wordsCount(int.parse(wordCount)),
+              style: TextStyle(
+                color: c.neobrutalism ? c.text : c.text.withAlpha(180),
+                fontSize: 13,
+                fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w500,
+              ),
             ),
           ),
         ),
@@ -47,25 +55,54 @@ class MnemonicStatusRow extends StatelessWidget {
 
         // Validation indicator
         if (hasChecked)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isValid ? Icons.check_circle : Icons.cancel,
-                size: 20,
-                color: isValid ? c.primary : c.error,
+          if (c.neobrutalism)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: statusColor.withAlpha(70),
+                borderRadius: BorderRadius.circular(Neo.radius),
+                border: Border.all(color: c.neoEdge, width: Neo.edge),
               ),
-              const SizedBox(width: 6),
-              Text(
-                isValid ? l10n.validMnemonic : l10n.invalidMnemonic,
-                style: TextStyle(
-                  color: isValid ? c.primary : c.error,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isValid ? Icons.check_circle : Icons.cancel,
+                    size: 18,
+                    color: statusColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isValid ? l10n.validMnemonic : l10n.invalidMnemonic,
+                    style: TextStyle(
+                      color: c.text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isValid ? Icons.check_circle : Icons.cancel,
+                  size: 20,
+                  color: statusColor,
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Text(
+                  isValid ? l10n.validMnemonic : l10n.invalidMnemonic,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
       ],
     );
   }

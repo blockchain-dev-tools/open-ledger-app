@@ -7,6 +7,8 @@ import '../../../core/models/vault.dart';
 import '../../../data/bip39_wordlist.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
 import 'views/enigma_tab.dart';
 import 'views/generate_tab.dart';
 import 'views/import_tab.dart';
@@ -667,19 +669,21 @@ class _StandInScreenState extends State<StandInScreen> {
       // Tinted grouped background so surface cards stay distinct in light
       // mode too (bg == surface == #FFFFFF would erase every card edge).
       backgroundColor: c.groupedBg,
-      appBar: AppBar(
-        backgroundColor: c.groupedBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: _onBack,
-        ),
+      appBar: neoAppBar(
+        c: c,
         title: Text(
           l10n.standInTitle,
           style: TextStyle(color: c.text, fontWeight: FontWeight.w600),
         ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: c.text),
+          onPressed: _onBack,
+        ),
+        darkBackground: c.groupedBg,
       ),
-      body: SafeArea(child: _buildBody(c, l10n)),
+      // Light mode paints the neobrutalist reference grid behind the body;
+      // GridBackground is a no-op in dark, so its chrome is unchanged.
+      body: GridBackground(child: SafeArea(child: _buildBody(c, l10n))),
     );
   }
 

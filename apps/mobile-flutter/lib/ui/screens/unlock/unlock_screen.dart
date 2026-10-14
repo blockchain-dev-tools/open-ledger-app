@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../theme/widgets/brand_mark.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/pin/pin_number_pad.dart';
 import '../../widgets/pin/pin_dot_indicator.dart';
 import '../../widgets/pin/pin_shake_wrapper.dart';
@@ -182,85 +184,105 @@ class _UnlockScreenState extends State<UnlockScreen> {
         systemStatusBarContrastEnforced: false,
       ),
       child: Scaffold(
-        backgroundColor: c.bg,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ── Brand Mark ────────────────────────────────────
-                    const BrandMark(size: 80),
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        body: GridBackground(
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── Brand Mark ────────────────────────────────────
+                      const BrandMark(size: 80),
 
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                    // ── Title ─────────────────────────────────────────
-                    Text(
-                      _lockedOut ? l10n.lockedOut : l10n.unlockTitle,
-                      style: TextStyle(
-                        color: _lockedOut ? c.error : c.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ── Error message (if any) ─────────────────────────
-                    if (_error != null && !_lockedOut)
+                      // ── Title ─────────────────────────────────────────
                       Text(
-                        _error!,
+                        _lockedOut ? l10n.lockedOut : l10n.unlockTitle,
                         style: TextStyle(
-                          color: c.error,
-                          fontSize: 14,
+                          color: _lockedOut ? c.error : c.text,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
 
-                    const SizedBox(height: 28),
+                      const SizedBox(height: 16),
 
-                    // ── PIN Dots ──────────────────────────────────────
-                    PinShakeWrapper(
-                      shaking: _shaking,
-                      child: PinDotIndicator(
-                        length: _maxPinLength,
-                        filledCount: _pin.length,
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    const SizedBox(height: 32),
-
-                    // ── Number Pad or Lockout ─────────────────────────
-                    if (_lockedOut)
-                      _buildLockoutView(c, l10n)
-                    else
-                      PinNumberPad(
-                        onDigit: _onDigitTap,
-                        onBackspace: _onBackspaceTap,
-                        keyPrefix: 'unlock',
-                      ),
-
-                    const SizedBox(height: 24),
-
-                    // ── Forgot PIN ────────────────────────────────────
-                    if (!_lockedOut)
-                      GestureDetector(
-                        key: const Key('forgot-pin'),
-                        onTap: _resetWallet,
-                        child: Text(
-                          l10n.forgotPin,
+                      // ── Error message (if any) ─────────────────────────
+                      if (_error != null && !_lockedOut)
+                        Text(
+                          _error!,
                           style: TextStyle(
-                            color: c.text.withAlpha(120),
+                            color: c.error,
                             fontSize: 14,
-                            decoration: TextDecoration.underline,
-                            decorationColor: c.text.withAlpha(80),
+                            // Neo text runs heavier so the line reads as a hard
+                            // label; dark keeps the regular weight.
+                            fontWeight: c.neobrutalism
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
+
+                      const SizedBox(height: 28),
+
+                      // ── PIN Dots ──────────────────────────────────────
+                      PinShakeWrapper(
+                        shaking: _shaking,
+                        child: PinDotIndicator(
+                          length: _maxPinLength,
+                          filledCount: _pin.length,
+                        ),
                       ),
-                  ],
+
+                      const SizedBox(height: 10),
+
+                      const SizedBox(height: 32),
+
+                      // ── Number Pad or Lockout ─────────────────────────
+                      if (_lockedOut)
+                        _buildLockoutView(c, l10n)
+                      else
+                        PinNumberPad(
+                          onDigit: _onDigitTap,
+                          onBackspace: _onBackspaceTap,
+                          keyPrefix: 'unlock',
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // ── Forgot PIN ────────────────────────────────────
+                      if (!_lockedOut)
+                        GestureDetector(
+                          key: const Key('forgot-pin'),
+                          onTap: _resetWallet,
+                          child: Text(
+                            l10n.forgotPin,
+                            style: TextStyle(
+                              // Neo inverts the muted grey link to a heavy
+                              // black one; dark keeps the thin grey underline.
+                              color: c.neobrutalism
+                                  ? c.text
+                                  : c.text.withAlpha(120),
+                              fontSize: 14,
+                              fontWeight: c.neobrutalism
+                                  ? FontWeight.w700
+                                  : FontWeight.normal,
+                              decoration: TextDecoration.underline,
+                              decorationColor: c.neobrutalism
+                                  ? c.neoEdge
+                                  : c.text.withAlpha(80),
+                              decorationThickness: c.neobrutalism ? 2 : null,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -285,24 +307,29 @@ class _UnlockScreenState extends State<UnlockScreen> {
         Text(
           l10n.resetWallet,
           textAlign: TextAlign.center,
-          style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
+          style: TextStyle(
+            color: c.neobrutalism ? c.text : c.text.withAlpha(140),
+            fontSize: 14,
+          ),
         ),
         const SizedBox(height: 24),
         GestureDetector(
           key: const Key('reset-wallet'),
           onTap: _resetWallet,
-          child: Container(
+          child: NeoCard(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-            decoration: BoxDecoration(
-              color: c.error.withAlpha(30),
-              borderRadius: BorderRadius.circular(R.lg),
-              border: Border.all(color: c.error.withAlpha(100)),
-            ),
+            // Dark restores the original error-tinted rounded block; light
+            // renders the neo block (black outline + hard shadow) with the
+            // destructive label in red.
+            legacyBackground: c.error.withAlpha(30),
+            legacyEdge: c.error.withAlpha(100),
+            legacyEdgeWidth: 1,
+            legacyRadius: R.lg,
             child: Text(
               l10n.reset,
               style: TextStyle(
                 color: c.error,
-                fontWeight: FontWeight.w600,
+                fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w600,
                 fontSize: 16,
               ),
             ),

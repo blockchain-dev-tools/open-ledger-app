@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/interfaces/backup_verifier.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/verify/verify_result_card.dart';
 
@@ -86,65 +89,72 @@ class _VerifyBackupEnigmaScreenState extends State<VerifyBackupEnigmaScreen> {
     final result = _result ?? widget.previewResult;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.bg,
         title: Text(l10n.verifyEnigmaTitle),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(Icons.auto_awesome_outlined, size: 44, color: c.primary),
-              const SizedBox(height: 16),
-              Text(
-                l10n.verifyEnigmaHint,
-                style: TextStyle(
-                    color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              _label(c, l10n.enigmaRiddleLabel),
-              const SizedBox(height: 8),
-              _field(
-                c: c,
-                key: const Key('verify-enigma-riddle'),
-                controller: _riddleController,
-                minLines: 2,
-                maxLines: 4,
-                hint: null,
-              ),
-              const SizedBox(height: 20),
-              _label(c, l10n.enigmaSecretLabel),
-              const SizedBox(height: 8),
-              _field(
-                c: c,
-                key: const Key('verify-enigma-secret'),
-                controller: _secretController,
-                obscure: _obscure,
-                suffix: IconButton(
-                  icon: Icon(
-                    _obscure ? Icons.visibility_off : Icons.visibility,
-                    color: c.text.withAlpha(150),
-                  ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
+      body: GridBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.auto_awesome_outlined, size: 44, color: c.primary),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.verifyEnigmaHint,
+                  style: TextStyle(
+                      color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
                 ),
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: l10n.verifyAction,
-                loading: _checking,
-                onTap: _verify,
-              ),
-              if (result != null) ...[
                 const SizedBox(height: 20),
-                VerifyResultCard(result: result),
+                _label(c, l10n.enigmaRiddleLabel),
+                const SizedBox(height: 8),
+                _field(
+                  c: c,
+                  key: const Key('verify-enigma-riddle'),
+                  controller: _riddleController,
+                  minLines: 2,
+                  maxLines: 4,
+                  hint: null,
+                ),
+                const SizedBox(height: 20),
+                _label(c, l10n.enigmaSecretLabel),
+                const SizedBox(height: 8),
+                _field(
+                  c: c,
+                  key: const Key('verify-enigma-secret'),
+                  controller: _secretController,
+                  obscure: _obscure,
+                  suffix: IconButton(
+                    icon: Icon(
+                      _obscure ? Icons.visibility_off : Icons.visibility,
+                      color: c.text.withAlpha(150),
+                    ),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                PrimaryButton(
+                  label: l10n.verifyAction,
+                  loading: _checking,
+                  onTap: _verify,
+                ),
+                if (result != null) ...[
+                  const SizedBox(height: 20),
+                  VerifyResultCard(result: result),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -170,12 +180,11 @@ class _VerifyBackupEnigmaScreenState extends State<VerifyBackupEnigmaScreen> {
     Widget? suffix,
     String? hint,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.border),
-      ),
+    return NeoCard(
+      // Light outlines the field as a neo block; dark falls back to the
+      // original hairline box.
+      legacyRadius: R.lg,
+      legacyEdge: c.border,
       child: TextField(
         key: key,
         controller: controller,

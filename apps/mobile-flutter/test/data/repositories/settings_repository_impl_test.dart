@@ -23,7 +23,7 @@ void main() {
 
     test('loadSettings returns defaults when nothing stored', () async {
       final settings = await loadWith({});
-      expect(settings.themeMode, ThemeMode.dark);
+      expect(settings.themeMode, ThemeMode.system);
       expect(settings.locale, const Locale('en'));
       expect(settings.storePassphrase, false);
     });

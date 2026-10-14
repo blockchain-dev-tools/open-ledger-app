@@ -114,8 +114,8 @@ void main() {
   // 1. Default values
   // ═══════════════════════════════════════════════════════════════════
 
-  test('default values: themeMode=dark, locale=en, storePassphrase=false', () {
-    expect(service.themeMode, ThemeMode.dark);
+  test('default values: themeMode=system, locale=en, storePassphrase=false', () {
+    expect(service.themeMode, ThemeMode.system);
     expect(service.locale, const Locale('en'));
     expect(service.storePassphrase, isFalse);
   });
@@ -145,8 +145,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════
 
   test('setThemeMode updates the mode and persists', () {
-    // Default is dark.
-    expect(service.themeMode, ThemeMode.dark);
+    // Default is system.
+    expect(service.themeMode, ThemeMode.system);
 
     service.setThemeMode(ThemeMode.light);
 
@@ -203,7 +203,7 @@ void main() {
     await service.loadSettings();
 
     // No overrides means defaults remain.
-    expect(service.themeMode, ThemeMode.dark);
+    expect(service.themeMode, ThemeMode.system);
     expect(service.locale, const Locale('en'));
     expect(service.storePassphrase, isFalse);
     expect(repo.loadSettingsCallCount, 1);
@@ -221,7 +221,7 @@ void main() {
     // Should still fire notify even on error path.
     expect(notified, isTrue);
     // Defaults preserved.
-    expect(service.themeMode, ThemeMode.dark);
+    expect(service.themeMode, ThemeMode.system);
     expect(service.locale, const Locale('en'));
     expect(service.storePassphrase, isFalse);
   });

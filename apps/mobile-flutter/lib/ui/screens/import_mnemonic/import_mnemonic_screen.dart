@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../services/mnemonic_service.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
 import 'components/import_button.dart';
 import 'components/mnemonic_input_field.dart';
 import 'components/mnemonic_status_row.dart';
@@ -127,110 +129,109 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
         if (!didPop) context.go('/welcome');
       },
       child: Scaffold(
-        backgroundColor: c.bg,
-        body: SafeArea(
-          // 整页可滚动：键盘弹出时视口被压缩，固定高度的内容放不下会溢出，
-          // 导致 Import 按钮被顶出屏幕。改成可滚动后用户可以滑到按钮。
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  // ── AppBar area ─────────────────────────────────────
-                  const SizedBox(height: 12),
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        appBar: neoAppBar(
+          c: c,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: c.text),
+            onPressed: () => context.go('/welcome'),
+          ),
+          darkBackground: c.bg,
+        ),
+        body: GridBackground(
+          child: SafeArea(
+            // 整页可滚动：键盘弹出时视口被压缩，固定高度的内容放不下会溢出，
+            // 导致 Import 按钮被顶出屏幕。改成可滚动后用户可以滑到按钮。
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
 
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      onTap: () => context.go('/welcome'),
-                      child: Icon(
-                        Icons.arrow_back,
-                        color: c.text.withAlpha(160),
-                        size: 24,
+                    // ── Title ───────────────────────────────────────────
+                    Text(
+                      l10n.importMnemonicTitle,
+                      style: TextStyle(
+                        color: c.text,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
-                  // ── Title ───────────────────────────────────────────
-                  Text(
-                    l10n.importMnemonicTitle,
-                    style: TextStyle(
-                      color: c.text,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                    // ── Subtitle ────────────────────────────────────────
+                    Text(
+                      l10n.importMnemonicHint,
+                      style: TextStyle(
+                        color: c.text.withAlpha(150),
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 28),
 
-                  // ── Subtitle ────────────────────────────────────────
-                  Text(
-                    l10n.importMnemonicHint,
-                    style: TextStyle(
-                      color: c.text.withAlpha(150),
-                      fontSize: 14,
+                    // ── Paste from clipboard button ─────────────────────
+                    PasteButton(onPressed: _pasteFromClipboard),
+
+                    // Light gives the neo button's offset shadow room to clear.
+                    SizedBox(height: c.neobrutalism ? 22 : 18),
+
+                    // ── Text input field ─────────────────────────────────
+                    MnemonicInputField(
+                      controller: _controller,
+                      onChanged: _onTextChanged,
+                      onClear: _clear,
+                      hasChecked: _hasChecked,
+                      isValid: _isValid,
                     ),
-                  ),
 
-                  const SizedBox(height: 28),
+                    SizedBox(height: c.neobrutalism ? 18 : 14),
 
-                  // ── Paste from clipboard button ─────────────────────
-                  PasteButton(onPressed: _pasteFromClipboard),
-
-                  const SizedBox(height: 18),
-
-                  // ── Text input field ─────────────────────────────────
-                  MnemonicInputField(
-                    controller: _controller,
-                    onChanged: _onTextChanged,
-                    onClear: _clear,
-                    hasChecked: _hasChecked,
-                    isValid: _isValid,
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // ── Passphrase field ──────────────────────────────
-                  PassphraseField(
-                    controller: _passphraseController,
-                    obscurePassphrase: _obscurePassphrase,
-                    onToggleObscure: () {
-                      setState(() {
-                        _obscurePassphrase = !_obscurePassphrase;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // ── Passphrase info text ──────────────────────────
-                  Text(
-                    'A passphrase creates a completely different set of wallets. '
-                    'Leave empty to use the standard BIP-39 seed.',
-                    style: TextStyle(
-                      color: c.text.withAlpha(100),
-                      fontSize: 11,
+                    // ── Passphrase field ──────────────────────────────
+                    PassphraseField(
+                      controller: _passphraseController,
+                      obscurePassphrase: _obscurePassphrase,
+                      onToggleObscure: () {
+                        setState(() {
+                          _obscurePassphrase = !_obscurePassphrase;
+                        });
+                      },
                     ),
-                  ),
 
-                  const SizedBox(height: 14),
+                    SizedBox(height: c.neobrutalism ? 12 : 8),
 
-                  // ── Status row: word count + validation ──────────────
-                  MnemonicStatusRow(
-                    wordCount: _wordCount,
-                    hasChecked: _hasChecked,
-                    isValid: _isValid,
-                  ),
+                    // ── Passphrase info text ──────────────────────────
+                    Text(
+                      'A passphrase creates a completely different set of wallets. '
+                      'Leave empty to use the standard BIP-39 seed.',
+                      style: TextStyle(
+                        color: c.text.withAlpha(100),
+                        fontSize: 11,
+                      ),
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                  // ── Import button ────────────────────────────────────
-                  ImportButton(isValid: _isValid, onTap: _import),
+                    // ── Status row: word count + validation ──────────────
+                    MnemonicStatusRow(
+                      wordCount: _wordCount,
+                      hasChecked: _hasChecked,
+                      isValid: _isValid,
+                    ),
 
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 16),
+
+                    // ── Import button ────────────────────────────────────
+                    ImportButton(isValid: _isValid, onTap: _import),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),

@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_card.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BIP-39 English wordlist subset (200 words) used for distractor choices.
@@ -165,177 +168,173 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
         : ColorTokens.light;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              // ── AppBar area ─────────────────────────────────────
-              const SizedBox(height: 12),
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.bg,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: c.text),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            }
+          },
+        ),
+      ),
+      body: GridBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
 
-              Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: () {
-                    if (context.canPop()) {
-                      context.pop();
-                    }
-                  },
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: c.text.withAlpha(160),
-                    size: 24,
+                // ── Title ───────────────────────────────────────────
+                Text(
+                  l10n.verifyMnemonicTitle,
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
-              // ── Title ───────────────────────────────────────────
-              Text(
-                l10n.verifyMnemonicTitle,
-                style: TextStyle(
-                  color: c.text,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                // ── Subtitle ────────────────────────────────────────
+                Text(
+                  'Confirm you\'ve saved the correct words',
+                  style: TextStyle(
+                    color: c.text.withAlpha(150),
+                    fontSize: 14,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 10),
+                const SizedBox(height: 28),
 
-              // ── Subtitle ────────────────────────────────────────
-              Text(
-                'Confirm you\'ve saved the correct words',
-                style: TextStyle(
-                  color: c.text.withAlpha(150),
-                  fontSize: 14,
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // ── Progress indicator ──────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (int i = 0; i < _quizPositions.length; i++)
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 6),
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _currentQuizIndex > i
-                            ? c.primary
-                            : _currentQuizIndex == i
-                                ? c.primary.withAlpha(180)
-                                : c.border.withAlpha(100),
-                        border: Border.all(
-                          color: _currentQuizIndex >= i
+                // ── Progress indicator ──────────────────────────────
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (int i = 0; i < _quizPositions.length; i++)
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _currentQuizIndex > i
                               ? c.primary
-                              : c.border,
-                          width: 2,
+                              : _currentQuizIndex == i
+                                  ? c.primary.withAlpha(180)
+                                  : c.border.withAlpha(100),
+                          border: Border.all(
+                            color: _currentQuizIndex >= i
+                                ? c.primary
+                                : c.border,
+                            width: 2,
+                          ),
                         ),
                       ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${_currentQuizIndex + 1} / ${_quizPositions.length}',
+                      style: TextStyle(
+                        color: c.text.withAlpha(180),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${_currentQuizIndex + 1} / ${_quizPositions.length}',
-                    style: TextStyle(
-                      color: c.text.withAlpha(180),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+
+                // ── Quiz prompt ─────────────────────────────────────
+                Text(
+                  l10n.verifyWordPosition(_currentPosition),
+                  style: TextStyle(
+                    color: c.primary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // ── Quiz prompt ─────────────────────────────────────
-              Text(
-                l10n.verifyWordPosition(_currentPosition),
-                style: TextStyle(
-                  color: c.primary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
 
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-              Text(
-                l10n.whichWord,
-                style: TextStyle(
-                  color: c.text.withAlpha(130),
-                  fontSize: 14,
+                Text(
+                  l10n.whichWord,
+                  style: TextStyle(
+                    color: c.text.withAlpha(130),
+                    fontSize: 14,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 28),
+                const SizedBox(height: 28),
 
-              // ── Choice buttons ──────────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: _currentChoices.map((word) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: GestureDetector(
-                          onTap: () => _onChoiceTap(word),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: c.surface,
-                              borderRadius:
-                                  BorderRadius.circular(R.lg),
-                              border: Border.all(
-                                color: c.border.withAlpha(100),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                word,
-                                style: TextStyle(
-                                  color: c.text,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.5,
+                // ── Choice buttons ──────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: _currentChoices.map((word) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: GestureDetector(
+                            onTap: () => _onChoiceTap(word),
+                            // Light outlines each choice as a neo block; dark
+                            // falls back to the original hairline tile.
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: NeoCard(
+                                legacyRadius: R.lg,
+                                legacyEdge: c.border.withAlpha(100),
+                                legacyEdgeWidth: 1.5,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    word,
+                                    style: TextStyle(
+                                      color: c.text,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-
-              // ── Feedback ────────────────────────────────────────
-              if (_feedbackText != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    _feedbackText!,
-                    style: TextStyle(
-                      color: _feedbackCorrect
-                          ? c.primary
-                          : c.error,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
 
-              const SizedBox(height: 8),
-            ],
+                // ── Feedback ────────────────────────────────────────
+                if (_feedbackText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      _feedbackText!,
+                      style: TextStyle(
+                        color: _feedbackCorrect
+                            ? c.primary
+                            : c.error,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       ),

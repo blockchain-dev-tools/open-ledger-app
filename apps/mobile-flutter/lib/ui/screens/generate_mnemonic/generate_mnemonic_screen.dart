@@ -3,8 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/mnemonic/mnemonic_word_grid.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 
 /// Displays the generated 12-word BIP-39 mnemonic in a 3×4 word grid.
@@ -58,255 +62,269 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
     final words = _words;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              // ── AppBar area ─────────────────────────────────────
-              const SizedBox(height: 12),
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: c.text),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            }
+          },
+        ),
+        darkBackground: c.bg,
+      ),
+      body: GridBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
 
-              Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: () {
-                    if (context.canPop()) {
-                      context.pop();
-                    }
-                  },
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: c.text.withAlpha(160),
-                    size: 24,
+                // ── Title ───────────────────────────────────────────
+                Text(
+                  l10n.generateMnemonicTitle,
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // ── Title ───────────────────────────────────────────
-              Text(
-                l10n.generateMnemonicTitle,
-                style: TextStyle(
-                  color: c.text,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
+                // ── Warning ─────────────────────────────────────────
+                WarningBanner(
+                  message: l10n.generateMnemonicWarning,
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-              // ── Warning ─────────────────────────────────────────
-              WarningBanner(
-                message: l10n.generateMnemonicWarning,
-              ),
-
-              const SizedBox(height: 24),
-
-              // ── Word Grid (3 columns × 4 rows) ──────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: MnemonicWordGrid(
-                      words: words,
-                      columns: 3,
-                      fontSize: 14,
+                // ── Word Grid (3 columns × 4 rows) ──────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: MnemonicWordGrid(
+                        words: words,
+                        columns: 3,
+                        fontSize: 14,
+                        // Light draws the neo cells; dark keeps the flat tiles.
+                        neo: c.neobrutalism,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // ── Confirmation checkbox ───────────────────────────
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _confirmed = !_confirmed;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(R.lg),
-                    border: Border.all(color: c.border.withAlpha(100)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
+                // ── Confirmation checkbox ───────────────────────────
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _confirmed = !_confirmed;
+                    });
+                  },
+                  child: NeoCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    // Dark keeps the original hairline-outlined surface card.
+                    legacyEdge: c.border.withAlpha(100),
+                    legacyEdgeWidth: 1,
+                    legacyRadius: R.lg,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              // Light outlines the empty box in brand ink.
+                              color: _confirmed
+                                  ? c.primary
+                                  : (c.neobrutalism ? c.neoEdge : c.border),
+                              width: 2,
+                            ),
                             color: _confirmed
                                 ? c.primary
-                                : c.border,
-                            width: 2,
+                                : Colors.transparent,
                           ),
-                          color: _confirmed
-                              ? c.primary
-                              : Colors.transparent,
+                          child: _confirmed
+                              ? Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: c.onPrimary,
+                                )
+                              : null,
                         ),
-                        child: _confirmed
-                            ? Icon(
-                                Icons.check,
-                                size: 16,
-                                color: c.onPrimary,
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        l10n.iveWrittenItDown,
-                        style: TextStyle(
-                          color: c.text.withAlpha(200),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // ── Passphrase toggle ────────────────────────────
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showPassphrase = !_showPassphrase;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.advancedBip39Passphrase,
+                        const SizedBox(width: 12),
+                        Text(
+                          l10n.iveWrittenItDown,
                           style: TextStyle(
-                            color: c.text.withAlpha(150),
-                            fontSize: 13,
+                            color: c.neobrutalism
+                                ? c.text
+                                : c.text.withAlpha(200),
+                            fontSize: 14,
                           ),
                         ),
-                      ),
-                      AnimatedRotation(
-                        turns: _showPassphrase ? 0.5 : 0,
-                        duration: const Duration(milliseconds: 200),
-                        child: Icon(
-                          Icons.chevron_right,
-                          color: c.text.withAlpha(120),
-                          size: 20,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // ── Passphrase input (collapsible) ───────────────
-              if (_showPassphrase) ...[
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(R.lg),
-                    border: Border.all(color: c.border.withAlpha(100)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'A passphrase acts as a 13th word. It creates a '
-                        'completely different wallet from the same recovery '
-                        'phrase. If you use one, you MUST remember it — '
-                        'there is no way to recover it.',
-                        style: TextStyle(
-                          color: c.text.withAlpha(120),
-                          fontSize: 12,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        key: const Key('passphrase-input'),
-                        controller: _passphraseController,
-                        obscureText: _obscurePassphrase,
-                        style: TextStyle(
-                          color: c.text,
-                          fontSize: 15,
-                        ),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: c.bg,
-                          hintText: l10n.enterPassphraseOptional,
-                          hintStyle: TextStyle(
-                            color: c.text.withAlpha(80),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(R.lg),
-                            borderSide: BorderSide(
-                              color: c.border.withAlpha(100),
+                const SizedBox(height: 16),
+
+                // ── Passphrase toggle ────────────────────────────
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showPassphrase = !_showPassphrase;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.advancedBip39Passphrase,
+                            style: TextStyle(
+                              color: c.neobrutalism
+                                  ? c.text
+                                  : c.text.withAlpha(150),
+                              fontSize: 13,
                             ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(R.lg),
-                            borderSide: BorderSide(
-                              color: c.border.withAlpha(100),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(R.lg),
-                            borderSide: BorderSide(
-                              color: c.primary,
-                            ),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassphrase
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: c.text.withAlpha(120),
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassphrase = !_obscurePassphrase;
-                              });
-                            },
                           ),
                         ),
-                      ),
-                    ],
+                        AnimatedRotation(
+                          turns: _showPassphrase ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            Icons.chevron_right,
+                            color: c.neobrutalism
+                                ? c.text
+                                : c.text.withAlpha(120),
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+
+                // ── Passphrase input (collapsible) ───────────────
+                if (_showPassphrase) ...[
+                  NeoCard(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    // Dark keeps the original hairline-outlined surface card.
+                    legacyEdge: c.border.withAlpha(100),
+                    legacyEdgeWidth: 1,
+                    legacyRadius: R.lg,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'A passphrase acts as a 13th word. It creates a '
+                          'completely different wallet from the same recovery '
+                          'phrase. If you use one, you MUST remember it — '
+                          'there is no way to recover it.',
+                          style: TextStyle(
+                            color: c.text.withAlpha(120),
+                            fontSize: 12,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          key: const Key('passphrase-input'),
+                          controller: _passphraseController,
+                          obscureText: _obscurePassphrase,
+                          style: TextStyle(
+                            color: c.text,
+                            fontSize: 15,
+                          ),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: c.bg,
+                            hintText: l10n.enterPassphraseOptional,
+                            hintStyle: TextStyle(
+                              color: c.text.withAlpha(80),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(R.lg),
+                              borderSide: BorderSide(
+                                color: c.border.withAlpha(100),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(R.lg),
+                              borderSide: BorderSide(
+                                color: c.border.withAlpha(100),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(R.lg),
+                              borderSide: BorderSide(
+                                color: c.primary,
+                              ),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassphrase
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: c.text.withAlpha(120),
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassphrase = !_obscurePassphrase;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 4),
+
+                // ── Continue button ──────────────────────────────────
+                // The neo button has no disabled state, so an unconfirmed
+                // checkbox keeps the original flat button even in light mode.
+                if (c.neobrutalism && _confirmed)
+                  NeoButton(
+                    label: l10n.continueButton,
+                    expanded: true,
+                    onTap: _continue,
+                  )
+                else
+                  PrimaryButton(
+                    label: l10n.continueButton,
+                    onTap: _confirmed ? _continue : null,
+                  ),
+
+                const SizedBox(height: 24),
               ],
-
-              const SizedBox(height: 4),
-
-              // ── Continue button ──────────────────────────────────
-              PrimaryButton(
-                label: l10n.continueButton,
-                onTap: _confirmed ? _continue : null,
-              ),
-
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         ),
       ),

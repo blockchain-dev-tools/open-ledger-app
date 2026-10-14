@@ -8,6 +8,7 @@ import '../../../core/models/launcher_disguise.dart';
 import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/neo_app_bar.dart';
 import 'components/about_card.dart';
 import 'components/group_header.dart';
 import 'components/settings_group.dart';
@@ -499,13 +500,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       canPop: true,
       child: Scaffold(
         backgroundColor: c.groupedBg,
-        appBar: AppBar(
-          backgroundColor: c.groupedBg,
+        appBar: neoAppBar(
+          c: c,
+          title: Text(AppLocalizations.of(context)!.settingsTitle),
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: c.text),
             onPressed: () => context.pop(),
           ),
-          title: Text(AppLocalizations.of(context)!.settingsTitle),
+          darkBackground: c.groupedBg,
         ),
         body: SafeArea(child: content),
       ),

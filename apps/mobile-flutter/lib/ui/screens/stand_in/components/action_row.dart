@@ -6,6 +6,9 @@ import '../stand_in_style.dart';
 /// A tappable row inside an [ActionGroup] — matches the Settings row
 /// metrics (24px icon, 17pt title, hairline-divided) instead of the old
 /// standalone card per action.
+///
+/// In neo (light) the neutral icon/title/chevron tones go full black and the
+/// title gains weight; dark keeps the original muted greys.
 class ActionRow extends StatelessWidget {
   final ColorTokens c;
   final IconData icon;
@@ -26,6 +29,7 @@ class ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = c.neobrutalism;
     final fg = destructive ? c.error : c.text;
     final secondary = standInSecondaryText(c, Theme.of(context).brightness);
     return InkWell(
@@ -37,7 +41,9 @@ class ActionRow extends StatelessWidget {
             Icon(
               icon,
               size: 24,
-              color: destructive ? c.error : c.text.withAlpha(160),
+              color: destructive
+                  ? c.error
+                  : (neo ? c.text : c.text.withAlpha(160)),
             ),
             const SizedBox(width: 14),
             Text(
@@ -47,7 +53,7 @@ class ActionRow extends StatelessWidget {
               style: TextStyle(
                 color: fg,
                 fontSize: 17,
-                fontWeight: FontWeight.w400,
+                fontWeight: neo ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
             if (value != null)
@@ -57,13 +63,20 @@ class ActionRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: TextStyle(color: secondary, fontSize: 17),
+                  style: TextStyle(
+                    color: neo ? c.text : secondary,
+                    fontSize: 17,
+                  ),
                 ),
               )
             else
               const Spacer(),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 16, color: c.text.withAlpha(80)),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: neo ? c.text : c.text.withAlpha(80),
+            ),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// The verification prompt card with two checkmark rows ("I have written down
 /// my seed phrase" / "I understand that losing these words ...").
@@ -14,19 +15,23 @@ class EnigmaVerificationCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
 
-    return Container(
+    return NeoCard(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.border),
-      ),
+      // Dark restores the original hairline card.
+      legacyEdge: c.border,
+      legacyRadius: R.lg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle_outline, size: 18, color: c.primary),
+              // The lime [primary] washes out on the light surface, so the
+              // glyph uses the deeper accent there.
+              Icon(
+                Icons.check_circle_outline,
+                size: 18,
+                color: c.neobrutalism ? c.accent : c.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -34,7 +39,9 @@ class EnigmaVerificationCard extends StatelessWidget {
                   style: TextStyle(
                     color: c.text,
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: c.neobrutalism
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                   ),
                 ),
               ),
@@ -43,7 +50,11 @@ class EnigmaVerificationCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.check_circle_outline, size: 18, color: c.primary),
+              Icon(
+                Icons.check_circle_outline,
+                size: 18,
+                color: c.neobrutalism ? c.accent : c.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

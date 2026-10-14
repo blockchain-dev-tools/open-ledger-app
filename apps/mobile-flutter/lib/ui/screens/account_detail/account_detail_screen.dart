@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/section_header.dart';
 import 'components/account_backup_card.dart';
 import 'components/account_detail_placeholder.dart';
@@ -40,24 +42,12 @@ class AccountDetailScreen extends StatelessWidget {
         state.extra is ChainAccount ? state.extra as ChainAccount : null;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        // Match the body background — the theme's AppBar uses c.surface,
-        // which renders as a lighter band above the c.bg page body.
-        backgroundColor: c.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        // Light mode separates the neo title bar from the body with a hard 2px
-        // rule instead of a soft elevation shadow; dark keeps the original
-        // seamless bar.
-        shape: c.neobrutalism
-            ? Border(
-                bottom: BorderSide(color: c.neoEdge, width: Neo.edge),
-              )
-            : null,
-        // Pull the title closer to the back button (default leading width is
-        // 56 + titleSpacing 16, which reads as a wide empty gap).
-        titleSpacing: 0,
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(
           l10n.accountDetail,
           style: TextStyle(
@@ -73,10 +63,16 @@ class AccountDetailScreen extends StatelessWidget {
             }
           },
         ),
+        // Pull the title closer to the back button (default leading width is
+        // 56 + titleSpacing 16, which reads as a wide empty gap).
+        titleSpacing: 0,
+        darkBackground: c.bg,
       ),
-      body: account == null
-          ? const AccountDetailPlaceholder()
-          : _buildContent(context, c, account),
+      body: GridBackground(
+        child: account == null
+            ? const AccountDetailPlaceholder()
+            : _buildContent(context, c, account),
+      ),
     );
   }
 

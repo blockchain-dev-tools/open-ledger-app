@@ -27,7 +27,7 @@ class SettingsService extends ChangeNotifier {
 
   // ── Theme ──────────────────────────────────────────────────────────
 
-  ThemeMode _themeMode = ThemeMode.dark;
+  ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
 
   /// Sets the theme mode ([ThemeMode.system] / light / dark) and persists

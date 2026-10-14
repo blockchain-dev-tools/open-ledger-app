@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../data/bip39_wordlist.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_button.dart';
+import '../../../widgets/common/neo_card.dart';
 import '../../../widgets/common/primary_button.dart';
 import '../../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../../widgets/mnemonic/warning_banner.dart';
@@ -64,10 +66,8 @@ class EnigmaTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final secondary = standInSecondaryText(c, Theme.of(context).brightness);
-    final canGenerate =
-        riddleController.text.trim().isNotEmpty &&
-        secretController.text.trim().isNotEmpty;
     final generated = words.isNotEmpty;
+    final cta = _buildCta(l10n, generated: generated);
 
     return Column(
       children: [
@@ -100,6 +100,7 @@ class EnigmaTab extends StatelessWidget {
                     fontSize: 12,
                     childAspectRatio: 2.0,
                     cellSpacing: 6.0,
+                    neo: c.neobrutalism,
                   ),
                   const SizedBox(height: 20),
                   CheckRow(
@@ -122,38 +123,40 @@ class EnigmaTab extends StatelessWidget {
                   const SizedBox(height: 20),
                   _fieldLabel(c, l10n.mnemonicLanguage),
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(R.lg),
-                      border: Border.all(color: c.border),
-                    ),
-                    child: DropdownButton<Bip39WordlistLanguage>(
-                      key: const ValueKey('standin-enigma-language'),
-                      value: language,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      dropdownColor: c.surface,
-                      style: TextStyle(color: c.text, fontSize: 15),
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: c.text.withAlpha(120),
+                  NeoCard(
+                    clip: true,
+                    // Dark restores the original hairline-outlined box.
+                    legacyEdge: c.border,
+                    legacyEdgeWidth: 1,
+                    legacyRadius: R.lg,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
                       ),
-                      items: Bip39WordlistLanguage.values.map((lang) {
-                        return DropdownMenuItem(
-                          value: lang,
-                          child: Text(_localizedLanguageName(l10n, lang)),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          onLanguageChanged(value);
-                        }
-                      },
+                      child: DropdownButton<Bip39WordlistLanguage>(
+                        key: const ValueKey('standin-enigma-language'),
+                        value: language,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        dropdownColor: c.surface,
+                        style: TextStyle(color: c.text, fontSize: 15),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: c.text.withAlpha(120),
+                        ),
+                        items: Bip39WordlistLanguage.values.map((lang) {
+                          return DropdownMenuItem(
+                            value: lang,
+                            child: Text(_localizedLanguageName(l10n, lang)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            onLanguageChanged(value);
+                          }
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -198,20 +201,48 @@ class EnigmaTab extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: generated
-              ? PrimaryButton(
-                  key: const Key('standin-enigma-continue'),
-                  label: l10n.continueButton,
-                  onTap: wordsConfirmed ? onContinue : null,
-                )
-              : PrimaryButton(
-                  key: const Key('standin-enigma-generate'),
-                  label: l10n.generateWallet,
-                  loading: generating,
-                  onTap: canGenerate && !generating ? onGenerate : null,
-                ),
+          child: cta,
         ),
       ],
+    );
+  }
+
+  /// The pinned footer action: derive before generation, continue after. Neo
+  /// renders the neo button only when the action is enabled; the gated cases
+  /// keep the original flat button (which owns the disabled + loading chrome).
+  Widget _buildCta(AppLocalizations l10n, {required bool generated}) {
+    if (generated) {
+      if (c.neobrutalism && wordsConfirmed) {
+        return NeoButton(
+          key: const Key('standin-enigma-continue'),
+          label: l10n.continueButton,
+          expanded: true,
+          onTap: onContinue,
+        );
+      }
+      return PrimaryButton(
+        key: const Key('standin-enigma-continue'),
+        label: l10n.continueButton,
+        onTap: wordsConfirmed ? onContinue : null,
+      );
+    }
+    final enabled =
+        riddleController.text.trim().isNotEmpty &&
+        secretController.text.trim().isNotEmpty &&
+        !generating;
+    if (c.neobrutalism && enabled) {
+      return NeoButton(
+        key: const Key('standin-enigma-generate'),
+        label: l10n.generateWallet,
+        expanded: true,
+        onTap: onGenerate,
+      );
+    }
+    return PrimaryButton(
+      key: const Key('standin-enigma-generate'),
+      label: l10n.generateWallet,
+      loading: generating,
+      onTap: enabled ? onGenerate : null,
     );
   }
 
@@ -235,6 +266,8 @@ class EnigmaTab extends StatelessWidget {
     bool obscure = false,
     Widget? suffix,
   }) {
+    final neo = c.neobrutalism;
+    final radius = BorderRadius.circular(neo ? Neo.radius : R.lg);
     return TextField(
       key: fieldKey,
       controller: controller,
@@ -251,17 +284,28 @@ class EnigmaTab extends StatelessWidget {
         fillColor: c.surface,
         contentPadding: const EdgeInsets.all(16),
         suffixIcon: suffix,
+        // Neo draws a hard brand-ink outline (deep green on focus); dark keeps
+        // the original hairline border and lime focus ring.
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
-          borderSide: BorderSide(color: c.border),
+          borderRadius: radius,
+          borderSide: BorderSide(
+            color: neo ? c.neoEdge : c.border,
+            width: neo ? Neo.edge : 1,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
-          borderSide: BorderSide(color: c.border),
+          borderRadius: radius,
+          borderSide: BorderSide(
+            color: neo ? c.neoEdge : c.border,
+            width: neo ? Neo.edge : 1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
-          borderSide: BorderSide(color: c.primary, width: 1.5),
+          borderRadius: radius,
+          borderSide: BorderSide(
+            color: neo ? c.accent : c.primary,
+            width: neo ? Neo.edge : 1.5,
+          ),
         ),
       ),
       // Only the masked secret key disables suggestions/autocorrect — that is

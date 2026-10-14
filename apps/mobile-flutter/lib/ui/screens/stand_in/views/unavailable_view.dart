@@ -20,7 +20,11 @@ class UnavailableView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline, size: 48, color: c.text.withAlpha(120)),
+            Icon(
+              Icons.lock_outline,
+              size: 48,
+              color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+            ),
             const SizedBox(height: 16),
             Text(
               l10n.standInUnavailable,

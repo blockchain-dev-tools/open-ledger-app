@@ -51,14 +51,25 @@ class WarningBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final neo = c.neobrutalism;
 
+    // Light draws the banner as a flat, opaque block — a solid red tint closed
+    // by a hard black outline — so the page's reference grid cannot show
+    // through it. `alphaBlend` flattens the old translucent tint against the
+    // surface, keeping the same colour without the see-through fill. Dark keeps
+    // the original translucent tint.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: c.error.withAlpha(18),
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.error.withAlpha(60)),
+        color: neo
+            ? Color.alphaBlend(c.error.withAlpha(18), c.surface)
+            : c.error.withAlpha(18),
+        borderRadius: BorderRadius.circular(neo ? Neo.radius : R.lg),
+        border: Border.all(
+          color: neo ? c.neoEdge : c.error.withAlpha(60),
+          width: neo ? Neo.edge : 1,
+        ),
       ),
       child: Row(
         children: [
@@ -71,7 +82,9 @@ class WarningBanner extends StatelessWidget {
                 color: c.error,
                 fontSize: fontSize,
                 height: 1.4,
-                fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: (bold || neo)
+                    ? FontWeight.w600
+                    : FontWeight.normal,
               ),
             ),
           ),

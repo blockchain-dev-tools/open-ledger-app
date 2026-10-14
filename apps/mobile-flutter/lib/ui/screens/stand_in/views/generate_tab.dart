@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_button.dart';
 import '../../../widgets/common/primary_button.dart';
 import '../../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../../widgets/mnemonic/warning_banner.dart';
@@ -65,7 +66,11 @@ class GenerateTab extends StatelessWidget {
                     ),
                   )
                 else
-                  MnemonicWordGrid(words: words, columns: 3),
+                  MnemonicWordGrid(
+                    words: words,
+                    columns: 3,
+                    neo: c.neobrutalism,
+                  ),
                 const SizedBox(height: 20),
                 CheckRow(
                   key: const ValueKey('standin-written-down'),
@@ -80,11 +85,18 @@ class GenerateTab extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: PrimaryButton(
-            key: const Key('standin-generate-continue'),
-            label: l10n.continueButton,
-            onTap: confirmed ? onContinue : null,
-          ),
+          child: c.neobrutalism && confirmed
+              ? NeoButton(
+                  key: const Key('standin-generate-continue'),
+                  label: l10n.continueButton,
+                  expanded: true,
+                  onTap: onContinue,
+                )
+              : PrimaryButton(
+                  key: const Key('standin-generate-continue'),
+                  label: l10n.continueButton,
+                  onTap: confirmed ? onContinue : null,
+                ),
         ),
       ],
     );

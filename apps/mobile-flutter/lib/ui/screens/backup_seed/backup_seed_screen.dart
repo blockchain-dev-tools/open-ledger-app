@@ -5,6 +5,10 @@ import '../../../core/interfaces/wallet_service.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/pin/pin_number_pad.dart';
 import '../../widgets/pin/pin_dot_indicator.dart';
 import '../../widgets/pin/pin_shake_wrapper.dart';
@@ -141,26 +145,33 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(l10n.backupSeedTitle),
+        darkBackground: c.bg,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              WarningBanner(
-                message: l10n.backupSeedWarning,
-              ),
+      body: GridBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                WarningBanner(
+                  message: l10n.backupSeedWarning,
+                ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              if (_revealed)
-                _buildRevealedView(c, l10n)
-              else
-                _buildPinEntryView(c, l10n),
-            ],
+                if (_revealed)
+                  _buildRevealedView(c, l10n)
+                else
+                  _buildPinEntryView(c, l10n),
+              ],
+            ),
           ),
         ),
       ),
@@ -169,23 +180,37 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
 
   /// PIN entry view: lock icon, attempt counter, PIN dots, number pad.
   Widget _buildPinEntryView(ColorTokens c, AppLocalizations l10n) {
+    final lockIcon = Icon(
+      _lockedOut ? Icons.lock : Icons.lock_outline,
+      size: 30,
+      color: _lockedOut ? c.error : c.text.withAlpha(150),
+    );
+
     return Column(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: c.surface,
-            border: Border.all(color: c.border),
+        // Light mode frames the lock as an outlined block; dark restores the
+        // original circular tinted tile.
+        if (c.neobrutalism)
+          NeoCard(
+            lifted: false,
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: Center(child: lockIcon),
+            ),
+          )
+        else
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: c.surface,
+              border: Border.all(color: c.border),
+            ),
+            alignment: Alignment.center,
+            child: lockIcon,
           ),
-          alignment: Alignment.center,
-          child: Icon(
-            _lockedOut ? Icons.lock : Icons.lock_outline,
-            size: 30,
-            color: _lockedOut ? c.error : c.text.withAlpha(150),
-          ),
-        ),
 
         const SizedBox(height: 20),
 
@@ -252,7 +277,13 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
   Widget _buildRevealedView(ColorTokens c, AppLocalizations l10n) {
     return Column(
       children: [
-        Icon(Icons.check_circle, size: 48, color: c.primary),
+        // The lime [primary] washes out on the light page, so the glyph uses
+        // the deeper accent there.
+        Icon(
+          Icons.check_circle,
+          size: 48,
+          color: c.neobrutalism ? c.accent : c.primary,
+        ),
         const SizedBox(height: 16),
         Text(
           l10n.yourSeedPhrase,
@@ -277,38 +308,50 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
           monospace: true,
           childAspectRatio: 3.0,
           cellSpacing: 8.0,
+          neo: c.neobrutalism,
         ),
 
         const SizedBox(height: 24),
 
-        GestureDetector(
-          onTap: _copyToClipboard,
-          child: Container(
-            width: double.infinity,
-            height: 50,
-            decoration: BoxDecoration(
-              color: c.primary.withAlpha(20),
-              borderRadius: BorderRadius.circular(R.lg),
-              border: Border.all(color: c.primary.withAlpha(80)),
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.copy, size: 18, color: c.primary),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.copyToClipboard,
-                  style: TextStyle(
-                    color: c.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+        // Light mode renders the neo action button; dark keeps the original
+        // tinted outline block.
+        if (c.neobrutalism)
+          NeoButton(
+            label: l10n.copyToClipboard,
+            icon: Icons.copy,
+            quiet: true,
+            expanded: true,
+            onTap: _copyToClipboard,
+          )
+        else
+          GestureDetector(
+            onTap: _copyToClipboard,
+            child: Container(
+              width: double.infinity,
+              height: 50,
+              decoration: BoxDecoration(
+                color: c.primary.withAlpha(20),
+                borderRadius: BorderRadius.circular(R.lg),
+                border: Border.all(color: c.primary.withAlpha(80)),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.copy, size: 18, color: c.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.copyToClipboard,
+                    style: TextStyle(
+                      color: c.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
         const SizedBox(height: 12),
         Text(

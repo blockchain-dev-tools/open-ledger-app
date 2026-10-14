@@ -64,23 +64,45 @@ class _AutoHideCountdownState extends State<AutoHideCountdown> {
     final total = widget.seconds <= 0 ? 1 : widget.seconds;
     final fraction = (_remaining / total).clamp(0.0, 1.0);
 
+    // Light mode outlines the track as a neo block with the brand lime fill;
+    // dark keeps the original bare bar.
+    final bar = c.neobrutalism
+        ? Container(
+            decoration: BoxDecoration(
+              color: c.bg,
+              borderRadius: BorderRadius.circular(Neo.radius),
+              border: Border.all(color: c.neoEdge, width: Neo.edge),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 6,
+              backgroundColor: c.bg,
+              valueColor: AlwaysStoppedAnimation<Color>(c.actionFill),
+            ),
+          )
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 3,
+              backgroundColor: c.text.withAlpha(30),
+              valueColor: AlwaysStoppedAnimation<Color>(c.primary),
+            ),
+          );
+
     return Column(
       children: [
         Text(
           AppLocalizations.of(context)!.autoHideHint(_remaining),
           textAlign: TextAlign.center,
-          style: TextStyle(color: c.text.withAlpha(120), fontSize: 12),
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: LinearProgressIndicator(
-            value: fraction,
-            minHeight: 3,
-            backgroundColor: c.text.withAlpha(30),
-            valueColor: AlwaysStoppedAnimation<Color>(c.primary),
+          style: TextStyle(
+            color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+            fontSize: 12,
           ),
         ),
+        const SizedBox(height: 8),
+        bar,
       ],
     );
   }

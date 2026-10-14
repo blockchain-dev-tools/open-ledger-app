@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_button.dart';
+import '../../../widgets/common/neo_card.dart';
 import '../../../widgets/common/primary_button.dart';
 import '../stand_in_style.dart';
 
@@ -62,36 +64,38 @@ class ImportTab extends StatelessWidget {
                   style: TextStyle(color: secondary, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(R.lg),
-                    border: Border.all(
-                      color: !checked
-                          ? c.border
-                          : (valid ? c.primary : c.error),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: TextField(
-                    key: const Key('standin-mnemonic-input'),
-                    controller: controller,
-                    onChanged: onChanged,
-                    maxLines: null,
-                    style: TextStyle(color: c.text, fontSize: 15, height: 1.6),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'word1 word2 word3 ...',
-                      hintStyle: TextStyle(
-                        color: c.text.withAlpha(80),
-                        fontSize: 15,
+                NeoCard(
+                  clip: true,
+                  // Light outlines the field in the validation colour (brand ink
+                  // until touched, then green / red); dark restores the original
+                  // 1.5px hairline border.
+                  edge: !checked ? c.neoEdge : (valid ? c.accent : c.error),
+                  legacyEdge: !checked
+                      ? c.border
+                      : (valid ? c.primary : c.error),
+                  legacyEdgeWidth: 1.5,
+                  legacyRadius: R.lg,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: TextField(
+                      key: const Key('standin-mnemonic-input'),
+                      controller: controller,
+                      onChanged: onChanged,
+                      maxLines: null,
+                      style: TextStyle(color: c.text, fontSize: 15, height: 1.6),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'word1 word2 word3 ...',
+                        hintStyle: TextStyle(
+                          color: c.text.withAlpha(80),
+                          fontSize: 15,
+                        ),
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      autocorrect: false,
+                      enableSuggestions: false,
                     ),
-                    autocorrect: false,
-                    enableSuggestions: false,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -109,13 +113,17 @@ class ImportTab extends StatelessWidget {
                           Icon(
                             valid ? Icons.check_circle : Icons.cancel,
                             size: 18,
-                            color: valid ? c.primary : c.error,
+                            color: valid
+                                ? (c.neobrutalism ? c.accent : c.primary)
+                                : c.error,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             valid ? l10n.validMnemonic : l10n.invalidMnemonic,
                             style: TextStyle(
-                              color: valid ? c.primary : c.error,
+                              color: valid
+                                  ? (c.neobrutalism ? c.accent : c.primary)
+                                  : c.error,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -130,11 +138,18 @@ class ImportTab extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: PrimaryButton(
-            key: const Key('standin-import-continue'),
-            label: l10n.continueButton,
-            onTap: valid ? onContinue : null,
-          ),
+          child: c.neobrutalism && valid
+              ? NeoButton(
+                  key: const Key('standin-import-continue'),
+                  label: l10n.continueButton,
+                  expanded: true,
+                  onTap: onContinue,
+                )
+              : PrimaryButton(
+                  key: const Key('standin-import-continue'),
+                  label: l10n.continueButton,
+                  onTap: valid ? onContinue : null,
+                ),
         ),
       ],
     );

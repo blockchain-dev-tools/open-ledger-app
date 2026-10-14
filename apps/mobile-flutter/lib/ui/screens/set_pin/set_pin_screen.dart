@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
 import '../../widgets/pin/pin_number_pad.dart';
 import '../../../core/interfaces/wallet_service.dart';
 import '../../../core/models/vault.dart';
@@ -372,52 +373,57 @@ class _SetPinScreenState extends State<SetPinScreen> {
         systemStatusBarContrastEnforced: false,
       ),
       child: Scaffold(
-        backgroundColor: c.bg,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ── Icon / Title / Subtitle ─────────────────────────
-                    PinHeader(title: _title(l10n), subtitle: _subtitle(l10n)),
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        body: GridBackground(
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── Icon / Title / Subtitle ─────────────────────────
+                      PinHeader(title: _title(l10n), subtitle: _subtitle(l10n)),
 
-                    const SizedBox(height: 28),
+                      const SizedBox(height: 28),
 
-                    // ── PIN Dots (with shake) ───────────────────────────
-                    PinDots(
-                      shaking: _shaking,
-                      length: _pinLength,
-                      filledCount: _pin.length,
-                    ),
+                      // ── PIN Dots (with shake) ───────────────────────────
+                      PinDots(
+                        shaking: _shaking,
+                        length: _pinLength,
+                        filledCount: _pin.length,
+                      ),
 
-                    const SizedBox(height: 10),
+                      const SizedBox(height: 10),
 
-                    // ── Error Indicator ─────────────────────────────────
-                    if (_error != null) PinErrorBanner(message: _error!),
+                      // ── Error Indicator ─────────────────────────────────
+                      if (_error != null) PinErrorBanner(message: _error!),
 
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                    // ── Number Pad ──────────────────────────────────────
-                    PinNumberPad(
-                      onDigit: _onDigitTap,
-                      onBackspace: _onBackspaceTap,
-                      keyPrefix: 'pin',
-                    ),
+                      // ── Number Pad ──────────────────────────────────────
+                      PinNumberPad(
+                        onDigit: _onDigitTap,
+                        onBackspace: _onBackspaceTap,
+                        keyPrefix: 'pin',
+                      ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // ── Cancel → go back ────────────────────────────────
-                    PinCancelButton(
-                      onTap: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        }
-                      },
-                    ),
-                  ],
+                      // ── Cancel → go back ────────────────────────────────
+                      PinCancelButton(
+                        onTap: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

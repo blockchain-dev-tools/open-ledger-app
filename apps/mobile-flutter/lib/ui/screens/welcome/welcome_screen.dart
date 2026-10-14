@@ -6,6 +6,8 @@ import '../../../services/settings_service.dart';
 import '../../theme/color_tokens.dart';
 import '../../theme/widgets/brand_mark.dart';
 import '../../widgets/common/enigma_logo_icon.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_card.dart';
 import 'components/entry_card.dart';
 
 /// Welcome screen — the app's landing page with three wallet entry points.
@@ -122,18 +124,173 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
+  /// Icon shown on the display-mode chip.
+  IconData _themeModeIcon(ThemeMode mode) => switch (mode) {
+    ThemeMode.system => Icons.brightness_auto_outlined,
+    ThemeMode.light => Icons.light_mode_outlined,
+    ThemeMode.dark => Icons.dark_mode_outlined,
+  };
+
+  /// Localized name of the current display mode, shown on the chip.
+  String _themeModeLabel(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
+    ThemeMode.system => l10n.themeSystem,
+    ThemeMode.light => l10n.lightMode,
+    ThemeMode.dark => l10n.darkMode,
+  };
+
+  /// Shows the display-mode picker sheet: system / light / dark. Mirrors the
+  /// language picker so the two corner controls behave identically.
+  void _showThemePicker(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
+    final current = settingsService?.themeMode ?? ThemeMode.system;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.xl)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: c.text.withAlpha(60),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                child: Text(
+                  l10n.theme,
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              for (final (mode, label) in [
+                (ThemeMode.system, l10n.themeSystem),
+                (ThemeMode.light, l10n.lightMode),
+                (ThemeMode.dark, l10n.darkMode),
+              ])
+                InkWell(
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    settingsService?.setThemeMode(mode);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 13),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              color: c.text,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        if (current == mode)
+                          Icon(Icons.check_rounded,
+                              color: c.primary, size: 22),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// A top-corner control chip. Light mode outlines it in brand ink with a
+  /// hard offset shadow; dark keeps the original soft pill. Shared by the
+  /// display-mode (top-left) and language (top-right) selectors.
+  Widget _cornerChip(
+    BuildContext context, {
+    required Key key,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
+    final neo = c.neobrutalism;
+    final fg = neo ? c.brandInk : c.text;
+
+    return GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(neo ? Neo.radius : R.xl),
+          border: Border.all(
+            color: neo ? c.neoEdge : c.border.withAlpha(80),
+            width: neo ? Neo.edge : 1,
+          ),
+          boxShadow: neo ? neoShadow(c) : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: neo ? fg : c.text.withAlpha(200)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: fg,
+                fontSize: 13,
+                fontWeight: neo ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final currentLocale = settingsService?.locale ?? const Locale('en');
+    final currentThemeMode = settingsService?.themeMode ?? ThemeMode.system;
 
     return Scaffold(
-      backgroundColor: c.bg,
+      // Light follows the shell's tinted inset-grouped background; dark's
+      // `groupedBg` equals `bg`, so this only changes light mode.
+      backgroundColor: c.groupedBg,
       body: SafeArea(
         child: Stack(
           children: [
+            // Reference grid from neobrutalism.dev — light-mode chrome only
+            // (dark returns the child untouched). Painted first so it sits
+            // behind the hero content.
+            Positioned.fill(
+              child: GridBackground(child: const SizedBox.expand()),
+            ),
             LayoutBuilder(
               builder: (context, constraints) {
                 final topPadding = constraints.maxHeight * 0.12;
@@ -224,38 +381,29 @@ class WelcomeScreen extends StatelessWidget {
               },
             ),
 
+            // ── Display-mode selector (top-left) ──────────────────────
+            Positioned(
+              top: 8,
+              left: 16,
+              child: _cornerChip(
+                context,
+                key: const Key('display-mode-selector'),
+                icon: _themeModeIcon(currentThemeMode),
+                label: _themeModeLabel(l10n, currentThemeMode),
+                onTap: () => _showThemePicker(context),
+              ),
+            ),
+
             // ── Language selector (top-right) ─────────────────────────
             Positioned(
               top: 8,
               right: 16,
-              child: InkWell(
+              child: _cornerChip(
+                context,
                 key: const Key('language-selector'),
-                borderRadius: BorderRadius.circular(R.xl),
+                icon: Icons.language,
+                label: _currentLanguageName(l10n, currentLocale),
                 onTap: () => _showLanguagePicker(context),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(R.xl),
-                    border: Border.all(color: c.border.withAlpha(80)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.language, size: 16, color: c.text.withAlpha(200)),
-                      const SizedBox(width: 6),
-                      Text(
-                        _currentLanguageName(l10n, currentLocale),
-                        style: TextStyle(
-                          color: c.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ],

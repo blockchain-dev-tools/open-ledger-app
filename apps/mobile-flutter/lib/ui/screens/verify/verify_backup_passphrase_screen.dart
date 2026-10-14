@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/interfaces/backup_verifier.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/verify/verify_result_card.dart';
 
@@ -72,68 +75,74 @@ class _VerifyBackupPassphraseScreenState
     final result = _result ?? widget.previewResult;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.bg,
         title: Text(l10n.verifyPassphraseTitle),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(Icons.password_outlined, size: 44, color: c.primary),
-              const SizedBox(height: 16),
-              Text(
-                l10n.verifyPassphraseHint,
-                style: TextStyle(
-                    color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(R.lg),
-                  border: Border.all(color: c.border),
+      body: GridBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.password_outlined, size: 44, color: c.primary),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.verifyPassphraseHint,
+                  style: TextStyle(
+                      color: c.text.withAlpha(150), fontSize: 13, height: 1.5),
                 ),
-                child: TextField(
-                  key: const Key('verify-passphrase-input'),
-                  controller: _controller,
-                  obscureText: _obscure,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  style: TextStyle(color: c.text, fontSize: 15),
-                  decoration: InputDecoration(
-                    hintText: l10n.enterPassphraseOptional,
-                    hintStyle: TextStyle(color: c.text.withAlpha(80)),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscure ? Icons.visibility_off : Icons.visibility,
-                        color: c.text.withAlpha(150),
+                const SizedBox(height: 20),
+                NeoCard(
+                  // Light outlines the field as a neo block; dark falls back to
+                  // the original hairline box.
+                  legacyRadius: R.lg,
+                  legacyEdge: c.border,
+                  child: TextField(
+                    key: const Key('verify-passphrase-input'),
+                    controller: _controller,
+                    obscureText: _obscure,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: TextStyle(color: c.text, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: l10n.enterPassphraseOptional,
+                      hintStyle: TextStyle(color: c.text.withAlpha(80)),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscure ? Icons.visibility_off : Icons.visibility,
+                          color: c.text.withAlpha(150),
+                        ),
+                        onPressed: () => setState(() => _obscure = !_obscure),
                       ),
-                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: l10n.verifyAction,
-                loading: _checking,
-                onTap: _verify,
-              ),
-              if (result != null) ...[
-                const SizedBox(height: 20),
-                VerifyResultCard(result: result),
+                const SizedBox(height: 24),
+                PrimaryButton(
+                  label: l10n.verifyAction,
+                  loading: _checking,
+                  onTap: _verify,
+                ),
+                if (result != null) ...[
+                  const SizedBox(height: 20),
+                  VerifyResultCard(result: result),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

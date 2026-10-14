@@ -5,6 +5,8 @@ import '../../../data/bip39_wordlist.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/enigma.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 // Web builds (design gallery) have no dart:ffi — the inert stub keeps the
 // screen compilable; the seed-hex section simply stays hidden there.
@@ -188,76 +190,82 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
         if (!didPop) context.go('/enigma');
       },
       child: Scaffold(
-        backgroundColor: c.bg,
-        appBar: AppBar(
+        // Light follows the neo page tint (pale lime) so the reference grid
+        // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+        // affects light mode.
+        backgroundColor: c.groupedBg,
+        appBar: neoAppBar(
+          c: c,
           title: const Text('Secret Phrase Mnemonic'),
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: c.text),
             onPressed: () => context.go('/enigma'),
           ),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Header ──────────────────────────────────────────
-                const EnigmaHeader(),
+        body: GridBackground(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Header ──────────────────────────────────────────
+                  const EnigmaHeader(),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // ── Warning Banner ──────────────────────────────────
-                WarningBanner(
-                  message: AppLocalizations.of(context)!.neverShareSeed,
-                  bold: true,
-                ),
+                  // ── Warning Banner ──────────────────────────────────
+                  WarningBanner(
+                    message: AppLocalizations.of(context)!.neverShareSeed,
+                    bold: true,
+                  ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ── Language Selector (interactive) ─────────────────
-                MnemonicLanguageSelector(
-                  language: _displayLanguage,
-                  onChanged: _onDisplayLanguageChanged,
-                ),
+                  // ── Language Selector (interactive) ─────────────────
+                  MnemonicLanguageSelector(
+                    language: _displayLanguage,
+                    onChanged: _onDisplayLanguageChanged,
+                  ),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // ── Word Grid (4 columns × 6 rows for 24 words) ────
-                EnigmaWordGrid(words: _displayWords),
+                  // ── Word Grid (4 columns × 6 rows for 24 words) ────
+                  EnigmaWordGrid(words: _displayWords),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // ── Seed Hex Display ────────────────────────────────
-                if (_seedHex != null) SeedHexCard(seedHex: _seedHex!),
+                  // ── Seed Hex Display ────────────────────────────────
+                  if (_seedHex != null) SeedHexCard(seedHex: _seedHex!),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // ── Instructions ────────────────────────────────────
-                const EnigmaVerificationCard(),
+                  // ── Instructions ────────────────────────────────────
+                  const EnigmaVerificationCard(),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ── Passphrase Input ─────────────────────────────────
-                PassphraseField(
-                  controller: _passphraseController,
-                  obscure: _obscurePassphrase,
-                  onToggleObscure: () {
-                    setState(() {
-                      _obscurePassphrase = !_obscurePassphrase;
-                    });
-                  },
-                ),
+                  // ── Passphrase Input ─────────────────────────────────
+                  PassphraseField(
+                    controller: _passphraseController,
+                    obscure: _obscurePassphrase,
+                    onToggleObscure: () {
+                      setState(() {
+                        _obscurePassphrase = !_obscurePassphrase;
+                      });
+                    },
+                  ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ── Continue Button ─────────────────────────────────
-                EnigmaContinueButton(
-                  onTap: _englishWords.isNotEmpty ? _onContinue : null,
-                ),
+                  // ── Continue Button ─────────────────────────────────
+                  EnigmaContinueButton(
+                    onTap: _englishWords.isNotEmpty ? _onContinue : null,
+                  ),
 
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),

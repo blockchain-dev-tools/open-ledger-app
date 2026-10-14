@@ -351,10 +351,11 @@ void main() {
     await tester.tap(find.text('Theme'));
     await tester.pumpAndSettle();
 
-    expect(find.text('System'), findsOneWidget);
+    // The service default is now ThemeMode.system, so the row's current value
+    // is "System" — which then also appears as a sheet option.
+    expect(find.text('System'), findsNWidgets(2));
     expect(find.text('Light Mode'), findsOneWidget);
-    // "Dark Mode" appears twice: the row's current value + the sheet option.
-    expect(find.text('Dark Mode'), findsNWidgets(2));
+    expect(find.text('Dark Mode'), findsOneWidget);
 
     await tester.tap(find.text('Light Mode'));
     await tester.pumpAndSettle();

@@ -7,6 +7,10 @@ import '../../../core/interfaces/export_service.dart';
 import '../../../core/interfaces/screen_security.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
@@ -72,45 +76,52 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(l10n.exportSeedTitle),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+        darkBackground: c.bg,
       ),
       // The QR lives in the body, so the lifecycle cover hides exactly the
       // secret while the plain "Recovery Phrase" title stays put.
-      body: PrivacyShield(
-        screenSecurity: widget.screenSecurity,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                WarningBanner(message: l10n.mnemonicQrWarning),
-                const SizedBox(height: 20),
-                if (exportService != null)
-                  PinGate(
-                    exportService: exportService,
-                    keyPrefix: 'export-seed-pin',
-                    onUnlocked: (pin) async {
-                      final revealed = await exportService.revealMnemonic(pin);
-                      if (revealed == null || revealed.isEmpty) return null;
-                      return _buildQrView(c, l10n, screenWidth, revealed,
-                          exportService.fingerprint,
-                          exportService.hasPassphrase);
-                    },
-                  )
-                else if (widget.previewMnemonic == null ||
-                    widget.previewMnemonic!.isEmpty)
-                  _buildEmptyState(c, l10n)
-                else
-                  _buildQrView(c, l10n, screenWidth, widget.previewMnemonic!,
-                      widget.previewFingerprint, widget.hasPassphrase),
-              ],
+      body: GridBackground(
+        child: PrivacyShield(
+          screenSecurity: widget.screenSecurity,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  WarningBanner(message: l10n.mnemonicQrWarning),
+                  const SizedBox(height: 20),
+                  if (exportService != null)
+                    PinGate(
+                      exportService: exportService,
+                      keyPrefix: 'export-seed-pin',
+                      onUnlocked: (pin) async {
+                        final revealed = await exportService.revealMnemonic(pin);
+                        if (revealed == null || revealed.isEmpty) return null;
+                        return _buildQrView(c, l10n, screenWidth, revealed,
+                            exportService.fingerprint,
+                            exportService.hasPassphrase);
+                      },
+                    )
+                  else if (widget.previewMnemonic == null ||
+                      widget.previewMnemonic!.isEmpty)
+                    _buildEmptyState(c, l10n)
+                  else
+                    _buildQrView(c, l10n, screenWidth, widget.previewMnemonic!,
+                        widget.previewFingerprint, widget.hasPassphrase),
+                ],
+              ),
             ),
           ),
         ),
@@ -131,10 +142,14 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
             decoration: BoxDecoration(
               // Black-on-white is REQUIRED for QR scannability.
               color: Colors.white,
-              borderRadius: BorderRadius.circular(R.lg),
-              // Without a border the white card disappears on the light
-              // theme's white background.
-              border: Border.all(color: c.border),
+              borderRadius: BorderRadius.circular(
+                c.neobrutalism ? Neo.radius : R.lg,
+              ),
+              // Light mode outlines the white card as a neo block; dark keeps
+              // the hairline that stops it vanishing on the white background.
+              border: c.neobrutalism
+                  ? Border.all(color: c.neoEdge, width: Neo.edge)
+                  : Border.all(color: c.border),
             ),
             child: QrImageView(
               data: mnemonic,
@@ -155,17 +170,17 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
         const SizedBox(height: 16),
         if (fingerprint != null)
           Center(
-            child: Container(
+            // Light mode draws the chip as a small outlined block; dark keeps
+            // the original hairline pill.
+            child: NeoCard(
+              lifted: false,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(R.lg),
-                border: Border.all(color: c.border.withAlpha(120)),
-              ),
+              legacyEdge: c.border.withAlpha(120),
+              legacyRadius: R.lg,
               child: Text(
                 l10n.walletChip(fingerprint),
                 style: TextStyle(
-                  color: c.text.withAlpha(150),
+                  color: c.neobrutalism ? c.text : c.text.withAlpha(150),
                   fontSize: 12,
                   fontFamily: 'monospace',
                 ),
@@ -179,10 +194,19 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
           onElapsed: () => Navigator.of(context).maybePop(),
         ),
         const SizedBox(height: 20),
-        PrimaryButton(
-          label: l10n.iveWrittenItDown,
-          onTap: () => Navigator.of(context).maybePop(),
-        ),
+        // Light mode renders the neo action button; dark keeps the original
+        // flat button.
+        if (c.neobrutalism)
+          NeoButton(
+            label: l10n.iveWrittenItDown,
+            expanded: true,
+            onTap: () => Navigator.of(context).maybePop(),
+          )
+        else
+          PrimaryButton(
+            label: l10n.iveWrittenItDown,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
         const SizedBox(height: 12),
         Text(
           l10n.englishBip39Note,

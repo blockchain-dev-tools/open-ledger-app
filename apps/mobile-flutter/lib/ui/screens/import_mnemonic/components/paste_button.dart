@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_button.dart';
 
 /// Full-width "paste from clipboard" action for the import-mnemonic screen.
+///
+/// Light mode renders the neo quiet button; dark keeps the original outlined
+/// button.
 class PasteButton extends StatelessWidget {
   final VoidCallback onPressed;
 
@@ -14,6 +18,17 @@ class PasteButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
+
+    if (c.neobrutalism) {
+      return NeoButton(
+        key: const Key('paste-btn'),
+        label: l10n.pasteFromClipboard,
+        icon: Icons.content_paste,
+        quiet: true,
+        expanded: true,
+        onTap: onPressed,
+      );
+    }
 
     return SizedBox(
       width: double.infinity,

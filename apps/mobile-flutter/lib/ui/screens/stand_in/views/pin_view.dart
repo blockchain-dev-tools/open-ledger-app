@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 import '../../../widgets/pin/pin_dot_indicator.dart';
 import '../../../widgets/pin/pin_number_pad.dart';
 import '../stand_in_style.dart';
@@ -42,6 +43,7 @@ class PinView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = c.neobrutalism;
     return Center(
       child: SingleChildScrollView(
         child: Padding(
@@ -49,11 +51,27 @@ class PinView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.lock_outline,
-                size: 56,
-                color: c.primary.withAlpha(120),
-              ),
+              // Light turns the translucent lime glyph into an outlined neo
+              // tile so the lock reads as a hard block; dark keeps the glyph.
+              if (neo)
+                NeoCard(
+                  lifted: false,
+                  child: SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: 34,
+                      color: c.brandInk,
+                    ),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.lock_outline,
+                  size: 56,
+                  color: c.primary.withAlpha(120),
+                ),
               const SizedBox(height: 18),
               Text(
                 title,
@@ -61,7 +79,7 @@ class PinView extends StatelessWidget {
                 style: TextStyle(
                   color: c.text,
                   fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: neo ? FontWeight.w800 : FontWeight.w700,
                 ),
               ),
               if (subtitle.isNotEmpty) ...[
@@ -70,10 +88,14 @@ class PinView extends StatelessWidget {
                   subtitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: standInSecondaryText(
-                      c,
-                      Theme.of(context).brightness,
-                    ),
+                    // Neo renders the subtitle in full brand ink, matching the
+                    // set-PIN header; dark keeps the muted secondary tone.
+                    color: neo
+                        ? c.text
+                        : standInSecondaryText(
+                            c,
+                            Theme.of(context).brightness,
+                          ),
                     fontSize: 14,
                   ),
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/bip39_wordlist.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// The display-language selector row: a label plus a bordered dropdown that
 /// re-derives the mnemonic for the chosen [Bip39WordlistLanguage].
@@ -32,13 +33,12 @@ class MnemonicLanguageSelector extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Container(
+          child: NeoCard(
+            clip: true,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(R.sm),
-              border: Border.all(color: c.border),
-            ),
+            // Dark restores the original hairline field.
+            legacyEdge: c.border,
+            legacyRadius: R.sm,
             child: DropdownButton<Bip39WordlistLanguage>(
               value: language,
               isExpanded: true,

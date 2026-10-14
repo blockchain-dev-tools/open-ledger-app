@@ -8,6 +8,9 @@ import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_card.dart';
 import 'private_key_qr_screen.dart';
 
 /// Per-account private-key list — the second hub destination.
@@ -57,50 +60,64 @@ class PrivateKeyListScreen extends StatelessWidget {
         .toList();
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
         title: Text(l10n.privateKeysRow),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+        darkBackground: c.bg,
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          children: [
-            _RareNote(c: c, message: l10n.privateKeysRareNote),
-            const SizedBox(height: 20),
-            Container(
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(R.lg),
-                border: Border.all(color: c.border.withAlpha(80)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  for (var i = 0; i < visibleAccounts.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        indent: 62,
-                        color: c.border.withAlpha(140),
+      body: GridBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            children: [
+              _RareNote(c: c, message: l10n.privateKeysRareNote),
+              const SizedBox(height: 20),
+              NeoCard(
+                clip: true,
+                // Dark restores the original hairline card.
+                legacyEdge: c.border.withAlpha(80),
+                legacyRadius: R.lg,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < visibleAccounts.length; i++) ...[
+                      if (i > 0)
+                        // Light rules the rows off with a full-bleed black line;
+                        // dark keeps the original inset hairline.
+                        if (c.neobrutalism)
+                          Divider(
+                            height: Neo.edge,
+                            thickness: Neo.edge,
+                            color: c.neoEdge,
+                          )
+                        else
+                          Divider(
+                            height: 1,
+                            thickness: 0.5,
+                            indent: 62,
+                            color: c.border.withAlpha(140),
+                          ),
+                      _AccountRow(
+                        c: c,
+                        account: visibleAccounts[i],
+                        accountIndex: visibleAccounts[i].accountIndex,
+                        enabled:
+                            exportService != null || encodedKeyFor != null,
+                        onTap: () => _openKey(context, visibleAccounts[i]),
                       ),
-                    _AccountRow(
-                      c: c,
-                      account: visibleAccounts[i],
-                      accountIndex: visibleAccounts[i].accountIndex,
-                      enabled:
-                          exportService != null || encodedKeyFor != null,
-                      onTap: () => _openKey(context, visibleAccounts[i]),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -150,20 +167,30 @@ class _AccountRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: c.primary.withAlpha(20),
-                borderRadius: BorderRadius.circular(17),
-              ),
-              child: SvgPicture.asset(
+            // Light leaves the chain logo unframed (the row block already
+            // outlines it); dark restores the original circular tinted tile.
+            if (c.neobrutalism)
+              SvgPicture.asset(
                 chainIconAssetPath(account.chain),
-                width: 18,
-                height: 18,
+                width: 34,
+                height: 34,
                 fit: BoxFit.contain,
+              )
+            else
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: c.primary.withAlpha(20),
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: SvgPicture.asset(
+                  chainIconAssetPath(account.chain),
+                  width: 18,
+                  height: 18,
+                  fit: BoxFit.contain,
+                ),
               ),
-            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

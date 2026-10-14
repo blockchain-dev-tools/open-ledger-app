@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 import '../components/action_group.dart';
 import '../components/action_row.dart';
 import '../stand_in_style.dart';
@@ -31,54 +32,77 @@ class StatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = c.neobrutalism;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(R.lg),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: c.primary.withAlpha(30),
-                  borderRadius: BorderRadius.circular(R.lg),
-                ),
-                child: Icon(Icons.shield_outlined, color: c.primary, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.standInConfigured,
-                      style: TextStyle(
-                        color: c.text,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+        NeoCard(
+          clip: true,
+          // Legacy chrome was a borderless surface card; dark restores it.
+          legacyEdgeWidth: 0,
+          legacyRadius: R.lg,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                // Light turns the tinted lime tile into an outlined neo tile so
+                // the shield reads as a hard block; dark keeps the tint.
+                if (neo)
+                  NeoCard(
+                    lifted: false,
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Icon(
+                        Icons.shield_outlined,
+                        color: c.brandInk,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${l10n.standInCurrentModeLabel}: $modeName',
-                      style: TextStyle(
-                        color: standInSecondaryText(
-                          c,
-                          Theme.of(context).brightness,
+                  )
+                else
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: c.primary.withAlpha(30),
+                      borderRadius: BorderRadius.circular(R.lg),
+                    ),
+                    child: Icon(
+                      Icons.shield_outlined,
+                      color: c.primary,
+                      size: 24,
+                    ),
+                  ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.standInConfigured,
+                        style: TextStyle(
+                          color: c.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                         ),
-                        fontSize: 13,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '${l10n.standInCurrentModeLabel}: $modeName',
+                        style: TextStyle(
+                          color: standInSecondaryText(
+                            c,
+                            Theme.of(context).brightness,
+                          ),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 24),

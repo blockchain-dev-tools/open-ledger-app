@@ -14,6 +14,7 @@ class PinCancelButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
+    final neo = c.neobrutalism;
 
     return GestureDetector(
       key: const Key('pin-cancel'),
@@ -21,10 +22,14 @@ class PinCancelButton extends StatelessWidget {
       child: Text(
         l10n.cancel,
         style: TextStyle(
-          color: c.text.withAlpha(120),
+          // Neo inverts the muted grey link to a heavy black one; dark keeps
+          // the original thin grey underline.
+          color: neo ? c.text : c.text.withAlpha(120),
           fontSize: 14,
+          fontWeight: neo ? FontWeight.w700 : FontWeight.normal,
           decoration: TextDecoration.underline,
-          decorationColor: c.text.withAlpha(80),
+          decorationColor: neo ? c.neoEdge : c.text.withAlpha(80),
+          decorationThickness: neo ? 2 : null,
         ),
       ),
     );

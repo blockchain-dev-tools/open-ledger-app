@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// The top-of-screen header block: lock icon, phase title and its subtitle.
 ///
@@ -17,12 +18,25 @@ class PinHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final neo = c.neobrutalism;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // ── Icon ────────────────────────────────────────────
-        Icon(Icons.lock_outline, size: 64, color: c.primary.withAlpha(120)),
+        // Light turns the translucent lime glyph into an outlined neo tile so
+        // the lock reads as a hard block; dark keeps the original glyph.
+        if (neo)
+          NeoCard(
+            lifted: false,
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: Icon(Icons.lock_outline, size: 34, color: c.brandInk),
+            ),
+          )
+        else
+          Icon(Icons.lock_outline, size: 64, color: c.primary.withAlpha(120)),
 
         const SizedBox(height: 20),
 
@@ -32,7 +46,7 @@ class PinHeader extends StatelessWidget {
           style: TextStyle(
             color: c.text,
             fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontWeight: neo ? FontWeight.w800 : FontWeight.w700,
           ),
         ),
 
@@ -41,7 +55,10 @@ class PinHeader extends StatelessWidget {
         // ── Subtitle ────────────────────────────────────────
         Text(
           subtitle,
-          style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
+          style: TextStyle(
+            color: neo ? c.text : c.text.withAlpha(140),
+            fontSize: 14,
+          ),
         ),
       ],
     );

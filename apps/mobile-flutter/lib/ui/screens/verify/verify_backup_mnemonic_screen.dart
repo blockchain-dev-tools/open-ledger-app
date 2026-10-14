@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/interfaces/backup_verifier.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/verify/verify_result_card.dart';
 
@@ -86,45 +89,52 @@ class _VerifyBackupMnemonicScreenState
     final result = _result ?? widget.previewResult;
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
+      // Light follows the neo page tint (pale lime) so the reference grid
+      // reads as paper ruling; dark's `groupedBg` equals `bg`, so this only
+      // affects light mode.
+      backgroundColor: c.groupedBg,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.bg,
         title: Text(l10n.verifySeedTitle),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: c.text),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(Icons.spellcheck, size: 44, color: c.primary),
-              const SizedBox(height: 16),
-              Text(
-                l10n.verifySeedHint,
-                style: TextStyle(color: c.text.withAlpha(150), fontSize: 13,
-                    height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              _PhraseField(c: c, controller: _controller),
-              const SizedBox(height: 24),
-              // Rebuild on every keystroke so the button enables as soon as
-              // the field is non-empty (the screen has no other text input).
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _controller,
-                builder: (context, value, _) => PrimaryButton(
-                  label: l10n.verifyAction,
-                  loading: _checking,
-                  onTap: value.text.trim().isEmpty ? null : _verify,
+      body: GridBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.spellcheck, size: 44, color: c.primary),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.verifySeedHint,
+                  style: TextStyle(color: c.text.withAlpha(150), fontSize: 13,
+                      height: 1.5),
                 ),
-              ),
-              if (result != null) ...[
                 const SizedBox(height: 20),
-                VerifyResultCard(result: result),
+                _PhraseField(c: c, controller: _controller),
+                const SizedBox(height: 24),
+                // Rebuild on every keystroke so the button enables as soon as
+                // the field is non-empty (the screen has no other text input).
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, _) => PrimaryButton(
+                    label: l10n.verifyAction,
+                    loading: _checking,
+                    onTap: value.text.trim().isEmpty ? null : _verify,
+                  ),
+                ),
+                if (result != null) ...[
+                  const SizedBox(height: 20),
+                  VerifyResultCard(result: result),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -142,12 +152,11 @@ class _PhraseField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: c.border),
-      ),
+    return NeoCard(
+      // Light outlines the field as a neo block; dark falls back to the
+      // original hairline box.
+      legacyRadius: R.lg,
+      legacyEdge: c.border,
       child: TextField(
         key: const Key('verify-seed-input'),
         controller: controller,

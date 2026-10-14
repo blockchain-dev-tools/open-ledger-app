@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
 
 /// The optional BIP-39 passphrase block: label, explanation and the obscured
 /// input field with its show/hide toggle.
@@ -32,7 +33,7 @@ class PassphraseField extends StatelessWidget {
         Text(
           AppLocalizations.of(context)!.passphraseOptional,
           style: TextStyle(
-            color: c.text.withAlpha(150),
+            color: c.neobrutalism ? c.text : c.text.withAlpha(150),
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -47,12 +48,11 @@ class PassphraseField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(R.lg),
-            border: Border.all(color: c.border),
-          ),
+        NeoCard(
+          clip: true,
+          // Dark restores the original hairline field.
+          legacyEdge: c.border,
+          legacyRadius: R.lg,
           child: TextField(
             key: const Key('passphrase-input'),
             controller: controller,

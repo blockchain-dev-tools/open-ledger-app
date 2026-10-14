@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/color_tokens.dart';
+import '../common/neo_card.dart';
 
 /// Displays a BIP-39 mnemonic word list in a numbered or plain grid.
 ///
@@ -51,6 +52,12 @@ class MnemonicWordGrid extends StatelessWidget {
   /// Default: 10 for cross-axis, 10 for main-axis.
   final double cellSpacing;
 
+  /// Draws the neo chrome on each cell (black outline, [Neo.radius] corners)
+  /// instead of the flat hairline tile. Pass [ColorTokens.neobrutalism] from
+  /// surfaces already on the neo language; everyone else leaves it false so
+  /// their chrome is unchanged.
+  final bool neo;
+
   const MnemonicWordGrid({
     super.key,
     required this.words,
@@ -60,6 +67,7 @@ class MnemonicWordGrid extends StatelessWidget {
     this.monospace = false,
     this.childAspectRatio = 2.6,
     this.cellSpacing = 10.0,
+    this.neo = false,
   });
 
   @override
@@ -78,6 +86,27 @@ class MnemonicWordGrid extends StatelessWidget {
       ),
       itemCount: words.length,
       itemBuilder: (context, index) {
+        final label = Text(
+          numbered ? '${index + 1}. ${words[index]}' : words[index],
+          style: TextStyle(
+            color: c.text,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w500,
+            fontFamily: monospace ? 'monospace' : null,
+          ),
+          overflow: TextOverflow.ellipsis,
+        );
+
+        // Neo cells keep the outline but drop the shadow — a grid of offset
+        // shadows reads as noise at this size. Dark restores the flat tile.
+        if (neo) {
+          return NeoCard(
+            lifted: false,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Center(child: label),
+          );
+        }
+
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
@@ -86,16 +115,7 @@ class MnemonicWordGrid extends StatelessWidget {
             border: Border.all(color: c.border),
           ),
           alignment: Alignment.center,
-          child: Text(
-            numbered ? '${index + 1}. ${words[index]}' : words[index],
-            style: TextStyle(
-              color: c.text,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w500,
-              fontFamily: monospace ? 'monospace' : null,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: label,
         );
       },
     );
