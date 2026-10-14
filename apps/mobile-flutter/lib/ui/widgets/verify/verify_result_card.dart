@@ -40,22 +40,50 @@ class VerifyResultCard extends StatelessWidget {
         ),
     };
 
+    // Light mode paints the verdict as a flat, opaque neo block: the `match`
+    // state is a brand note, so it fills with the lime (which forces black ink
+    // and the deep-green glyph — the translucent lime tint would wash out);
+    // `mismatch` / `unavailable` keep their own colour, with the tint flattened
+    // against the surface so the page grid cannot show through. Dark keeps the
+    // original translucent tint.
+    final neo = c.neobrutalism;
+    final Color fill;
+    final Color ink;
+    final Color glyph;
+    if (neo) {
+      final brand = result == VerifyResult.match;
+      final unavailable = result == VerifyResult.unavailable;
+      fill = brand
+          ? c.actionFill
+          : Color.alphaBlend(color.withAlpha(18), c.surface);
+      ink = brand ? c.brandInk : (unavailable ? c.text : color);
+      glyph = brand ? c.accent : (unavailable ? c.text : color);
+    } else {
+      fill = color.withAlpha(18);
+      ink = color;
+      glyph = color;
+    }
+
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: color.withAlpha(18),
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: color.withAlpha(70)),
+        color: fill,
+        borderRadius: BorderRadius.circular(neo ? Neo.radius : R.lg),
+        border: Border.all(
+          color: neo ? c.neoEdge : color.withAlpha(70),
+          width: neo ? Neo.edge : 1,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
+          Icon(icon, color: glyph, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: color, fontSize: 13, height: 1.4),
+              style: TextStyle(color: ink, fontSize: 13, height: 1.4),
             ),
           ),
         ],

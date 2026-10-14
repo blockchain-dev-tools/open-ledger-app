@@ -96,13 +96,13 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
       return _card(
         Column(
           children: [
-            _rawDataRow(
+            _hpad(_rawDataRow(
                 c,
                 AppLocalizations.of(context)!.dataHex,
-                '0x${widget.payloadHex.substring(0, widget.payloadHex.length.clamp(0, 64))}${widget.payloadHex.length > 64 ? '...' : ''}'),
+                '0x${widget.payloadHex.substring(0, widget.payloadHex.length.clamp(0, 64))}${widget.payloadHex.length > 64 ? '...' : ''}')),
             const SizedBox(height: 8),
-            _rawDataRow(c, AppLocalizations.of(context)!.dataSize,
-                '${widget.payloadHex.length ~/ 2} bytes'),
+            _hpad(_rawDataRow(c, AppLocalizations.of(context)!.dataSize,
+                '${widget.payloadHex.length ~/ 2} bytes')),
           ],
         ),
       );
@@ -124,15 +124,34 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     }
   }
 
+  /// Rule drawn between two detail rows. Neo rules the table with a hard black
+  /// [Neo.edge]-px line (matching the History expanded body); the legacy chrome
+  /// keeps the hairline.
+  Widget _divider() {
+    if (widget.neo) {
+      return Divider(
+        height: Neo.edge,
+        thickness: Neo.edge,
+        color: c.neoEdge,
+      );
+    }
+    return Container(
+      height: 1,
+      color: c.border.withAlpha(60),
+    );
+  }
+
   Widget _card(Widget child) {
     if (widget.neo) {
-      // Outline only: the record card around it already carries the shadow,
-      // and the inner rules stay hairlines so a dense table reads calmly.
+      // Outline only: the record card around it already carries the shadow.
+      // No horizontal padding — each top-level row carries its own via [_hpad]
+      // so the row rules span the full inner width (matching the Vault
+      // accordion). The vertical padding stays on the card.
       return SizedBox(
         width: double.infinity,
         child: NeoCard(
           lifted: false,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(vertical: 20),
           child: child,
         ),
       );
@@ -149,58 +168,75 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     );
   }
 
+  /// Horizontal inset for a top-level row. The neo card carries no horizontal
+  /// padding of its own, so each row adds the inset here, leaving the
+  /// [Neo.edge] rules between rows edge to edge. No-op in the legacy chrome,
+  /// where the card still owns the inset.
+  Widget _hpad(Widget child) {
+    if (widget.neo) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: child,
+      );
+    }
+    return child;
+  }
+
   Widget _buildEthTxDetails(Map<String, dynamic> data) {
     return _card(
       Column(
         children: [
-          _detailRow(c, AppLocalizations.of(context)!.chain,
-              TxDetailsCard.chainName(data['chainId'] as String? ?? '0')),
+          _hpad(_detailRow(c, AppLocalizations.of(context)!.chain,
+              TxDetailsCard.chainName(data['chainId'] as String? ?? '0'))),
           const SizedBox(height: 10),
-          Container(height: 1, color: c.border.withAlpha(60)),
+          _divider(),
           const SizedBox(height: 10),
-          _buildAddressRow(c, AppLocalizations.of(context)!.to, data['to'] as String? ?? ''),
+          _hpad(_buildAddressRow(
+              c, AppLocalizations.of(context)!.to, data['to'] as String? ?? '')),
           const SizedBox(height: 10),
-          Container(height: 1, color: c.border.withAlpha(60)),
+          _divider(),
           const SizedBox(height: 10),
-          _detailRow(c, AppLocalizations.of(context)!.value,
-              '${weiToEth(data['value'] as String? ?? '0')} ETH'),
+          _hpad(_detailRow(c, AppLocalizations.of(context)!.value,
+              '${weiToEth(data['value'] as String? ?? '0')} ETH')),
           const SizedBox(height: 10),
-          Container(height: 1, color: c.border.withAlpha(60)),
+          _divider(),
           const SizedBox(height: 10),
-          _detailRow(c, 'Type', data['txType'] as String? ?? 'legacy'),
+          _hpad(_detailRow(c, 'Type', data['txType'] as String? ?? 'legacy')),
           const SizedBox(height: 10),
-          Container(height: 1, color: c.border.withAlpha(60)),
+          _divider(),
           const SizedBox(height: 10),
-          _detailRow(c, AppLocalizations.of(context)!.gasLimit, data['gas'] as String? ?? ''),
+          _hpad(_detailRow(
+              c, AppLocalizations.of(context)!.gasLimit, data['gas'] as String? ?? '')),
           const SizedBox(height: 10),
-          Container(height: 1, color: c.border.withAlpha(60)),
+          _divider(),
           const SizedBox(height: 10),
-          _detailRow(c, _gasPriceLabel(data['txType'] as String? ?? ''),
-              '${weiToGwei(data['gasPrice'] as String? ?? '0')} Gwei'),
+          _hpad(_detailRow(c, _gasPriceLabel(data['txType'] as String? ?? ''),
+              '${weiToGwei(data['gasPrice'] as String? ?? '0')} Gwei')),
           if (data['txType'] == 'eip1559' && data['priorityFee'] != null) ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: c.border.withAlpha(60)),
+            _divider(),
             const SizedBox(height: 10),
-            _detailRow(c, AppLocalizations.of(context)!.priorityFee,
-                '${weiToGwei(data['priorityFee'] as String? ?? '0')} Gwei'),
+            _hpad(_detailRow(c, AppLocalizations.of(context)!.priorityFee,
+                '${weiToGwei(data['priorityFee'] as String? ?? '0')} Gwei')),
           ],
           if (data['nonce'] != null && (data['nonce'] as String?) != '0') ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: c.border.withAlpha(60)),
+            _divider(),
             const SizedBox(height: 10),
-            _detailRow(c, AppLocalizations.of(context)!.nonce, data['nonce'] as String? ?? ''),
+            _hpad(_detailRow(
+                c, AppLocalizations.of(context)!.nonce, data['nonce'] as String? ?? '')),
           ],
           if (data['data'] != null && (data['data'] as String?) != '0x') ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: c.border.withAlpha(60)),
+            _divider(),
             const SizedBox(height: 10),
-            _buildDataField(data['data'] as String? ?? ''),
+            _hpad(_buildDataField(data['data'] as String? ?? '')),
           ],
           if (data['action'] is Map) ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: c.border.withAlpha(60)),
+            _divider(),
             const SizedBox(height: 10),
-            _buildDecodedAction(data['action'] as Map<String, dynamic>),
+            _hpad(_buildDecodedAction(data['action'] as Map<String, dynamic>)),
           ],
         ],
       ),
@@ -218,10 +254,10 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     void addSeparated(Widget w) {
       if (children.isNotEmpty) {
         children.add(const SizedBox(height: 10));
-        children.add(Container(height: 1, color: c.border.withAlpha(60)));
+        children.add(_divider());
         children.add(const SizedBox(height: 10));
       }
-      children.add(w);
+      children.add(_hpad(w));
     }
 
     if (to != null && to.isNotEmpty) {
@@ -248,17 +284,20 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     final params = action['params'] as List<dynamic>?;
     if (method == null || params == null) return const SizedBox.shrink();
 
+    // Light's lime washes out on white; the accent green stands in.
+    final heading = widget.neo ? c.accent : c.primary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.code, size: 16, color: c.primary),
+            Icon(Icons.code, size: 16, color: heading),
             const SizedBox(width: 6),
             Text(
               AppLocalizations.of(context)!.decodedAction,
               style: TextStyle(
-                color: c.primary,
+                color: heading,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -385,6 +424,8 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     final prefix = address.length > 12 ? address.substring(0, 6) : address;
     final suffix = address.length > 12 ? address.substring(address.length - 6) : '';
     final middle = address.length > 12 ? address.substring(6, address.length - 6) : '';
+    // Light's lime highlights wash out on white; the accent green stands in.
+    final highlight = widget.neo ? c.accent : c.primary;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -410,7 +451,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
                   TextSpan(
                     text: prefix,
                     style: TextStyle(
-                      color: c.primary,
+                      color: highlight,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -423,7 +464,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
                     TextSpan(
                       text: suffix,
                       style: TextStyle(
-                        color: c.primary,
+                        color: highlight,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -588,7 +629,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
 
   Widget _buildPersonalMsgDetails(Map<String, dynamic> data) {
     return _card(
-      Column(
+      _hpad(Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -618,13 +659,13 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 
   Widget _buildEip712Details(Map<String, dynamic> data) {
     return _card(
-      Column(
+      _hpad(Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -664,7 +705,7 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -676,11 +717,11 @@ class _TxDetailsCardState extends State<TxDetailsCard> {
     return _card(
       Column(
         children: [
-          _rawDataRow(c, 'Hex', displayHex),
+          _hpad(_rawDataRow(c, 'Hex', displayHex)),
           const SizedBox(height: 8),
-          Container(height: 1, color: c.border.withAlpha(60)),
+          _divider(),
           const SizedBox(height: 8),
-          _rawDataRow(c, 'Size', '$size bytes'),
+          _hpad(_rawDataRow(c, 'Size', '$size bytes')),
         ],
       ),
     );

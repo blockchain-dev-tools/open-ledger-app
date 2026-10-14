@@ -54,6 +54,11 @@ class NeoCard extends StatelessWidget {
   /// [ColorTokens.brandInk] for blocks outlined in the brand colour.
   final Color? edge;
 
+  /// Neo fill. Defaults to [ColorTokens.surface]; pass
+  /// [ColorTokens.actionFill] for the lime icon tiles and chips that carry a
+  /// black glyph. Ignored by the legacy chrome, which uses [legacyBackground].
+  final Color? fill;
+
   /// Legacy outline colour. Defaults to [ColorTokens.borderStrong].
   final Color? legacyEdge;
 
@@ -76,6 +81,7 @@ class NeoCard extends StatelessWidget {
     this.clip = false,
     this.lifted = true,
     this.edge,
+    this.fill,
     this.legacyEdge,
     this.legacyEdgeWidth = 1,
     this.legacyRadius = R.lg,
@@ -92,7 +98,7 @@ class NeoCard extends StatelessWidget {
     final BoxDecoration decoration;
     if (c.neobrutalism) {
       decoration = BoxDecoration(
-        color: c.surface,
+        color: fill ?? c.surface,
         borderRadius: BorderRadius.circular(Neo.radius),
         border: Border.all(color: edge ?? c.neoEdge, width: Neo.edge),
         boxShadow: lifted ? neoShadow(c) : null,

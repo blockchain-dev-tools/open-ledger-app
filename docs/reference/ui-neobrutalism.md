@@ -27,11 +27,14 @@ Shared primitives live in `apps/mobile-flutter/lib/ui/widgets/common/`:
 - [NeoCard](../../apps/mobile-flutter/lib/ui/widgets/common/neo_card.dart) — the neo block, plus the
   `neoShadow()` helper. It owns both chromes: while `neobrutalism` is true it is a `Neo.edge`-px outline
   with `Neo.radius` corners and a zero-blur shadow offset `Neo.lift` on both axes; otherwise it paints the
-  flat pre-neo card described by its `legacy*` parameters.
+  flat pre-neo card described by its `legacy*` parameters. Pass `fill:` to override the neo fill (default
+  `surface`) — `actionFill` for the lime tiles and chips that carry a black glyph.
 - [NeoButton](../../apps/mobile-flutter/lib/ui/widgets/common/neo_button.dart) — brand / quiet tones. Press
   feedback lives here: the block translates into its own shadow (`_NeoPress`).
 - [NeoCodeBlock](../../apps/mobile-flutter/lib/ui/widgets/common/neo_code_block.dart) — outlined container
   for machine-readable data (addresses, payload hex); a no-op in dark.
+- [NeoNote](../../apps/mobile-flutter/lib/ui/widgets/common/neo_note.dart) — the informational note block
+  (`actionFill` fill, hard outline, deep-green icon); dark keeps the original translucent tint.
 - [GridBackground](../../apps/mobile-flutter/lib/ui/widgets/common/grid_background.dart) — the
   `Neo.gridStep` reference grid; also light-only.
 - [neoAppBar](../../apps/mobile-flutter/lib/ui/widgets/common/neo_app_bar.dart) — the title bar (see

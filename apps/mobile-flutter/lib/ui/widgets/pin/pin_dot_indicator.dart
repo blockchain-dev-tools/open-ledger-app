@@ -49,6 +49,9 @@ class PinDotIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    // In light (neo) a lit dot keeps a black hard outline so it reads as a
+    // filled block rather than a bare circle; dark keeps the original fill.
+    final neo = c.neobrutalism;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -62,8 +65,8 @@ class PinDotIndicator extends StatelessWidget {
             shape: BoxShape.circle,
             color: filled ? c.primary : c.surface,
             border: Border.all(
-              color: filled ? c.primary : c.border,
-              width: borderWidth,
+              color: filled ? (neo ? c.neoEdge : c.primary) : c.border,
+              width: filled && neo ? Neo.edge : borderWidth,
             ),
           ),
         );

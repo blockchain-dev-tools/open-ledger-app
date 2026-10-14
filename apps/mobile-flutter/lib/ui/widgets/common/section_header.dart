@@ -38,13 +38,19 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: c.text.withAlpha(100)),
+            Icon(
+              icon,
+              size: 14,
+              color: c.neobrutalism ? c.text : c.text.withAlpha(100),
+            ),
             const SizedBox(width: 6),
           ],
           Text(
             title.toUpperCase(),
             style: TextStyle(
-              color: c.text.withAlpha(100),
+              // Neo (light) prints the heading in solid text black so it reads
+              // as a label on the pale page; dark keeps the muted style.
+              color: c.neobrutalism ? c.text : c.text.withAlpha(100),
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
