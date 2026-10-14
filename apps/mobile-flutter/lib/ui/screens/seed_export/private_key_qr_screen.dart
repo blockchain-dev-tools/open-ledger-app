@@ -401,13 +401,9 @@ class _KeyRevealToggle extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
+      child: NeoCard(
+        lifted: false,
         padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: c.bg,
-          borderRadius: BorderRadius.circular(Neo.radius),
-          border: Border.all(color: c.neoEdge, width: Neo.edge),
-        ),
         child: Icon(icon, size: 18, color: c.brandInk),
       ),
     );

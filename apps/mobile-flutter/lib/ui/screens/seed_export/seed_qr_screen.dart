@@ -11,9 +11,9 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/common/neo_note.dart';
 import '../../widgets/common/primary_button.dart';
+import '../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
 import '../../widgets/security/privacy_shield.dart';
@@ -229,53 +229,19 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
     );
   }
 
-  /// The phrase rendered as machine-readable data, in the same neo idiom the
-  /// hex/keys use elsewhere: numbered words wrapped across lines inside an
-  /// outlined block in light, the original bare wording in dark.
+  /// The phrase, shown with the same shared grid the generate / Enigma /
+  /// back-up screens use.
   ///
   /// Lives inside the [PrivacyShield] body, so the lifecycle cover hides the
   /// words together with the QR.
   Widget _buildMnemonicBlock(ColorTokens c, String mnemonic) {
-    final words = mnemonic.trim().split(RegExp(r'\s+'));
-
-    final content = Wrap(
-      spacing: 18,
-      runSpacing: 10,
-      children: [
-        for (var i = 0; i < words.length; i++)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${i + 1}',
-                style: TextStyle(
-                  color: c.neobrutalism
-                      ? c.text.withAlpha(120)
-                      : c.text.withAlpha(70),
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                words[i],
-                style: TextStyle(
-                  color: c.neobrutalism ? c.text : c.text.withAlpha(180),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
-          ),
-      ],
-    );
-
-    if (!c.neobrutalism) return content;
-
-    return NeoCodeBlock(
-      padding: const EdgeInsets.all(14),
-      child: content,
+    return MnemonicWordGrid(
+      words: mnemonic.trim().split(RegExp(r'\s+')),
+      columns: 3,
+      fontSize: 14,
+      monospace: true,
+      // Light draws the neo cells; dark keeps the flat tiles.
+      neo: c.neobrutalism,
     );
   }
 
