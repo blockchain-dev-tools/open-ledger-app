@@ -39,6 +39,7 @@ import 'package:open_ledger_app/ui/screens/seed_export/private_key_qr_screen.dar
 import 'package:open_ledger_app/ui/screens/seed_export/seed_qr_screen.dart';
 import 'package:open_ledger_app/ui/screens/set_pin/set_pin_screen.dart';
 import 'package:open_ledger_app/ui/screens/stand_in/stand_in_screen.dart';
+import 'package:open_ledger_app/ui/screens/transaction/address_confirm_screen.dart';
 import 'package:open_ledger_app/ui/screens/transaction/transaction_screen.dart';
 import 'package:open_ledger_app/ui/widgets/security/privacy_shield.dart';
 import 'package:open_ledger_app/services/settings_service.dart';
@@ -98,6 +99,36 @@ StandInMode _standInModeFrom(GoRouterState state) =>
     state.uri.queryParameters['mode'] == 'wipe'
         ? StandInMode.wipe
         : StandInMode.hide;
+
+// ── Onboarding / signing builders ───────────────────────────────────────
+//
+// Each of these screens is registered at *two* paths: the product path the
+// app's own `context.go` calls use (`/entropy`, `/import`, `/enigma`, …) and
+// the `/screens/…` alias the catalog deep-links to. Sharing one builder per
+// screen keeps the two in sync — mirrors `_buildBackupExport` / `_buildStandIn`.
+Widget _buildEntropy() =>
+    EntropyScreen(mnemonicService: createFakeMnemonicService());
+
+Widget _buildGenerateMnemonic() =>
+    const GenerateMnemonicScreen(mnemonic: sampleMnemonic);
+
+Widget _buildVerifyMnemonic() =>
+    const VerifyMnemonicScreen(creationData: sampleCreationData);
+
+Widget _buildImport() =>
+    ImportMnemonicScreen(mnemonicService: createFakeMnemonicService());
+
+Widget _buildEnigma() => const EnigmaScreen();
+
+Widget _buildEnigmaMnemonic() => const EnigmaMnemonicScreen(
+      previewWords: sampleEnigmaWords,
+      previewEntropyHex: sampleEnigmaEntropyHex,
+    );
+
+Widget _buildSetPin() => const SetPinScreen(mnemonic: sampleMnemonic);
+
+Widget _buildSignatureResult() =>
+    SignatureResultScreen(previewResult: sampleSignResult());
 
 GoRouter createGalleryRouter(GalleryBoot boot) {
   // Direct page loads (headless screenshots, shared links) carry no
@@ -258,47 +289,76 @@ GoRouter createGalleryRouter(GalleryBoot boot) {
           // Mounted under /screens/ because product `/` conflicts with the
           // gallery catalog. Services that would pull in FFI/BLE are left
           // null; screens render their standalone/degraded state.
+          //
+          // The product path is also registered for each screen the app
+          // reaches through `context.go` (e.g. Welcome → `/entropy`), so the
+          // in-app navigation works inside the gallery too.
+          GoRoute(
+            path: '/welcome',
+            builder: (context, state) =>
+                WelcomeScreen(settingsService: gallerySettingsService),
+          ),
           GoRoute(
             path: '/screens/welcome',
             builder: (context, state) =>
                 WelcomeScreen(settingsService: gallerySettingsService),
           ),
           GoRoute(
+            path: '/entropy',
+            builder: (context, state) => _buildEntropy(),
+          ),
+          GoRoute(
             path: '/screens/entropy',
-            builder: (context, state) =>
-                EntropyScreen(mnemonicService: createFakeMnemonicService()),
+            builder: (context, state) => _buildEntropy(),
+          ),
+          GoRoute(
+            path: '/generate-mnemonic',
+            builder: (context, state) => _buildGenerateMnemonic(),
           ),
           GoRoute(
             path: '/screens/generate-mnemonic',
-            builder: (context, state) =>
-                const GenerateMnemonicScreen(mnemonic: sampleMnemonic),
+            builder: (context, state) => _buildGenerateMnemonic(),
+          ),
+          GoRoute(
+            path: '/verify-mnemonic',
+            builder: (context, state) => _buildVerifyMnemonic(),
           ),
           GoRoute(
             path: '/screens/verify-mnemonic',
-            builder: (context, state) =>
-                const VerifyMnemonicScreen(creationData: sampleCreationData),
+            builder: (context, state) => _buildVerifyMnemonic(),
+          ),
+          GoRoute(
+            path: '/import',
+            builder: (context, state) => _buildImport(),
           ),
           GoRoute(
             path: '/screens/import',
-            builder: (context, state) =>
-                ImportMnemonicScreen(mnemonicService: createFakeMnemonicService()),
+            builder: (context, state) => _buildImport(),
+          ),
+          GoRoute(
+            path: '/enigma',
+            builder: (context, state) => _buildEnigma(),
           ),
           GoRoute(
             path: '/screens/enigma',
-            builder: (context, state) => const EnigmaScreen(),
+            builder: (context, state) => _buildEnigma(),
+          ),
+          GoRoute(
+            path: '/enigma-mnemonic',
+            builder: (context, state) => _buildEnigmaMnemonic(),
           ),
           GoRoute(
             path: '/screens/enigma-mnemonic',
-            builder: (context, state) => const EnigmaMnemonicScreen(
-              previewWords: sampleEnigmaWords,
-              previewEntropyHex: sampleEnigmaEntropyHex,
-            ),
+            builder: (context, state) => _buildEnigmaMnemonic(),
+          ),
+          // Create mode (mnemonic provided) — the canonical onboarding path.
+          GoRoute(
+            path: '/set-pin',
+            builder: (context, state) => _buildSetPin(),
           ),
           GoRoute(
             path: '/screens/set-pin',
-            // Create mode (mnemonic provided) — the canonical onboarding path.
-            builder: (context, state) =>
-                const SetPinScreen(mnemonic: sampleMnemonic),
+            builder: (context, state) => _buildSetPin(),
           ),
 
           // ── Stand-in wallet (ADR-009) ─────────────────────────────
@@ -385,9 +445,19 @@ GoRouter createGalleryRouter(GalleryBoot boot) {
                 TransactionScreen(previewRequest: sampleSignRequest),
           ),
           GoRoute(
-            path: '/screens/signature-result',
+            path: '/screens/confirm-address',
             builder: (context, state) =>
-                SignatureResultScreen(previewResult: sampleSignResult()),
+                AddressConfirmScreen(previewRequest: sampleAddressRequest),
+          ),
+          // Approving a signature lands on `/signature-result`, so the product
+          // path is registered alongside the catalog alias.
+          GoRoute(
+            path: '/signature-result',
+            builder: (context, state) => _buildSignatureResult(),
+          ),
+          GoRoute(
+            path: '/screens/signature-result',
+            builder: (context, state) => _buildSignatureResult(),
           ),
         ],
       ),

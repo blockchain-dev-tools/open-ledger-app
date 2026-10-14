@@ -81,6 +81,19 @@ scenarios=(
   "stand-in-intro|/screens/stand-in"
   "stand-in-mnemonic|/screens/stand-in?step=mnemonic"
   "stand-in-status|/screens/stand-in?configured=1"
+  "welcome|/screens/welcome"
+  "entropy|/screens/entropy"
+  "generate-mnemonic|/screens/generate-mnemonic"
+  "verify-mnemonic|/screens/verify-mnemonic"
+  "import|/screens/import"
+  "enigma|/screens/enigma"
+  "enigma-mnemonic|/screens/enigma-mnemonic"
+  "set-pin|/screens/set-pin"
+  "unlock|/screens/unlock"
+  "backup-seed|/screens/backup-seed"
+  "transaction|/screens/transaction"
+  "confirm-address|/screens/confirm-address"
+  "signature-result|/screens/signature-result"
 )
 
 shoot() {
@@ -149,6 +162,21 @@ shoot privacy-shield /screens/privacy-shield light en
 shoot stand-in-intro /screens/stand-in light en
 shoot stand-in-mnemonic '/screens/stand-in?step=mnemonic' light en
 shoot stand-in-status '/screens/stand-in?configured=1' light en
+# The onboarding, auth and signing flows are all neo in light mode, so each
+# needs a light capture — the dark pass above never sees their neo chrome.
+shoot welcome /screens/welcome light en
+shoot unlock /screens/unlock light en
+shoot set-pin /screens/set-pin light en
+shoot entropy /screens/entropy light en
+shoot generate-mnemonic /screens/generate-mnemonic light en
+shoot verify-mnemonic /screens/verify-mnemonic light en
+shoot import /screens/import light en
+shoot enigma /screens/enigma light en
+shoot enigma-mnemonic /screens/enigma-mnemonic light en
+shoot backup-seed /screens/backup-seed light en
+shoot transaction /screens/transaction light en
+shoot confirm-address /screens/confirm-address light en
+shoot signature-result /screens/signature-result light en
 
 echo "Done → $OUT_DIR"
 ls -la "$OUT_DIR"/*.png | awk '{print $5, $9}'

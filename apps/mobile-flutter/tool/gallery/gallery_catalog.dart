@@ -132,6 +132,13 @@ const List<GalleryItem> _signingItems = [
     pushRoute: true,
   ),
   GalleryItem(
+    title: 'Address Confirm',
+    subtitle: 'GET_PUBLIC_KEY · 展示地址并等待确认（60s 倒计时）',
+    icon: Icons.badge_outlined,
+    path: '/screens/confirm-address',
+    pushRoute: true,
+  ),
+  GalleryItem(
     title: 'Signature Result',
     subtitle: '签名结果 · 可复制原始签名',
     icon: Icons.check_circle_outline,

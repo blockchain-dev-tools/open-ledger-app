@@ -38,7 +38,7 @@ final PendingSignRequest sampleSignRequest = PendingSignRequest(
   },
 );
 
-/// Sample sign result for the SignatureResult screen preview.
+/// Sample pending sign result for the SignatureResult screen preview.
 Map<String, dynamic> sampleSignResult() => {
       'isSuccess': true,
       'chain': 'ethereum',
@@ -50,3 +50,14 @@ Map<String, dynamic> sampleSignResult() => {
       'signatureHex':
           '3044022079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179802200c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5',
     };
+
+/// Sample pending address request for the Address Confirm screen preview.
+///
+/// Mirrors an ETH GET_PUBLIC_KEY intercept (CLA 0xE0, INS 0x02) with P1=0x01
+/// — the "show the address and wait for confirmation" flow.
+final PendingAddressRequest sampleAddressRequest = PendingAddressRequest(
+  command: const ApduCommand(cla: 0xE0, ins: 0x02, p1: 0x01, p2: 0x00),
+  chain: 'ethereum',
+  derivationPath: "m/44'/60'/0'/0/0",
+  address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+);
