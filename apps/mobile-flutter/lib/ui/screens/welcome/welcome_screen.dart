@@ -363,7 +363,7 @@ class WelcomeScreen extends StatelessWidget {
                                 EntryCard(
                                   key: const Key('entry-enigma'),
                                   iconBuilder: (color) =>
-                                      EnigmaLogoIcon(color: color, size: 32),
+                                      EnigmaLogoIcon(color: color, size: 44),
                                   title: l10n.enigmaWallet,
                                   description: l10n.advancedEnigma,
                                   onTap: () => context.go('/enigma'),

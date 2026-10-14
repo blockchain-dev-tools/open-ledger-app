@@ -112,7 +112,11 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: MnemonicWordGrid(
                         words: words,
-                        columns: 3,
+                        // Two per row: three leaves the cells too narrow and the
+                        // longest BIP-39 words get ellipsised. The wider ratio
+                        // keeps the cell height unchanged.
+                        columns: 2,
+                        childAspectRatio: 4.0,
                         fontSize: 14,
                         // Light draws the neo cells; dark keeps the flat tiles.
                         neo: c.neobrutalism,

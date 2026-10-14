@@ -232,10 +232,15 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
                                   ? c.primary.withAlpha(180)
                                   : c.border.withAlpha(100),
                           border: Border.all(
+                            // Light outlines every reached step in black so the
+                            // progress reads on the pale page; dark keeps the
+                            // original brand-coloured ring.
                             color: _currentQuizIndex >= i
-                                ? c.primary
+                                ? (c.neobrutalism ? c.neoEdge : c.primary)
                                 : c.border,
-                            width: 2,
+                            width: _currentQuizIndex >= i && c.neobrutalism
+                                ? Neo.edge
+                                : 2,
                           ),
                         ),
                       ),

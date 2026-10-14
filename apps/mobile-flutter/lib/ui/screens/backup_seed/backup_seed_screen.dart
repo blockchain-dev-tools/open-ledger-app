@@ -233,7 +233,10 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
         if (!_lockedOut)
           Text(
             l10n.enterPinToReveal,
-            style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
+            style: TextStyle(
+              color: c.neobrutalism ? c.text : c.text.withAlpha(140),
+              fontSize: 14,
+            ),
           ),
         if (!_lockedOut && _attemptCount > 0)
           Padding(
