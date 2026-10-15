@@ -26,6 +26,9 @@ class NeoButton extends StatelessWidget {
   /// Optional leading icon.
   final IconData? icon;
 
+  /// Optional trailing icon — for buttons that drill into another view.
+  final IconData? trailingIcon;
+
   /// Called on tap. Always enabled — the neo prototype has no disabled state.
   final VoidCallback onTap;
 
@@ -40,6 +43,7 @@ class NeoButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.icon,
+    this.trailingIcon,
     this.expanded = false,
     this.quiet = false,
   });
@@ -90,6 +94,10 @@ class NeoButton extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (trailingIcon != null) ...[
+                const SizedBox(width: 4),
+                Icon(trailingIcon, size: 18, color: foreground),
+              ],
             ],
           ),
         );

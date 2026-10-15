@@ -256,7 +256,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Tron'), findsOneWidget); // control view
 
-    await tester.tap(find.byIcon(Icons.article_outlined));
+    await tester.tap(find.byKey(const Key('ble-sheet-logs')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     // The page slide is 300ms; give the outgoing view one more frame to be
@@ -287,7 +287,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.byIcon(Icons.article_outlined), findsNothing);
+    expect(find.byKey(const Key('ble-sheet-logs')), findsNothing);
   });
 
   testWidgets('error state: sheet shows the chain and an error subtitle',

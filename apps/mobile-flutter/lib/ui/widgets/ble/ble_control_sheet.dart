@@ -7,8 +7,15 @@ import '../../../core/models/chain.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../common/neo_button.dart';
+import '../common/neo_card.dart';
 import 'ble_log_controller.dart';
 import 'ble_log_view.dart';
+
+/// Deep blue for the Bluetooth glyph while the peripheral is broadcasting.
+/// The only blue the app needs, so it stays local rather than joining the
+/// shared token set.
+const Color _broadcastBlue = Color(0xFF1565C0);
 
 /// Bottom sheet controlling the single BLE peripheral.
 ///
@@ -34,12 +41,20 @@ class BleControlSheet {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final neo = c.neobrutalism;
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: c.surface,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      // Neo outlines the panel in brand ink with the tighter corners, like the
+      // option sheets; dark keeps the original soft, rounded sheet.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(neo ? Neo.radius : R.xl),
+        ),
+        side: neo
+            ? BorderSide(color: c.neoEdge, width: Neo.edge)
+            : BorderSide.none,
       ),
       builder: (context) => _BleControlSheetContent(
         control: control,
@@ -126,15 +141,16 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
             Center(
               child: Container(
                 width: 40,
-                height: 4,
+                height: c.neobrutalism ? 3 : 4,
                 decoration: BoxDecoration(
-                  color: c.text.withAlpha(60),
-                  borderRadius: BorderRadius.circular(2),
+                  // Neo draws a crisp black rule; dark keeps the grey pill.
+                  color: c.neobrutalism ? c.neoEdge : c.text.withAlpha(60),
+                  borderRadius: BorderRadius.circular(c.neobrutalism ? 0 : 2),
                 ),
               ),
             ),
-            // The control view and the log view differ a lot in height, so
-            // animate the resize; the two views also slide horizontally like
+            // Both views are pinned to the same height, so opening or leaving
+            // the log never resizes the sheet. They slide horizontally like
             // pages (logs in from the right, control back from the left)
             // instead of swapping in place.
             AnimatedSize(
@@ -171,8 +187,9 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
                           onBack: () => setState(() => _logs = false),
                         ),
                       )
-                    : KeyedSubtree(
+                    : SizedBox(
                         key: const ValueKey('control'),
+                        height: screenHeight * 0.6,
                         child: _buildControlView(context, c, logs),
                       ),
               ),
@@ -226,10 +243,12 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
                             : Icons.bluetooth)
                         : Icons.bluetooth_outlined,
                     size: 20,
+                    // Neo turns the glyph deep blue while broadcasting; dark
+                    // keeps the brand lime.
                     color: error
                         ? c.error
                         : active
-                            ? c.primary
+                            ? (c.neobrutalism ? _broadcastBlue : c.primary)
                             : c.text.withAlpha(160),
                   ),
                   const SizedBox(width: 10),
@@ -244,7 +263,11 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
                           style: TextStyle(
                             color: c.text,
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            // Neo gives the sheet title the same weight the
+                            // option sheets use.
+                            fontWeight: c.neobrutalism
+                                ? FontWeight.w800
+                                : FontWeight.w600,
                           ),
                         ),
                         Text(
@@ -252,76 +275,144 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
                               ? statusText
                               : l10n.startBleBroadcasting,
                           style: TextStyle(
-                            color: error ? c.error : c.text.withAlpha(130),
+                            // Neo inks the status line black (errors stay red);
+                            // dark keeps the muted grey.
+                            color: error
+                                ? c.error
+                                : c.neobrutalism
+                                    ? c.brandInk
+                                    : c.text.withAlpha(130),
                             fontSize: 13,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (logs != null)
-                    IconButton(
-                      tooltip: l10n.bleLogs,
-                      icon: Icon(Icons.article_outlined,
-                          color: c.text.withAlpha(150)),
-                      onPressed: () => setState(() => _logs = true),
-                    ),
                   IconButton(
                     key: const Key('ble-sheet-close'),
-                    icon: Icon(Icons.close, color: c.text.withAlpha(140)),
+                    icon: Icon(Icons.close,
+                        color: c.neobrutalism
+                            ? c.brandInk
+                            : c.text.withAlpha(140)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            Divider(height: 1, color: c.border),
+            // Neo rules the header off with a black line, matching the option
+            // sheets; dark keeps the hairline.
+            if (c.neobrutalism)
+              Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
+            else
+              Divider(height: 1, color: c.border),
             // ── Chain grid (3 columns) ─────────────────────
             // Chain selection is a single-select choice, so a grid of
             // chain tiles reads far denser than full-width rows —
             // the only per-row information was "which one is selected".
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-              child: GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.15,
-                children: [
-                  for (final chain in BleControlSheet.chains)
-                    _ChainCell(
-                      key: ValueKey('ble-chain-${chain.id}'),
-                      c: c,
-                      chain: chain,
-                      selected: active && activeChain == chain,
-                      disabled: control.isSignPending,
-                      onTap: () =>
-                          _toggleChain(chain, active && activeChain == chain),
+            //
+            // Tiles + hint scroll as one block. The panel is pinned to the log
+            // view's height and the tiles' height follows the sheet's width,
+            // so a short panel would otherwise overflow instead of scrolling.
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                      child: GridView.count(
+                        crossAxisCount: 3,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: 1.15,
+                        children: [
+                          for (final chain in BleControlSheet.chains)
+                            _ChainCell(
+                              key: ValueKey('ble-chain-${chain.id}'),
+                              c: c,
+                              chain: chain,
+                              selected: active && activeChain == chain,
+                              disabled: control.isSignPending,
+                              onTap: () => _toggleChain(
+                                  chain, active && activeChain == chain),
+                            ),
+                        ],
+                      ),
                     ),
-                ],
+                    // ── Hint ───────────────────────────────────
+                    // Sits directly under the tiles, where the finger already
+                    // is, so the gesture is taught in every state: how to start
+                    // (idle) and how to stop (active). Hidden only while a
+                    // signing request locks the tiles.
+                    if (!control.isSignPending)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+                        child: Text(
+                          active
+                              ? l10n.tapActiveChainToStop
+                              : l10n.tapChainToStartBroadcast,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            // Neo inks it black; dark keeps the muted grey.
+                            color: c.neobrutalism
+                                ? c.brandInk
+                                : c.text.withAlpha(110),
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
-            // ── Hint ─────────────────────────────────────────────
-            // This slot is always filled so the gesture is taught in every
-            // state: how to start (idle) and how to stop (active). Hidden
-            // only while a signing request locks the tiles.
-            if (!control.isSignPending)
+            // ── Log entry ───────────────────────────────────────
+            // Centred and lifted off the panel edge: it is the only way into
+            // the log, so it reads as a real action rather than a stray label.
+            if (logs != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 2, 16, 14),
-                child: Text(
-                  active
-                      ? l10n.tapActiveChainToStop
-                      : l10n.tapChainToStartBroadcast,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: c.text.withAlpha(110),
-                    fontSize: 12,
-                  ),
+                key: const Key('ble-sheet-logs'),
+                // Neo's button carries a [Neo.lift] shadow, and neither tone
+                // should sit flush against the sheet's bottom edge.
+                padding: const EdgeInsets.only(bottom: 28),
+                child: Center(
+                  child: c.neobrutalism
+                      ? NeoButton(
+                          label: l10n.bleLogs,
+                          trailingIcon: Icons.chevron_right,
+                          quiet: true,
+                          onTap: () => setState(() => _logs = true),
+                        )
+                      : InkWell(
+                          onTap: () => setState(() => _logs = true),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  l10n.bleLogs,
+                                  style: TextStyle(
+                                    color: c.text.withAlpha(180),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 20,
+                                  color: c.text.withAlpha(100),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
-              )
-            else
-              const SizedBox(height: 8),
+              ),
           ],
         );
       },
@@ -366,16 +457,16 @@ class _ChainCell extends StatelessWidget {
           onTap: disabled ? null : onTap,
           child: Opacity(
             opacity: disabled ? 0.45 : 1,
-            child: Container(
-              decoration: BoxDecoration(
-                color:
-                    selected ? c.primary.withAlpha(22) : c.text.withAlpha(10),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: selected ? c.primary : Colors.transparent,
-                  width: 1.5,
-                ),
-              ),
+            // Neo outlines every tile in brand ink and fills the broadcasting
+            // one with bright lime; dark keeps the original tinted chip.
+            child: NeoCard(
+              lifted: false,
+              fill: selected ? c.actionFill : null,
+              legacyBackground:
+                  selected ? c.primary.withAlpha(22) : c.text.withAlpha(10),
+              legacyEdge: selected ? c.primary : Colors.transparent,
+              legacyEdgeWidth: 1.5,
+              legacyRadius: 14,
               child: Stack(
                 children: [
                   Center(
@@ -400,10 +491,19 @@ class _ChainCell extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: selected ? c.primary : c.text.withAlpha(200),
+                              // Neo inks every label black and heavy; dark keeps
+                              // the brand-lime / muted pair.
+                              color: c.neobrutalism
+                                  ? c.brandInk
+                                  : selected
+                                      ? c.primary
+                                      : c.text.withAlpha(200),
                               fontSize: 13,
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: c.neobrutalism
+                                  ? FontWeight.w800
+                                  : selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -420,13 +520,14 @@ class _ChainCell extends StatelessWidget {
                         width: 19,
                         height: 19,
                         decoration: BoxDecoration(
-                          color: c.primary,
+                          // Deep-green tag in neo; dark keeps the lime disc.
+                          color: c.neobrutalism ? c.accent : c.primary,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.power_settings_new,
                           size: 13,
-                          color: c.onPrimary,
+                          color: c.neobrutalism ? c.onAccent : c.onPrimary,
                         ),
                       ),
                     ),

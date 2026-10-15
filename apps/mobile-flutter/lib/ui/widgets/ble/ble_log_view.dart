@@ -36,7 +36,8 @@ class BleLogView extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                icon: Icon(Icons.arrow_back, color: c.text.withAlpha(180)),
+                icon: Icon(Icons.arrow_back,
+                    color: c.neobrutalism ? c.brandInk : c.text.withAlpha(180)),
                 tooltip: l10n.back,
                 onPressed: onBack,
               ),
@@ -44,16 +45,24 @@ class BleLogView extends StatelessWidget {
               Text(
                 l10n.bleLogs,
                 style: TextStyle(
-                  color: c.text,
+                  color: c.neobrutalism ? c.brandInk : c.text,
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  // Neo gives the view title the same weight as the control
+                  // view's header.
+                  fontWeight:
+                      c.neobrutalism ? FontWeight.w800 : FontWeight.w600,
                 ),
               ),
               const Spacer(),
             ],
           ),
         ),
-        Divider(height: 1, color: c.border),
+        // Neo rules the header off with a black line, matching the control
+        // view; dark keeps the hairline.
+        if (c.neobrutalism)
+          Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
+        else
+          Divider(height: 1, color: c.border),
         Expanded(
           child: ListenableBuilder(
             listenable: controller,
@@ -63,7 +72,10 @@ class BleLogView extends StatelessWidget {
                 return Center(
                   child: Text(
                     l10n.noBleActivity,
-                    style: TextStyle(color: c.text.withAlpha(100), fontSize: 14),
+                    style: TextStyle(
+                      color: c.neobrutalism ? c.brandInk : c.text.withAlpha(100),
+                      fontSize: 14,
+                    ),
                   ),
                 );
               }

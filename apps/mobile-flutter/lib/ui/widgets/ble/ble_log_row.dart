@@ -26,11 +26,14 @@ class _BleLogRowState extends State<BleLogRow> {
   Widget build(BuildContext context) {
     final e = widget.entry;
     final c = widget.c;
+    // Neo inks plain entries black; errors and warnings keep their signal.
     final color = e.level == BleLogLevel.error
         ? c.error
         : e.level == BleLogLevel.warn
             ? c.error.withAlpha(170)
-            : c.text.withAlpha(180);
+            : c.neobrutalism
+                ? c.brandInk
+                : c.text.withAlpha(180);
     final mono = TextStyle(
       color: color,
       fontSize: 12,
@@ -48,7 +51,8 @@ class _BleLogRowState extends State<BleLogRow> {
             height: 12,
             child: CircularProgressIndicator(
               strokeWidth: 1.5,
-              color: c.primary,
+              // Neo reads as ink; lime on white would wash out.
+              color: c.neobrutalism ? c.neoEdge : c.primary,
             ),
           ),
           const SizedBox(width: 6),
@@ -56,7 +60,7 @@ class _BleLogRowState extends State<BleLogRow> {
             child: Text(
               e.summary,
               style: TextStyle(
-                color: c.text.withAlpha(150),
+                color: c.neobrutalism ? c.brandInk : c.text.withAlpha(150),
                 fontSize: 12,
                 fontFamily: 'monospace',
               ),
