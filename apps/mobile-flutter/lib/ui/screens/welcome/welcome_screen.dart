@@ -8,6 +8,7 @@ import '../../theme/widgets/brand_mark.dart';
 import '../../widgets/common/enigma_logo_icon.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_card.dart';
+import '../../widgets/common/neo_option_sheet.dart';
 import 'components/entry_card.dart';
 
 /// Welcome screen — the app's landing page with three wallet entry points.
@@ -44,83 +45,24 @@ class WelcomeScreen extends StatelessWidget {
   /// Shows the language picker sheet: English / 中文 / 日本語 / 한국어.
   void _showLanguagePicker(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final c = Theme.of(context).brightness == Brightness.dark
-        ? ColorTokens.dark
-        : ColorTokens.light;
     final current = settingsService?.locale ?? const Locale('en');
 
-    showModalBottomSheet(
+    showNeoOptionSheet(
       context: context,
-      backgroundColor: c.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.xl)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: c.text.withAlpha(60),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-                child: Text(
-                  l10n.language,
-                  style: TextStyle(
-                    color: c.text,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              for (final (locale, label) in [
-                (const Locale('en'), l10n.languageEnglish),
-                (const Locale('zh'), l10n.languageChinese),
-                (const Locale('ja'), l10n.languageJapanese),
-                (const Locale('ko'), l10n.languageKorean),
-              ])
-                InkWell(
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    settingsService?.setLocale(locale);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 13),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              color: c.text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                        if (current.languageCode == locale.languageCode)
-                          Icon(Icons.check_rounded,
-                              color: c.primary, size: 22),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 8),
-            ],
+      title: l10n.language,
+      options: [
+        for (final (locale, label) in [
+          (const Locale('en'), l10n.languageEnglish),
+          (const Locale('zh'), l10n.languageChinese),
+          (const Locale('ja'), l10n.languageJapanese),
+          (const Locale('ko'), l10n.languageKorean),
+        ])
+          (
+            label: label,
+            selected: current.languageCode == locale.languageCode,
+            onSelect: () => settingsService?.setLocale(locale),
           ),
-        );
-      },
+      ],
     );
   }
 
@@ -142,82 +84,23 @@ class WelcomeScreen extends StatelessWidget {
   /// language picker so the two corner controls behave identically.
   void _showThemePicker(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final c = Theme.of(context).brightness == Brightness.dark
-        ? ColorTokens.dark
-        : ColorTokens.light;
     final current = settingsService?.themeMode ?? ThemeMode.system;
 
-    showModalBottomSheet(
+    showNeoOptionSheet(
       context: context,
-      backgroundColor: c.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.xl)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: c.text.withAlpha(60),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-                child: Text(
-                  l10n.theme,
-                  style: TextStyle(
-                    color: c.text,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              for (final (mode, label) in [
-                (ThemeMode.system, l10n.themeSystem),
-                (ThemeMode.light, l10n.lightMode),
-                (ThemeMode.dark, l10n.darkMode),
-              ])
-                InkWell(
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    settingsService?.setThemeMode(mode);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 13),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              color: c.text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                        if (current == mode)
-                          Icon(Icons.check_rounded,
-                              color: c.primary, size: 22),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 8),
-            ],
+      title: l10n.theme,
+      options: [
+        for (final (mode, label) in [
+          (ThemeMode.system, l10n.themeSystem),
+          (ThemeMode.light, l10n.lightMode),
+          (ThemeMode.dark, l10n.darkMode),
+        ])
+          (
+            label: label,
+            selected: current == mode,
+            onSelect: () => settingsService?.setThemeMode(mode),
           ),
-        );
-      },
+      ],
     );
   }
 

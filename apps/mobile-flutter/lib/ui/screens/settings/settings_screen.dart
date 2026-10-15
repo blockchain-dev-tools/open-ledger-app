@@ -9,6 +9,7 @@ import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_option_sheet.dart';
 import 'components/about_card.dart';
 import 'components/group_header.dart';
 import 'components/settings_group.dart';
@@ -126,7 +127,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Shows the theme picker sheet: system / light / dark.
   void _showThemePicker() {
     final l10n = AppLocalizations.of(context)!;
-    _showOptionsSheet(
+    showNeoOptionSheet(
+      context: context,
       title: l10n.theme,
       options: [
         (
@@ -146,87 +148,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onSelect: () => widget.settingsService?.setThemeMode(ThemeMode.dark),
         ),
       ],
-    );
-  }
-
-  /// Shows a modal bottom sheet with a checkmark-style option list — the
-  /// shared picker used by both the theme and language rows.
-  void _showOptionsSheet({
-    required String title,
-    required List<({String label, bool selected, VoidCallback onSelect})>
-    options,
-  }) {
-    final c = Theme.of(context).brightness == Brightness.dark
-        ? ColorTokens.dark
-        : ColorTokens.light;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: c.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.xl)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: c.text.withAlpha(60),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: c.text,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              for (final opt in options)
-                InkWell(
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    opt.onSelect();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 13,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            opt.label,
-                            style: TextStyle(
-                              color: c.text,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                        if (opt.selected)
-                          Icon(Icons.check_rounded, color: c.primary, size: 22),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -320,7 +241,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Shows the language picker sheet.
   void _showLanguagePicker() {
     final l10n = AppLocalizations.of(context)!;
-    _showOptionsSheet(
+    showNeoOptionSheet(
+      context: context,
       title: l10n.language,
       options: [
         for (final (locale, label) in [
@@ -350,7 +272,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// so the user should know what is about to happen and how to undo it.
   void _showDisguisePicker() {
     final l10n = AppLocalizations.of(context)!;
-    _showOptionsSheet(
+    showNeoOptionSheet(
+      context: context,
       title: l10n.disguiseTitle,
       options: [
         for (final disguise in LauncherDisguise.values)
