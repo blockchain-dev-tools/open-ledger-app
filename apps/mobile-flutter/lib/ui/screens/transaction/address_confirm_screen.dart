@@ -7,11 +7,10 @@ import '../../../app/app_state.dart';
 import '../../../core/models/apdu_message.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
-import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/primary_button.dart';
 
 /// Address display + confirm UI.
 ///
@@ -176,33 +175,19 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: c.neobrutalism
-                          ? NeoButton(
-                              label: l10n.reject,
-                              quiet: true,
-                              expanded: true,
-                              onTap: _onReject,
-                            )
-                          : PrimaryButton(
-                              label: l10n.reject,
-                              onTap: _onReject,
-                              outline: true,
-                              outlineColor: c.error,
-                              textColor: c.error,
-                            ),
+                      child: AdaptiveActionButton(
+                        label: l10n.reject,
+                        quiet: true,
+                        legacyOutlineColor: c.error,
+                        onTap: _onReject,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: c.neobrutalism
-                          ? NeoButton(
-                              label: l10n.approve,
-                              expanded: true,
-                              onTap: _onApprove,
-                            )
-                          : PrimaryButton(
-                              label: l10n.approve,
-                              onTap: _onApprove,
-                            ),
+                      child: AdaptiveActionButton(
+                        label: l10n.approve,
+                        onTap: _onApprove,
+                      ),
                     ),
                   ],
                 ),

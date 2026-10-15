@@ -8,11 +8,10 @@ import '../../../core/models/apdu_message.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
-import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/primary_button.dart';
 import '../../widgets/tx_details_card.dart';
 
 /// Sign approval UI — shows transaction content and signing address
@@ -179,37 +178,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: c.neobrutalism
-                          ? NeoButton(
-                              key: const Key('sign-reject'),
-                              label: AppLocalizations.of(context)!.reject,
-                              quiet: true,
-                              expanded: true,
-                              onTap: _onReject,
-                            )
-                          : PrimaryButton(
-                              key: const Key('sign-reject'),
-                              label: AppLocalizations.of(context)!.reject,
-                              onTap: _onReject,
-                              outline: true,
-                              outlineColor: c.error,
-                              textColor: c.error,
-                            ),
+                      child: AdaptiveActionButton(
+                        key: const Key('sign-reject'),
+                        label: AppLocalizations.of(context)!.reject,
+                        quiet: true,
+                        legacyOutlineColor: c.error,
+                        onTap: _onReject,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: c.neobrutalism
-                          ? NeoButton(
-                              key: const Key('sign-approve'),
-                              label: AppLocalizations.of(context)!.approve,
-                              expanded: true,
-                              onTap: _onApprove,
-                            )
-                          : PrimaryButton(
-                              key: const Key('sign-approve'),
-                              label: AppLocalizations.of(context)!.approve,
-                              onTap: _onApprove,
-                            ),
+                      child: AdaptiveActionButton(
+                        key: const Key('sign-approve'),
+                        label: AppLocalizations.of(context)!.approve,
+                        onTap: _onApprove,
+                      ),
                     ),
                   ],
                 ),

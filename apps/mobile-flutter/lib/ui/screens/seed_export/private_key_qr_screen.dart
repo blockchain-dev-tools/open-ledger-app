@@ -10,13 +10,13 @@ import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/adaptive_action_button.dart';
+import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
-import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/common/neo_rule.dart';
-import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
 import '../../widgets/security/privacy_shield.dart';
@@ -242,17 +242,10 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
         const SizedBox(height: 20),
         // Light mode renders the neo action button; dark keeps the original
         // flat button.
-        if (c.neobrutalism)
-          NeoButton(
-            label: l10n.iveBackedUp,
-            expanded: true,
-            onTap: () => Navigator.of(context).maybePop(),
-          )
-        else
-          PrimaryButton(
-            label: l10n.iveBackedUp,
-            onTap: () => Navigator.of(context).maybePop(),
-          ),
+        AdaptiveActionButton(
+          label: l10n.iveBackedUp,
+          onTap: () => Navigator.of(context).maybePop(),
+        ),
       ],
     );
   }
@@ -349,20 +342,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
   }
 
   Widget _buildEmptyState(ColorTokens c, AppLocalizations l10n) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          Icon(Icons.qr_code, size: 56, color: c.text.withAlpha(60)),
-          const SizedBox(height: 16),
-          Text(
-            l10n.noAccountSelected,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
-          ),
-        ],
-      ),
-    );
+    return EmptyState(icon: Icons.qr_code, message: l10n.noAccountSelected);
   }
 
   static String _truncate(String value) {

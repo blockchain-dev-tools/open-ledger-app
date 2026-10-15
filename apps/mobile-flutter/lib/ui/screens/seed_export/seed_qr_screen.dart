@@ -7,12 +7,12 @@ import '../../../core/interfaces/export_service.dart';
 import '../../../core/interfaces/screen_security.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/adaptive_action_button.dart';
+import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
-import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_note.dart';
-import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
@@ -202,17 +202,10 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
         const SizedBox(height: 20),
         // Light mode renders the neo action button; dark keeps the original
         // flat button.
-        if (c.neobrutalism)
-          NeoButton(
-            label: l10n.iveWrittenItDown,
-            expanded: true,
-            onTap: () => Navigator.of(context).maybePop(),
-          )
-        else
-          PrimaryButton(
-            label: l10n.iveWrittenItDown,
-            onTap: () => Navigator.of(context).maybePop(),
-          ),
+        AdaptiveActionButton(
+          label: l10n.iveWrittenItDown,
+          onTap: () => Navigator.of(context).maybePop(),
+        ),
         const SizedBox(height: 12),
         Text(
           l10n.englishBip39Note,
@@ -246,19 +239,6 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
   }
 
   Widget _buildEmptyState(ColorTokens c, AppLocalizations l10n) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          Icon(Icons.qr_code, size: 56, color: c.text.withAlpha(60)),
-          const SizedBox(height: 16),
-          Text(
-            l10n.noMnemonicGenerated,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
-          ),
-        ],
-      ),
-    );
+    return EmptyState(icon: Icons.qr_code, message: l10n.noMnemonicGenerated);
   }
 }

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_button.dart';
-import '../../../widgets/common/primary_button.dart';
+import '../../../widgets/common/adaptive_action_button.dart';
 import '../../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../../widgets/mnemonic/warning_banner.dart';
 import '../components/check_row.dart';
@@ -85,18 +84,11 @@ class GenerateTab extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: c.neobrutalism && confirmed
-              ? NeoButton(
-                  key: const Key('standin-generate-continue'),
-                  label: l10n.continueButton,
-                  expanded: true,
-                  onTap: onContinue,
-                )
-              : PrimaryButton(
-                  key: const Key('standin-generate-continue'),
-                  label: l10n.continueButton,
-                  onTap: confirmed ? onContinue : null,
-                ),
+          child: AdaptiveActionButton(
+            key: const Key('standin-generate-continue'),
+            label: l10n.continueButton,
+            onTap: confirmed ? onContinue : null,
+          ),
         ),
       ],
     );

@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/bip39_wordlist.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_button.dart';
-import '../../../widgets/common/primary_button.dart';
+import '../../../widgets/common/adaptive_action_button.dart';
 import '../../../widgets/mnemonic/mnemonic_language_picker.dart';
 import '../../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../../widgets/mnemonic/warning_banner.dart';
@@ -181,15 +180,7 @@ class EnigmaTab extends StatelessWidget {
   /// keep the original flat button (which owns the disabled + loading chrome).
   Widget _buildCta(AppLocalizations l10n, {required bool generated}) {
     if (generated) {
-      if (c.neobrutalism && wordsConfirmed) {
-        return NeoButton(
-          key: const Key('standin-enigma-continue'),
-          label: l10n.continueButton,
-          expanded: true,
-          onTap: onContinue,
-        );
-      }
-      return PrimaryButton(
+      return AdaptiveActionButton(
         key: const Key('standin-enigma-continue'),
         label: l10n.continueButton,
         onTap: wordsConfirmed ? onContinue : null,
@@ -199,15 +190,7 @@ class EnigmaTab extends StatelessWidget {
         riddleController.text.trim().isNotEmpty &&
         secretController.text.trim().isNotEmpty &&
         !generating;
-    if (c.neobrutalism && enabled) {
-      return NeoButton(
-        key: const Key('standin-enigma-generate'),
-        label: l10n.generateWallet,
-        expanded: true,
-        onTap: onGenerate,
-      );
-    }
-    return PrimaryButton(
+    return AdaptiveActionButton(
       key: const Key('standin-enigma-generate'),
       label: l10n.generateWallet,
       loading: generating,

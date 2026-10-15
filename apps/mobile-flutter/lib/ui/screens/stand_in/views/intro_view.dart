@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/models/vault.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_button.dart';
-import '../../../widgets/common/primary_button.dart';
+import '../../../widgets/common/adaptive_action_button.dart';
 import '../components/option_card.dart';
 import '../components/section_title.dart';
 import '../stand_in_style.dart';
@@ -83,18 +82,11 @@ class IntroView extends StatelessWidget {
         // of floating mid-page with a dead half-screen beneath it.
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: c.neobrutalism
-              ? NeoButton(
-                  key: const Key('standin-intro-continue'),
-                  label: l10n.continueButton,
-                  expanded: true,
-                  onTap: onContinue,
-                )
-              : PrimaryButton(
-                  key: const Key('standin-intro-continue'),
-                  label: l10n.continueButton,
-                  onTap: onContinue,
-                ),
+          child: AdaptiveActionButton(
+            key: const Key('standin-intro-continue'),
+            label: l10n.continueButton,
+            onTap: onContinue,
+          ),
         ),
       ],
     );

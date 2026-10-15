@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
-import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_button.dart';
-import '../../../widgets/common/primary_button.dart';
+import '../../../widgets/common/adaptive_action_button.dart';
 
 /// The primary "Import" footer action; disabled until the mnemonic validates.
 ///
@@ -17,14 +15,8 @@ class ImportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final label = AppLocalizations.of(context)!.import;
 
-    if (c.neobrutalism && isValid) {
-      return NeoButton(label: label, expanded: true, onTap: onTap);
-    }
-
-    return PrimaryButton(label: label, onTap: isValid ? onTap : null);
+    return AdaptiveActionButton(label: label, onTap: isValid ? onTap : null);
   }
 }

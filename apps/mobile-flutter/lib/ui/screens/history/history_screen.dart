@@ -6,7 +6,8 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/neo_code_block.dart';
+import '../../widgets/common/neo_detail_row.dart';
+import '../../widgets/common/neo_mono_block.dart';
 import '../../widgets/common/neo_rule.dart';
 import '../../widgets/tx_details_card.dart';
 
@@ -243,11 +244,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _detailRow(c, AppLocalizations.of(context)!.derivationPath,
-                        record.derivationPath),
+                    NeoDetailRow(
+                        label: AppLocalizations.of(context)!.derivationPath,
+                        value: record.derivationPath),
                     const SizedBox(height: 10),
-                    _detailRow(c, AppLocalizations.of(context)!.signingAddress,
-                        record.signingAddress),
+                    NeoDetailRow(
+                        label: AppLocalizations.of(context)!.signingAddress,
+                        value: record.signingAddress),
                     const SizedBox(height: 10),
 
                     // Parsed transaction data — same card as the sign screen.
@@ -270,10 +273,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                     // Status word
                     const SizedBox(height: 6),
-                    _detailRow(
-                      c,
-                      AppLocalizations.of(context)!.statusWord,
-                      '0x${record.statusWord.toRadixString(16).padLeft(4, '0')}',
+                    NeoDetailRow(
+                      label: AppLocalizations.of(context)!.statusWord,
+                      value: '0x${record.statusWord.toRadixString(16).padLeft(4, '0')}',
                     ),
                   ],
                 ),
@@ -312,56 +314,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
         const SizedBox(height: 4),
         // Light mode outlines the hex as data to be checked; dark keeps the
         // original plain filled block.
-        if (c.neobrutalism)
-          SizedBox(
-            width: double.infinity,
-            child: NeoCodeBlock(
-              padding: const EdgeInsets.all(10),
-              child: content,
-            ),
-          )
-        else
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: c.bg,
-              borderRadius: BorderRadius.circular(R.sm),
-            ),
-            child: content,
-          ),
-      ],
-    );
-  }
-
-  static Widget _detailRow(
-      ColorTokens c, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: c.mutedText(130),
-              fontSize: 12,
-              fontWeight:
-                  c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: SelectableText(
-            value,
-            style: TextStyle(
-              color: c.text,
-              fontSize: 12,
-              fontFamily: 'monospace',
-            ),
-            textAlign: TextAlign.right,
-          ),
+        NeoMonoBlock(
+          padding: const EdgeInsets.all(10),
+          child: content,
         ),
       ],
     );

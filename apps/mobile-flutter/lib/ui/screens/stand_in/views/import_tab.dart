@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_button.dart';
+import '../../../widgets/common/adaptive_action_button.dart';
 import '../../../widgets/common/neo_card.dart';
-import '../../../widgets/common/primary_button.dart';
 import '../stand_in_style.dart';
 
 /// Import tab — paste a 12-word phrase, live-validate it, then continue to the
@@ -138,18 +137,11 @@ class ImportTab extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: c.neobrutalism && valid
-              ? NeoButton(
-                  key: const Key('standin-import-continue'),
-                  label: l10n.continueButton,
-                  expanded: true,
-                  onTap: onContinue,
-                )
-              : PrimaryButton(
-                  key: const Key('standin-import-continue'),
-                  label: l10n.continueButton,
-                  onTap: valid ? onContinue : null,
-                ),
+          child: AdaptiveActionButton(
+            key: const Key('standin-import-continue'),
+            label: l10n.continueButton,
+            onTap: valid ? onContinue : null,
+          ),
         ),
       ],
     );

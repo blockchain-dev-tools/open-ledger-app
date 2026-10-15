@@ -6,11 +6,10 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../../utils/formatting.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/adaptive_action_button.dart';
 import '../../../widgets/common/copy_to_clipboard.dart';
-import '../../../widgets/common/neo_button.dart';
 import '../../../widgets/common/neo_card.dart';
 import '../../../widgets/common/neo_code_block.dart';
-import '../../../widgets/common/primary_button.dart';
 
 /// One full-width "Address" card: QR + outlined address block + full-width copy
 /// button. The whole card is tappable to copy.
@@ -98,21 +97,13 @@ class AccountReceiveCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              if (c.neobrutalism)
-                NeoButton(
-                  key: const ValueKey('copy-address'),
-                  label: l10n.copyAddress,
-                  icon: Icons.copy,
-                  // Brand tone: lime fill with a black label.
-                  expanded: true,
-                  onTap: copy,
-                )
-              else
-                PrimaryButton(
-                  label: l10n.copyAddress,
-                  onTap: copy,
-                  outline: true,
-                ),
+              AdaptiveActionButton(
+                key: const ValueKey('copy-address'),
+                label: l10n.copyAddress,
+                icon: Icons.copy,
+                legacyOutline: true,
+                onTap: copy,
+              ),
             ],
           ),
         ),

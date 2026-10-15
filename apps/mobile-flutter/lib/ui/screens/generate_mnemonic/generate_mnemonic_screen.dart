@@ -7,9 +7,8 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/mnemonic/mnemonic_word_grid.dart';
-import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/primary_button.dart';
 
 /// Displays the generated 12-word BIP-39 mnemonic in a 3×4 word grid.
 ///
@@ -326,17 +325,10 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                 // ── Continue button ──────────────────────────────────
                 // The neo button has no disabled state, so an unconfirmed
                 // checkbox keeps the original flat button even in light mode.
-                if (c.neobrutalism && _confirmed)
-                  NeoButton(
-                    label: l10n.continueButton,
-                    expanded: true,
-                    onTap: _continue,
-                  )
-                else
-                  PrimaryButton(
-                    label: l10n.continueButton,
-                    onTap: _confirmed ? _continue : null,
-                  ),
+                AdaptiveActionButton(
+                  label: l10n.continueButton,
+                  onTap: _confirmed ? _continue : null,
+                ),
 
                 const SizedBox(height: 24),
               ],

@@ -6,14 +6,14 @@ import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
-import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/neo_code_block.dart';
+import '../../widgets/common/neo_detail_row.dart';
+import '../../widgets/common/neo_mono_block.dart';
 import '../../widgets/common/neo_rule.dart';
-import '../../widgets/common/primary_button.dart';
 
 /// Signature result screen — shown after a transaction is signed.
 ///
@@ -129,9 +129,9 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Signing address
-                            _hpad(c, _resultRow(
-                              c, AppLocalizations.of(context)!.signingAddress,
-                              signingAddress.length > 14
+                            _hpad(c, NeoDetailRow(
+                              label: AppLocalizations.of(context)!.signingAddress,
+                              value: signingAddress.length > 14
                                   ? '${signingAddress.substring(0, 8)}...${signingAddress.substring(signingAddress.length - 6)}'
                                   : signingAddress,
                             )),
@@ -140,14 +140,14 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                             const SizedBox(height: 10),
 
                             // Derivation path
-                            _hpad(c, _resultRow(c, AppLocalizations.of(context)!.derivationPath, derivationPath)),
+                            _hpad(c, NeoDetailRow(label: AppLocalizations.of(context)!.derivationPath, value: derivationPath)),
                             const SizedBox(height: 10),
                             _separator(c),
                             const SizedBox(height: 10),
 
                             // To address (ETH/PERSONAL)
                             if (txType == 'eth_tx' && toAddr != null) ...[
-                              _hpad(c, _resultRow(c, AppLocalizations.of(context)!.to, toAddr)),
+                              _hpad(c, NeoDetailRow(label: AppLocalizations.of(context)!.to, value: toAddr)),
                               const SizedBox(height: 10),
                               _separator(c),
                               const SizedBox(height: 10),
@@ -155,7 +155,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
 
                             // Value (ETH)
                             if (txType == 'eth_tx' && value != null) ...[
-                              _hpad(c, _resultRow(c, AppLocalizations.of(context)!.value, '${weiToEth(value)} ETH')),
+                              _hpad(c, NeoDetailRow(label: AppLocalizations.of(context)!.value, value: '${weiToEth(value)} ETH')),
                               const SizedBox(height: 10),
                               _separator(c),
                               const SizedBox(height: 10),
@@ -163,9 +163,9 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
 
                             // Personal message
                             if (txType == 'personal_msg')
-                              _hpad(c, _resultRow(
-                                c, AppLocalizations.of(context)!.messageLabel,
-                                (result['message'] as String? ?? '').length > 40
+                              _hpad(c, NeoDetailRow(
+                                label: AppLocalizations.of(context)!.messageLabel,
+                                value: (result['message'] as String? ?? '').length > 40
                                     ? '${(result['message'] as String? ?? '').substring(0, 40)}...'
                                     : result['message'] as String? ?? '',
                               )),
@@ -187,23 +187,13 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                 const SizedBox(height: 24),
 
                 // ── Done button ──────────────────────────────────────
-                if (c.neobrutalism)
-                  NeoButton(
-                    label: AppLocalizations.of(context)!.done,
-                    expanded: true,
-                    onTap: () {
-                      widget.appState?.clearLastSignResult();
-                      context.go('/');
-                    },
-                  )
-                else
-                  PrimaryButton(
-                    label: AppLocalizations.of(context)!.done,
-                    onTap: () {
-                      widget.appState?.clearLastSignResult();
-                      context.go('/');
-                    },
-                  ),
+                AdaptiveActionButton(
+                  label: AppLocalizations.of(context)!.done,
+                  onTap: () {
+                    widget.appState?.clearLastSignResult();
+                    context.go('/');
+                  },
+                ),
                 const SizedBox(height: 12),
               ],
             ),
@@ -259,24 +249,9 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
           const SizedBox(height: 8),
           // Light outlines the hex as data to be checked; dark keeps the
           // original plain filled block.
-          if (c.neobrutalism)
-            SizedBox(
-              width: double.infinity,
-              child: NeoCodeBlock(
-                padding: const EdgeInsets.all(12),
-                child: _signatureText(c, signatureHex),
-              ),
-            )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: c.bg,
-                borderRadius: BorderRadius.circular(R.sm),
-              ),
-              child: _signatureText(c, signatureHex),
-            ),
+          NeoMonoBlock(
+            child: _signatureText(c, signatureHex),
+          ),
         ],
       ],
     );
@@ -312,36 +287,4 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
   /// full-weight brand rule used elsewhere; dark keeps the inset hairline.
   Widget _separator(ColorTokens c) =>
       neoRule(c, legacy: Container(height: 1, color: c.border.withAlpha(60)));
-
-  static Widget _resultRow(ColorTokens c, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: c.mutedText(130),
-              fontSize: 13,
-              fontWeight:
-                  c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: SelectableText(
-            value,
-            style: TextStyle(
-              color: c.text,
-              fontSize: 13,
-              fontFamily: 'monospace',
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
 }
