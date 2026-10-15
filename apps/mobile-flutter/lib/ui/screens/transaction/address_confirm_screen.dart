@@ -9,6 +9,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/grid_background.dart';
+import '../../widgets/common/highlighted_address_text.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_card.dart';
 
@@ -232,10 +233,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            SelectableText.rich(
-              _highlightedAddress(address, c),
-              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-            ),
+            HighlightedAddressText(address: address, c: c),
             const SizedBox(height: 6),
             Text(
               path,
@@ -250,31 +248,6 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  /// Build a [TextSpan] with first 6 and last 6 chars bold+primary.
-  TextSpan _highlightedAddress(String address, ColorTokens c) {
-    // Light's lime highlights wash out on white; the accent green stands in.
-    final highlight = c.accent;
-    if (address.length <= 12) {
-      return TextSpan(text: address, style: TextStyle(color: c.text));
-    }
-    final prefix = address.substring(0, 6);
-    final middle = address.substring(6, address.length - 6);
-    final suffix = address.substring(address.length - 6);
-    return TextSpan(
-      children: [
-        TextSpan(
-          text: prefix,
-          style: TextStyle(color: highlight, fontWeight: FontWeight.bold),
-        ),
-        TextSpan(text: middle, style: TextStyle(color: c.text)),
-        TextSpan(
-          text: suffix,
-          style: TextStyle(color: highlight, fontWeight: FontWeight.bold),
-        ),
-      ],
     );
   }
 }

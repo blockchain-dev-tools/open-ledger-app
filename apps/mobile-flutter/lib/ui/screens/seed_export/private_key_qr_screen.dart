@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/interfaces/export_service.dart';
 import '../../../core/interfaces/screen_security.dart';
@@ -17,6 +16,7 @@ import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/common/neo_rule.dart';
+import '../../widgets/common/qr_display_card.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
 import '../../widgets/security/privacy_shield.dart';
@@ -197,37 +197,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              // Black-on-white is REQUIRED for QR scannability.
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(
-                c.neobrutalism ? Neo.radius : R.lg,
-              ),
-              // Light mode outlines the white card as a neo block; dark keeps
-              // the hairline that stops it vanishing on the white background.
-              border: c.neobrutalism
-                  ? Border.all(color: c.neoEdge, width: Neo.edge)
-                  : Border.all(color: c.border),
-            ),
-            child: QrImageView(
-              data: key,
-              version: QrVersions.auto,
-              size: qrSize,
-              backgroundColor: Colors.white,
-              eyeStyle: const QrEyeStyle(
-                eyeShape: QrEyeShape.square,
-                color: Colors.black,
-              ),
-              dataModuleStyle: const QrDataModuleStyle(
-                dataModuleShape: QrDataModuleShape.square,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ),
+        QrDisplayCard(data: key, size: qrSize),
         const SizedBox(height: 20),
         _buildMetaCard(c, l10n, encodingLabel),
         const SizedBox(height: 16),

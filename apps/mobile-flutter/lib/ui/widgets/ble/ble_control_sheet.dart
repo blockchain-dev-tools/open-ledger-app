@@ -10,6 +10,7 @@ import '../../theme/color_tokens.dart';
 import '../common/neo_button.dart';
 import '../common/neo_card.dart';
 import '../common/neo_rule.dart';
+import '../common/neo_sheet.dart';
 import 'ble_log_controller.dart';
 import 'ble_log_view.dart';
 
@@ -42,21 +43,13 @@ class BleControlSheet {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
-    final neo = c.neobrutalism;
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: c.surface,
       isScrollControlled: true,
       // Neo outlines the panel in brand ink with the tighter corners, like the
       // option sheets; dark keeps the original soft, rounded sheet.
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(neo ? Neo.radius : R.xl),
-        ),
-        side: neo
-            ? BorderSide(color: c.neoEdge, width: Neo.edge)
-            : BorderSide.none,
-      ),
+      shape: neoSheetShape(c),
       builder: (context) => _BleControlSheetContent(
         control: control,
         c: c,
@@ -139,17 +132,7 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 40,
-                height: c.neobrutalism ? 3 : 4,
-                decoration: BoxDecoration(
-                  // Neo draws a crisp black rule; dark keeps the grey pill.
-                  color: c.neobrutalism ? c.neoEdge : c.text.withAlpha(60),
-                  borderRadius: BorderRadius.circular(c.neobrutalism ? 0 : 2),
-                ),
-              ),
-            ),
+            neoSheetHandle(c),
             // Both views are pinned to the same height, so opening or leaving
             // the log never resizes the sheet. They slide horizontally like
             // pages (logs in from the right, control back from the left)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/color_tokens.dart';
 import 'neo_rule.dart';
+import 'neo_sheet.dart';
 
 /// One row in a [showNeoOptionSheet]: what it reads, whether it is the current
 /// value, and what to run when it is picked.
@@ -27,14 +28,7 @@ void showNeoOptionSheet({
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: c.surface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(neo ? Neo.radius : R.xl),
-      ),
-      side: neo
-          ? BorderSide(color: c.neoEdge, width: Neo.edge)
-          : BorderSide.none,
-    ),
+    shape: neoSheetShape(c),
     builder: (ctx) {
       return SafeArea(
         child: Column(
@@ -42,16 +36,8 @@ void showNeoOptionSheet({
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 36,
-                height: neo ? 3 : 4,
-                decoration: BoxDecoration(
-                  color: neo ? c.neoEdge : c.text.withAlpha(60),
-                  borderRadius: BorderRadius.circular(neo ? 0 : 2),
-                ),
-              ),
-            ),
+            // Narrower than the BLE panel's handle.
+            neoSheetHandle(c, width: 36),
             // The title's gap to the boundary below it (the neo rule, or the
             // first option in dark) — well clear of the original sheet's 6px.
             Padding(
