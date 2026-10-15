@@ -6,6 +6,7 @@ import '../../theme/color_tokens.dart';
 import '../../widgets/common/enigma_logo_icon.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/mnemonic_language_picker.dart';
@@ -142,10 +143,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
         appBar: neoAppBar(
           c: c,
           title: Text(AppLocalizations.of(context)!.enigmaWallet),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
-            onPressed: () => context.go('/welcome'),
-          ),
+          leading: neoBackButton(c, onPressed: () => context.go('/welcome')),
         ),
         body: GridBackground(
           child: SafeArea(

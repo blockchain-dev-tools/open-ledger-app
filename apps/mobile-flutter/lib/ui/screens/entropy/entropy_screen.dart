@@ -5,6 +5,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../../services/mnemonic_service.dart';
@@ -94,10 +95,7 @@ class _EntropyScreenState extends State<EntropyScreen> {
         backgroundColor: c.groupedBg,
         appBar: neoAppBar(
           c: c,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
-            onPressed: () => context.go('/welcome'),
-          ),
+          leading: neoBackButton(c, onPressed: () => context.go('/welcome')),
           darkBackground: c.bg,
         ),
         body: GridBackground(
@@ -150,148 +148,184 @@ class _EntropyScreenState extends State<EntropyScreen> {
                         const SizedBox(height: 40),
 
                         // ── Counter ───────────────────────────────────
-                        Text(
-                          '$_tapCount / $_requiredTaps touches',
-                          style: TextStyle(
-                            color: progress >= 1.0
-                                ? c.primary
-                                : c.text.withAlpha(180),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        _EntropyTapCounter(
+                          c: c,
+                          tapCount: _tapCount,
+                          requiredTaps: _requiredTaps,
                         ),
 
                         const SizedBox(height: 16),
 
                         // ── Progress bar ──────────────────────────────
-                        Container(
-                          width: 260,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            // Light outlines the empty track in brand ink; dark
-                            // keeps the original grey-filled track.
-                            color: c.neobrutalism
-                                ? c.surface
-                                : c.border.withAlpha(100),
-                            borderRadius: BorderRadius.circular(
-                                c.neobrutalism ? Neo.radius : 5),
-                            border: c.neobrutalism
-                                ? Border.all(color: c.neoEdge, width: Neo.edge)
-                                : null,
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: progress.clamp(0.0, 1.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: c.primary,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                            ),
-                          ),
-                        ),
+                        _EntropyProgressBar(c: c, progress: progress),
 
                         const SizedBox(height: 44),
 
                         // ── Tap area hint ─────────────────────────────
-                        SizedBox(
-                          width: double.infinity,
-                          child: NeoCard(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            // Dark keeps the original hairline-outlined surface card.
-                            legacyEdge: c.border.withAlpha(100),
-                            legacyEdgeWidth: 1,
-                            legacyRadius: R.lg,
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.gesture,
-                                  size: 32,
-                                  color: _error != null ? c.error : c.primary,
-                                ),
-                                const SizedBox(height: 10),
-                                if (_isGenerating)
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: c.primary,
-                                      ),
-                                    ),
-                                  ),
-                                Text(
-                                  _error != null
-                                      ? _error!
-                                      : _isGenerating
-                                          ? l10n.processing
-                                          : _tapCount >= _requiredTaps
-                                              ? l10n.processing
-                                              : l10n.entropyInstruction,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: _error != null
-                                        ? c.error.withAlpha(220)
-                                        : c.text.withAlpha(160),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                if (_error != null) ...[
-                                  const SizedBox(height: 12),
-                                  if (c.neobrutalism)
-                                    NeoButton(
-                                      label: l10n.retry,
-                                      quiet: true,
-                                      onTap: () {
-                                        if (!_isGenerating) _finalize();
-                                      },
-                                    )
-                                  else
-                                    GestureDetector(
-                                      onTap: () {
-                                        if (!_isGenerating) _finalize();
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: c.primary.withAlpha(30),
-                                          borderRadius:
-                                              BorderRadius.circular(R.sm),
-                                          border: Border.all(
-                                            color: c.primary.withAlpha(100),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          l10n.retry,
-                                          style: TextStyle(
-                                            color: c.primary,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
+                        _buildHintCard(c, l10n),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The instruction card under the progress bar: gesture glyph, live status
+  /// text and — when generation failed — a retry affordance.
+  Widget _buildHintCard(ColorTokens c, AppLocalizations l10n) {
+    return SizedBox(
+      width: double.infinity,
+      child: NeoCard(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
+        // Dark keeps the original hairline-outlined surface card.
+        legacyEdge: c.border.withAlpha(100),
+        legacyEdgeWidth: 1,
+        legacyRadius: R.lg,
+        child: Column(
+          children: [
+            Icon(
+              Icons.gesture,
+              size: 32,
+              color: _error != null ? c.error : c.primary,
+            ),
+            const SizedBox(height: 10),
+            if (_isGenerating)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.primary,
+                  ),
+                ),
+              ),
+            Text(
+              _error != null
+                  ? _error!
+                  : _isGenerating
+                      ? l10n.processing
+                      : _tapCount >= _requiredTaps
+                          ? l10n.processing
+                          : l10n.entropyInstruction,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _error != null
+                    ? c.error.withAlpha(220)
+                    : c.text.withAlpha(160),
+                fontSize: 13,
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              if (c.neobrutalism)
+                NeoButton(
+                  label: l10n.retry,
+                  quiet: true,
+                  onTap: () {
+                    if (!_isGenerating) _finalize();
+                  },
+                )
+              else
+                GestureDetector(
+                  onTap: () {
+                    if (!_isGenerating) _finalize();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.primary.withAlpha(30),
+                      borderRadius: BorderRadius.circular(R.sm),
+                      border: Border.all(
+                        color: c.primary.withAlpha(100),
+                      ),
+                    ),
+                    child: Text(
+                      l10n.retry,
+                      style: TextStyle(
+                        color: c.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EntropyTapCounter extends StatelessWidget {
+  const _EntropyTapCounter({
+    required this.c,
+    required this.tapCount,
+    required this.requiredTaps,
+  });
+
+  final ColorTokens c;
+  final int tapCount;
+  final int requiredTaps;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = tapCount / requiredTaps;
+    return Text(
+      '$tapCount / $requiredTaps touches',
+      style: TextStyle(
+        color: progress >= 1.0 ? c.primary : c.text.withAlpha(180),
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _EntropyProgressBar extends StatelessWidget {
+  const _EntropyProgressBar({required this.c, required this.progress});
+
+  final ColorTokens c;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 260,
+      height: 10,
+      decoration: BoxDecoration(
+        // Light outlines the empty track in brand ink; dark
+        // keeps the original grey-filled track.
+        color: c.neobrutalism
+            ? c.surface
+            : c.border.withAlpha(100),
+        borderRadius: BorderRadius.circular(
+            c.neobrutalism ? Neo.radius : 5),
+        border: c.neobrutalism
+            ? Border.all(color: c.neoEdge, width: Neo.edge)
+            : null,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: progress.clamp(0.0, 1.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: c.primary,
+            borderRadius: BorderRadius.circular(5),
           ),
         ),
       ),

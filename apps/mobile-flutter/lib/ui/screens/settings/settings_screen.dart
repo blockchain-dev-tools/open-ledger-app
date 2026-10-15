@@ -9,6 +9,7 @@ import '../../../app/app_state.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_option_sheet.dart';
 import 'components/about_card.dart';
 import 'components/group_header.dart';
@@ -426,10 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         appBar: neoAppBar(
           c: c,
           title: Text(AppLocalizations.of(context)!.settingsTitle),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
-            onPressed: () => context.pop(),
-          ),
+          leading: neoBackButton(c, onPressed: () => context.pop()),
           darkBackground: c.groupedBg,
         ),
         body: SafeArea(child: content),

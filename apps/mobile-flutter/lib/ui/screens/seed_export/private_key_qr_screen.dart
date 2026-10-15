@@ -13,6 +13,7 @@ import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_code_block.dart';
 import '../../widgets/common/neo_rule.dart';
@@ -88,10 +89,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
       appBar: neoAppBar(
         c: c,
         title: Text(l10n.privateKeyExportTitle),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        leading: neoBackButton(c, onPressed: () => Navigator.of(context).maybePop()),
         darkBackground: c.bg,
       ),
       // The QR lives in the body, so the lifecycle cover hides exactly the

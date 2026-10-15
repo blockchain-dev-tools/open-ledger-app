@@ -5,6 +5,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../widgets/common/adaptive_action_button.dart';
@@ -67,14 +68,11 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
       backgroundColor: c.groupedBg,
       appBar: neoAppBar(
         c: c,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            }
-          },
-        ),
+        leading: neoBackButton(c, onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          }
+        }),
         darkBackground: c.bg,
       ),
       body: GridBackground(
@@ -127,198 +125,20 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                 const SizedBox(height: 16),
 
                 // ── Confirmation checkbox ───────────────────────────
-                GestureDetector(
-                  onTap: () {
+                _ConfirmationCheckbox(
+                  c: c,
+                  confirmed: _confirmed,
+                  l10n: l10n,
+                  onToggle: () {
                     setState(() {
                       _confirmed = !_confirmed;
                     });
                   },
-                  child: NeoCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    // Dark keeps the original hairline-outlined surface card.
-                    legacyEdge: c.border.withAlpha(100),
-                    legacyEdgeWidth: 1,
-                    legacyRadius: R.lg,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              // Light keeps the black neo outline in every
-                              // state; dark keeps its primary/border colouring.
-                              color: c.neobrutalism
-                                  ? c.neoEdge
-                                  : (_confirmed ? c.primary : c.border),
-                              width: 2,
-                            ),
-                            color: _confirmed
-                                ? c.primary
-                                : Colors.transparent,
-                          ),
-                          child: _confirmed
-                              ? Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: c.onPrimary,
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.iveWrittenItDown,
-                          style: TextStyle(
-                            color: c.mutedText(200),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // ── Passphrase toggle ────────────────────────────
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _showPassphrase = !_showPassphrase;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l10n.advancedBip39Passphrase,
-                            style: TextStyle(
-                              color: c.mutedText(150),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        AnimatedRotation(
-                          turns: _showPassphrase ? 0.5 : 0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Icon(
-                            Icons.chevron_right,
-                            color: c.mutedText(120),
-                            size: 20,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ── Passphrase input (collapsible) ───────────────
-                if (_showPassphrase) ...[
-                  NeoCard(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    // Dark keeps the original hairline-outlined surface card.
-                    legacyEdge: c.border.withAlpha(100),
-                    legacyEdgeWidth: 1,
-                    legacyRadius: R.lg,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'A passphrase acts as a 13th word. It creates a '
-                          'completely different wallet from the same recovery '
-                          'phrase. If you use one, you MUST remember it — '
-                          'there is no way to recover it.',
-                          style: TextStyle(
-                            color: c.mutedText(120),
-                            fontSize: 12,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          key: const Key('passphrase-input'),
-                          controller: _passphraseController,
-                          obscureText: _obscurePassphrase,
-                          style: TextStyle(
-                            color: c.text,
-                            fontSize: 15,
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            // Light fills with the neo surface (white-on-page);
-                            // dark keeps its original `bg` fill.
-                            fillColor: c.neobrutalism ? c.surface : c.bg,
-                            hintText: l10n.enterPassphraseOptional,
-                            hintStyle: TextStyle(
-                              color: c.mutedText(80),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                c.neobrutalism ? Neo.radius : R.lg,
-                              ),
-                              borderSide: BorderSide(
-                                color: c.neobrutalism
-                                    ? c.neoEdge
-                                    : c.border.withAlpha(100),
-                                width: c.neobrutalism ? Neo.edge : 1,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                c.neobrutalism ? Neo.radius : R.lg,
-                              ),
-                              borderSide: BorderSide(
-                                color: c.neobrutalism
-                                    ? c.neoEdge
-                                    : c.border.withAlpha(100),
-                                width: c.neobrutalism ? Neo.edge : 1,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                c.neobrutalism ? Neo.radius : R.lg,
-                              ),
-                              borderSide: BorderSide(
-                                color: c.neobrutalism
-                                    ? c.neoEdge
-                                    : c.primary,
-                                width: c.neobrutalism ? Neo.edge : 1,
-                              ),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassphrase
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: c.text.withAlpha(120),
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassphrase = !_obscurePassphrase;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                _buildPassphraseSection(c, l10n),
 
                 const SizedBox(height: 4),
 
@@ -334,6 +154,219 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// The optional BIP-39 passphrase section: the collapsible toggle plus the
+  /// input card it reveals, kept together so the reveal state stays local.
+  Widget _buildPassphraseSection(ColorTokens c, AppLocalizations l10n) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Passphrase toggle ────────────────────────────
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _showPassphrase = !_showPassphrase;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.advancedBip39Passphrase,
+                    style: TextStyle(
+                      color: c.mutedText(150),
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _showPassphrase ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.chevron_right,
+                    color: c.mutedText(120),
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Passphrase input (collapsible) ───────────────
+        if (_showPassphrase) ...[
+          NeoCard(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            // Dark keeps the original hairline-outlined surface card.
+            legacyEdge: c.border.withAlpha(100),
+            legacyEdgeWidth: 1,
+            legacyRadius: R.lg,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'A passphrase acts as a 13th word. It creates a '
+                  'completely different wallet from the same recovery '
+                  'phrase. If you use one, you MUST remember it — '
+                  'there is no way to recover it.',
+                  style: TextStyle(
+                    color: c.mutedText(120),
+                    fontSize: 12,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('passphrase-input'),
+                  controller: _passphraseController,
+                  obscureText: _obscurePassphrase,
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 15,
+                  ),
+                  decoration: InputDecoration(
+                    filled: true,
+                    // Light fills with the neo surface (white-on-page);
+                    // dark keeps its original `bg` fill.
+                    fillColor: c.neobrutalism ? c.surface : c.bg,
+                    hintText: l10n.enterPassphraseOptional,
+                    hintStyle: TextStyle(
+                      color: c.mutedText(80),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        c.neobrutalism ? Neo.radius : R.lg,
+                      ),
+                      borderSide: BorderSide(
+                        color: c.neobrutalism
+                            ? c.neoEdge
+                            : c.border.withAlpha(100),
+                        width: c.neobrutalism ? Neo.edge : 1,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        c.neobrutalism ? Neo.radius : R.lg,
+                      ),
+                      borderSide: BorderSide(
+                        color: c.neobrutalism
+                            ? c.neoEdge
+                            : c.border.withAlpha(100),
+                        width: c.neobrutalism ? Neo.edge : 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        c.neobrutalism ? Neo.radius : R.lg,
+                      ),
+                      borderSide: BorderSide(
+                        color: c.neobrutalism
+                            ? c.neoEdge
+                            : c.primary,
+                        width: c.neobrutalism ? Neo.edge : 1,
+                      ),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassphrase
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: c.text.withAlpha(120),
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassphrase = !_obscurePassphrase;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ConfirmationCheckbox extends StatelessWidget {
+  const _ConfirmationCheckbox({
+    required this.c,
+    required this.confirmed,
+    required this.l10n,
+    required this.onToggle,
+  });
+
+  final ColorTokens c;
+  final bool confirmed;
+  final AppLocalizations l10n;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onToggle,
+      child: NeoCard(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        // Dark keeps the original hairline-outlined surface card.
+        legacyEdge: c.border.withAlpha(100),
+        legacyEdgeWidth: 1,
+        legacyRadius: R.lg,
+        child: Row(
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  // Light keeps the black neo outline in every
+                  // state; dark keeps its primary/border colouring.
+                  color: c.neobrutalism
+                      ? c.neoEdge
+                      : (confirmed ? c.primary : c.border),
+                  width: 2,
+                ),
+                color: confirmed
+                    ? c.primary
+                    : Colors.transparent,
+              ),
+              child: confirmed
+                  ? Icon(
+                      Icons.check,
+                      size: 16,
+                      color: c.onPrimary,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              l10n.iveWrittenItDown,
+              style: TextStyle(
+                color: c.mutedText(200),
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       ),
     );

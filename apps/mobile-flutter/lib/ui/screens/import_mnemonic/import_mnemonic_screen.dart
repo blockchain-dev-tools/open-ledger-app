@@ -7,6 +7,7 @@ import '../../../services/mnemonic_service.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import 'components/import_button.dart';
 import 'components/mnemonic_input_field.dart';
 import 'components/mnemonic_status_row.dart';
@@ -135,10 +136,7 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
         backgroundColor: c.groupedBg,
         appBar: neoAppBar(
           c: c,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
-            onPressed: () => context.go('/welcome'),
-          ),
+          leading: neoBackButton(c, onPressed: () => context.go('/welcome')),
           darkBackground: c.bg,
         ),
         body: GridBackground(

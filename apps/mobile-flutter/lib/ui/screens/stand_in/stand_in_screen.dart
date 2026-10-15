@@ -9,6 +9,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import 'views/enigma_tab.dart';
 import 'views/generate_tab.dart';
 import 'views/import_tab.dart';
@@ -675,10 +676,7 @@ class _StandInScreenState extends State<StandInScreen> {
           l10n.standInTitle,
           style: TextStyle(color: c.text, fontWeight: FontWeight.w600),
         ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: _onBack,
-        ),
+        leading: neoBackButton(c, onPressed: _onBack),
         darkBackground: c.groupedBg,
       ),
       // Light mode paints the neobrutalist reference grid behind the body;

@@ -6,6 +6,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/section_header.dart';
 import 'components/account_backup_card.dart';
 import 'components/account_detail_placeholder.dart';
@@ -55,14 +56,11 @@ class AccountDetailScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            }
-          },
-        ),
+        leading: neoBackButton(c, onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          }
+        }),
         // Pull the title closer to the back button (default leading width is
         // 56 + titleSpacing 16, which reads as a wide empty gap).
         titleSpacing: 0,

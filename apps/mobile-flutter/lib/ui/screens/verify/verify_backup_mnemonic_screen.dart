@@ -5,6 +5,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/verify/verify_result_card.dart';
@@ -97,10 +98,7 @@ class _VerifyBackupMnemonicScreenState
         c: c,
         darkBackground: c.bg,
         title: Text(l10n.verifySeedTitle),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        leading: neoBackButton(c, onPressed: () => Navigator.of(context).maybePop()),
       ),
       body: GridBackground(
         // `SizedBox.expand` forces the body to the viewport height so the grid

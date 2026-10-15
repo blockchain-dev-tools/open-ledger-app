@@ -10,6 +10,7 @@ import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_note.dart';
 import '../../widgets/common/qr_display_card.dart';
@@ -85,10 +86,7 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
       appBar: neoAppBar(
         c: c,
         title: Text(l10n.exportSeedTitle),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        leading: neoBackButton(c, onPressed: () => Navigator.of(context).maybePop()),
         darkBackground: c.bg,
       ),
       // The QR lives in the body, so the lifecycle cover hides exactly the

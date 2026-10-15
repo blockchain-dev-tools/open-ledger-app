@@ -7,6 +7,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -175,14 +176,11 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
       appBar: neoAppBar(
         c: c,
         darkBackground: c.bg,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            }
-          },
-        ),
+        leading: neoBackButton(c, onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          }
+        }),
       ),
       body: GridBackground(
         child: SafeArea(
@@ -216,44 +214,10 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
                 const SizedBox(height: 28),
 
                 // ── Progress indicator ──────────────────────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (int i = 0; i < _quizPositions.length; i++)
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 6),
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _currentQuizIndex > i
-                              ? c.primary
-                              : _currentQuizIndex == i
-                                  ? c.primary.withAlpha(180)
-                                  : c.border.withAlpha(100),
-                          border: Border.all(
-                            // Light outlines every reached step in black so the
-                            // progress reads on the pale page; dark keeps the
-                            // original brand-coloured ring.
-                            color: _currentQuizIndex >= i
-                                ? (c.neobrutalism ? c.neoEdge : c.primary)
-                                : c.border,
-                            width: _currentQuizIndex >= i && c.neobrutalism
-                                ? Neo.edge
-                                : 2,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${_currentQuizIndex + 1} / ${_quizPositions.length}',
-                      style: TextStyle(
-                        color: c.text.withAlpha(180),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                _QuizProgressDots(
+                  c: c,
+                  currentIndex: _currentQuizIndex,
+                  totalSteps: _quizPositions.length,
                 ),
 
                 const SizedBox(height: 32),
@@ -283,40 +247,10 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
                 // ── Choice buttons ──────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
-                      children: _currentChoices.map((word) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: GestureDetector(
-                            onTap: () => _onChoiceTap(word),
-                            // Light outlines each choice as a neo block; dark
-                            // falls back to the original hairline tile.
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: NeoCard(
-                                legacyRadius: R.lg,
-                                legacyEdge: c.border.withAlpha(100),
-                                legacyEdgeWidth: 1.5,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    word,
-                                    style: TextStyle(
-                                      color: c.text,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                    child: _QuizChoiceTiles(
+                      c: c,
+                      choices: _currentChoices,
+                      onChoice: _onChoiceTap,
                     ),
                   ),
                 ),
@@ -343,6 +277,112 @@ class _VerifyMnemonicScreenState extends State<VerifyMnemonicScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _QuizProgressDots extends StatelessWidget {
+  const _QuizProgressDots({
+    required this.c,
+    required this.currentIndex,
+    required this.totalSteps,
+  });
+
+  final ColorTokens c;
+  final int currentIndex;
+  final int totalSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < totalSteps; i++)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: currentIndex > i
+                  ? c.primary
+                  : currentIndex == i
+                      ? c.primary.withAlpha(180)
+                      : c.border.withAlpha(100),
+              border: Border.all(
+                // Light outlines every reached step in black so the
+                // progress reads on the pale page; dark keeps the
+                // original brand-coloured ring.
+                color: currentIndex >= i
+                    ? (c.neobrutalism ? c.neoEdge : c.primary)
+                    : c.border,
+                width: currentIndex >= i && c.neobrutalism
+                    ? Neo.edge
+                    : 2,
+              ),
+            ),
+          ),
+        const SizedBox(width: 12),
+        Text(
+          '${currentIndex + 1} / $totalSteps',
+          style: TextStyle(
+            color: c.text.withAlpha(180),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuizChoiceTiles extends StatelessWidget {
+  const _QuizChoiceTiles({
+    required this.c,
+    required this.choices,
+    required this.onChoice,
+  });
+
+  final ColorTokens c;
+  final List<String> choices;
+  final ValueChanged<String> onChoice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: choices.map((word) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: GestureDetector(
+            onTap: () => onChoice(word),
+            // Light outlines each choice as a neo block; dark
+            // falls back to the original hairline tile.
+            child: SizedBox(
+              width: double.infinity,
+              child: NeoCard(
+                legacyRadius: R.lg,
+                legacyEdge: c.border.withAlpha(100),
+                legacyEdgeWidth: 1.5,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Center(
+                  child: Text(
+                    word,
+                    style: TextStyle(
+                      color: c.text,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

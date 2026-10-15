@@ -7,6 +7,7 @@ import '../../../utils/enigma.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 // Web builds (design gallery) have no dart:ffi — the inert stub keeps the
 // screen compilable; the seed-hex section simply stays hidden there.
@@ -197,10 +198,7 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
         appBar: neoAppBar(
           c: c,
           title: const Text('Secret Phrase Mnemonic'),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: c.text),
-            onPressed: () => context.go('/enigma'),
-          ),
+          leading: neoBackButton(c, onPressed: () => context.go('/enigma')),
         ),
         body: GridBackground(
           child: SafeArea(

@@ -10,6 +10,7 @@ import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
+import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_note.dart';
 import '../../widgets/common/neo_rule.dart';
@@ -69,10 +70,7 @@ class PrivateKeyListScreen extends StatelessWidget {
       appBar: neoAppBar(
         c: c,
         title: Text(l10n.privateKeysRow),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: c.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        leading: neoBackButton(c, onPressed: () => Navigator.of(context).maybePop()),
         darkBackground: c.bg,
       ),
       body: GridBackground(
