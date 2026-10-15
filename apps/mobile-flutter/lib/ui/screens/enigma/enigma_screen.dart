@@ -8,6 +8,7 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/primary_button.dart';
+import '../../widgets/mnemonic/mnemonic_language_picker.dart';
 import '../../../data/bip39_wordlist.dart';
 import '../../../utils/enigma.dart';
 
@@ -45,16 +46,6 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
   bool get _isFormValid =>
       _riddleController.text.trim().isNotEmpty &&
       _secretController.text.trim().isNotEmpty;
-
-  String _localizedLanguageName(Bip39WordlistLanguage lang) {
-    final l10n = AppLocalizations.of(context)!;
-    switch (lang) {
-      case Bip39WordlistLanguage.english:
-        return l10n.languageEnglish;
-      case Bip39WordlistLanguage.chineseSimplified:
-        return l10n.languageChinese;
-    }
-  }
 
   /// Wraps an input in the neo block in light mode; dark returns the field
   /// untouched so it keeps its own filled, hairline-outlined box.
@@ -222,34 +213,10 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  NeoCard(
-                    // Light outlines the selector as a neo block; dark falls back
-                    // to the original hairline box.
-                    legacyRadius: R.lg,
-                    legacyEdge: c.border,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: DropdownButton<Bip39WordlistLanguage>(
-                      value: _selectedLanguage,
-                      isExpanded: true,
-                      underline: const SizedBox.shrink(),
-                      dropdownColor: c.surface,
-                      style:
-                          TextStyle(color: c.text, fontSize: 15),
-                      icon: Icon(Icons.arrow_drop_down,
-                          color: c.text.withAlpha(120)),
-                      items: Bip39WordlistLanguage.values.map((lang) {
-                        return DropdownMenuItem(
-                          value: lang,
-                          child: Text(_localizedLanguageName(lang)),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedLanguage = value);
-                        }
-                      },
-                    ),
+                  MnemonicLanguageTrigger(
+                    language: _selectedLanguage,
+                    onChanged: (lang) =>
+                        setState(() => _selectedLanguage = lang),
                   ),
 
                   const SizedBox(height: 20),

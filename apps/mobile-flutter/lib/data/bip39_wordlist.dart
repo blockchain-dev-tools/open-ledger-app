@@ -2316,27 +2316,32 @@ const List<String> bip39ChineseSimplified = [
 // ── Language Selection ─────────────────────────────────────────────
 
 /// Supported BIP-39 wordlist languages.
+///
+/// Never send `enum.index` across FFI — it only happens to match the SDK's
+/// codes while this list is `[english, chineseSimplified]`. Use
+/// [bip39LanguageCode] instead.
 enum Bip39WordlistLanguage {
   english,
   chineseSimplified,
+  japanese,
+  korean,
 }
 
-/// Returns the display name for a wordlist language.
-String bip39LanguageName(Bip39WordlistLanguage lang) {
+/// Maps a wordlist language to the Rust SDK's BIP-39 language code.
+///
+/// Must stay in sync with `Bip39Language` in
+/// `crates/open-ledger-biz/src/mnemonic.rs` (0=English, 1=SimplifiedChinese,
+/// 6=Japanese, 7=Korean). The Rust side is the only implementation that holds
+/// the wordlists, so this is the single Dart→FFI mapping.
+int bip39LanguageCode(Bip39WordlistLanguage lang) {
   switch (lang) {
     case Bip39WordlistLanguage.english:
-      return 'English';
+      return 0;
     case Bip39WordlistLanguage.chineseSimplified:
-      return '简体中文';
-  }
-}
-
-/// Returns the wordlist for a given language.
-List<String> bip39Wordlist(Bip39WordlistLanguage lang) {
-  switch (lang) {
-    case Bip39WordlistLanguage.english:
-      return bip39English;
-    case Bip39WordlistLanguage.chineseSimplified:
-      return bip39ChineseSimplified;
+      return 1;
+    case Bip39WordlistLanguage.japanese:
+      return 6;
+    case Bip39WordlistLanguage.korean:
+      return 7;
   }
 }

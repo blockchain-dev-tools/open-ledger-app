@@ -4,8 +4,8 @@ import '../../../../data/bip39_wordlist.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
 import '../../../widgets/common/neo_button.dart';
-import '../../../widgets/common/neo_card.dart';
 import '../../../widgets/common/primary_button.dart';
+import '../../../widgets/mnemonic/mnemonic_language_picker.dart';
 import '../../../widgets/mnemonic/mnemonic_word_grid.dart';
 import '../../../widgets/mnemonic/warning_banner.dart';
 import '../components/check_row.dart';
@@ -123,41 +123,10 @@ class EnigmaTab extends StatelessWidget {
                   const SizedBox(height: 20),
                   _fieldLabel(c, l10n.mnemonicLanguage),
                   const SizedBox(height: 8),
-                  NeoCard(
-                    clip: true,
-                    // Dark restores the original hairline-outlined box.
-                    legacyEdge: c.border,
-                    legacyEdgeWidth: 1,
-                    legacyRadius: R.lg,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      child: DropdownButton<Bip39WordlistLanguage>(
-                        key: const ValueKey('standin-enigma-language'),
-                        value: language,
-                        isExpanded: true,
-                        underline: const SizedBox.shrink(),
-                        dropdownColor: c.surface,
-                        style: TextStyle(color: c.text, fontSize: 15),
-                        icon: Icon(
-                          Icons.arrow_drop_down,
-                          color: c.text.withAlpha(120),
-                        ),
-                        items: Bip39WordlistLanguage.values.map((lang) {
-                          return DropdownMenuItem(
-                            value: lang,
-                            child: Text(_localizedLanguageName(l10n, lang)),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            onLanguageChanged(value);
-                          }
-                        },
-                      ),
-                    ),
+                  MnemonicLanguageTrigger(
+                    key: const ValueKey('standin-enigma-language'),
+                    language: language,
+                    onChanged: onLanguageChanged,
                   ),
                   const SizedBox(height: 20),
                   _fieldLabel(c, l10n.secretKey),
@@ -315,18 +284,5 @@ class EnigmaTab extends StatelessWidget {
       autocorrect: !obscure,
       enableSuggestions: !obscure,
     );
-  }
-}
-
-/// Localized name for a BIP-39 wordlist, shared with the Enigma flow.
-String _localizedLanguageName(
-  AppLocalizations l10n,
-  Bip39WordlistLanguage lang,
-) {
-  switch (lang) {
-    case Bip39WordlistLanguage.english:
-      return l10n.languageEnglish;
-    case Bip39WordlistLanguage.chineseSimplified:
-      return l10n.languageChinese;
   }
 }

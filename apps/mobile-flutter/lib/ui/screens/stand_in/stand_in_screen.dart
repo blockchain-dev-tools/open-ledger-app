@@ -300,7 +300,7 @@ class _StandInScreenState extends State<StandInScreen> {
       _ => VaultSource.imported,
     };
     final enigmaLanguage = source == VaultSource.enigma
-        ? _enigmaLanguage.index
+        ? bip39LanguageCode(_enigmaLanguage)
         : 0;
     try {
       await ws.configureStandIn(
@@ -598,7 +598,7 @@ class _StandInScreenState extends State<StandInScreen> {
       final words = svc.generateEnigmaMnemonic(
         riddle,
         secret,
-        language: _enigmaLanguage.index,
+        language: bip39LanguageCode(_enigmaLanguage),
       );
       if (!mounted) return;
       setState(() {

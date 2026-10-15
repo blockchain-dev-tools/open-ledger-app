@@ -20,7 +20,7 @@ import '../infrastructure/ffi/crypto_bridge_stub.dart'
   final phrase = bridge.CryptoBridge.enigmaDeriveMnemonic(
     riddle,
     secret,
-    language.index,
+    bip39LanguageCode(language),
   );
   if (phrase == null || phrase.isEmpty) {
     throw StateError(
@@ -29,7 +29,7 @@ import '../infrastructure/ffi/crypto_bridge_stub.dart'
   final entropyHex = bridge.CryptoBridge.enigmaEntropyHex(
     riddle,
     secret,
-    language.index,
+    bip39LanguageCode(language),
   );
   if (entropyHex == null || entropyHex.isEmpty) {
     throw StateError(
@@ -48,8 +48,10 @@ List<String> mnemonicFromEntropy(
   String entropyHex, {
   Bip39WordlistLanguage language = Bip39WordlistLanguage.english,
 }) {
-  final phrase =
-      bridge.CryptoBridge.mnemonicFromEntropy(entropyHex, language.index);
+  final phrase = bridge.CryptoBridge.mnemonicFromEntropy(
+    entropyHex,
+    bip39LanguageCode(language),
+  );
   if (phrase == null || phrase.isEmpty) {
     throw StateError(
         'Mnemonic from entropy failed (Rust SDK returned null)');

@@ -109,12 +109,12 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
       }
       entropyHex = (extra['entropyHex'] as String?) ?? '';
       // The Enigma screen sends the chosen Bip39WordlistLanguage; accept a raw
-      // index too so either shape resolves to the same persisted int.
+      // FFI language code too so either shape resolves to the same persisted int.
       final lang = extra['language'];
       if (lang is int) {
         creationLanguage = lang;
       } else if (lang is Bip39WordlistLanguage) {
-        creationLanguage = lang.index;
+        creationLanguage = bip39LanguageCode(lang);
       }
     }
     // Fall back to preview data (design gallery direct URL loads).
