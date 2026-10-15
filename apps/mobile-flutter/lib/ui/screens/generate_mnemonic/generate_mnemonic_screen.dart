@@ -174,9 +174,7 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                         Text(
                           l10n.iveWrittenItDown,
                           style: TextStyle(
-                            color: c.neobrutalism
-                                ? c.text
-                                : c.text.withAlpha(200),
+                            color: c.mutedText(200),
                             fontSize: 14,
                           ),
                         ),
@@ -205,9 +203,7 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                           child: Text(
                             l10n.advancedBip39Passphrase,
                             style: TextStyle(
-                              color: c.neobrutalism
-                                  ? c.text
-                                  : c.text.withAlpha(150),
+                              color: c.mutedText(150),
                               fontSize: 13,
                             ),
                           ),
@@ -217,9 +213,7 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                           duration: const Duration(milliseconds: 200),
                           child: Icon(
                             Icons.chevron_right,
-                            color: c.neobrutalism
-                                ? c.text
-                                : c.text.withAlpha(120),
+                            color: c.mutedText(120),
                             size: 20,
                           ),
                         ),
@@ -246,9 +240,7 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                           'phrase. If you use one, you MUST remember it — '
                           'there is no way to recover it.',
                           style: TextStyle(
-                            color: c.neobrutalism
-                                ? c.text
-                                : c.text.withAlpha(120),
+                            color: c.mutedText(120),
                             fontSize: 12,
                             height: 1.5,
                           ),
@@ -269,9 +261,7 @@ class _GenerateMnemonicScreenState extends State<GenerateMnemonicScreen> {
                             fillColor: c.neobrutalism ? c.surface : c.bg,
                             hintText: l10n.enterPassphraseOptional,
                             hintStyle: TextStyle(
-                              color: c.neobrutalism
-                                  ? c.text
-                                  : c.text.withAlpha(80),
+                              color: c.mutedText(80),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,

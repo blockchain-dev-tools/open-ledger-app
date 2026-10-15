@@ -57,7 +57,7 @@ class PinHeader extends StatelessWidget {
         Text(
           subtitle,
           style: TextStyle(
-            color: neo ? c.text : c.text.withAlpha(140),
+            color: c.mutedText(140),
             fontSize: 14,
           ),
         ),

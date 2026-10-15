@@ -195,7 +195,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   Text(
                     AppLocalizations.of(context)!.enigmaDescription,
                     style: TextStyle(
-                      color: c.neobrutalism ? c.text : c.text.withAlpha(160),
+                      color: c.mutedText(160),
                       fontSize: 14,
                       height: 1.5,
                     ),

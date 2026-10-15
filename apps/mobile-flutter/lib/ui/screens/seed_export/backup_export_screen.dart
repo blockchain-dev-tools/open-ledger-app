@@ -164,7 +164,7 @@ class BackupExportScreen extends StatelessWidget {
                 Text(
                   l10n.privateKeysRareNote,
                   style: TextStyle(
-                    color: c.neobrutalism ? c.text : c.text.withAlpha(110),
+                    color: c.mutedText(110),
                     fontSize: 12,
                     height: 1.5,
                   ),
@@ -175,7 +175,7 @@ class BackupExportScreen extends StatelessWidget {
                 Text(
                   l10n.verifySectionHeader,
                   style: TextStyle(
-                    color: c.neobrutalism ? c.text : c.text.withAlpha(170),
+                    color: c.mutedText(170),
                     fontSize: 13,
                     fontWeight:
                         c.neobrutalism ? FontWeight.w700 : FontWeight.w600,
@@ -256,7 +256,7 @@ class _NavCard extends StatelessWidget {
         children: [
           // The lime [primary] washes out on the light surface, so the glyph
           // uses the deeper accent there.
-          Icon(icon, size: 22, color: c.neobrutalism ? c.accent : c.primary),
+          Icon(icon, size: 22, color: c.accent),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -275,7 +275,7 @@ class _NavCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+                    color: c.mutedText(120),
                     fontSize: 12,
                   ),
                 ),

@@ -41,7 +41,7 @@ class PassphraseField extends StatelessWidget {
             Text(
               l10n.passphraseOptional,
               style: TextStyle(
-                color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                color: c.mutedText(150),
                 fontSize: 13,
                 fontWeight: c.neobrutalism ? FontWeight.w600 : FontWeight.w500,
               ),

@@ -43,12 +43,12 @@ class SettingsRow extends StatelessWidget {
     final neo = c.neobrutalism;
     final enabled = onTap != null;
     final iconEffective = enabled
-        ? (iconColor ?? (neo ? c.text : c.text.withAlpha(160)))
+        ? (iconColor ?? c.mutedText(160))
         : c.text.withAlpha(80);
     final titleEffective = enabled
         ? (titleColor ?? c.text)
         : c.text.withAlpha(neo ? 90 : 120);
-    final trailingEffective = neo ? c.text : c.text.withAlpha(80);
+    final trailingEffective = c.mutedText(80);
 
     return InkWell(
       onTap: onTap,
@@ -79,9 +79,7 @@ class SettingsRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: neo
-                        ? c.text
-                        : c.text.withAlpha(enabled ? 120 : 80),
+                    color: c.mutedText(enabled ? 120 : 80),
                     fontSize: 15,
                     fontWeight: neo ? FontWeight.w500 : FontWeight.normal,
                   ),

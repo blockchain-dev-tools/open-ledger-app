@@ -140,9 +140,7 @@ class _EntropyScreenState extends State<EntropyScreen> {
                             l10n.tapRandomly,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: c.neobrutalism
-                                  ? c.text
-                                  : c.text.withAlpha(160),
+                              color: c.mutedText(160),
                               fontSize: 14,
                               height: 1.5,
                             ),

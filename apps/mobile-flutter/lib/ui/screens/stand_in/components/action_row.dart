@@ -43,7 +43,7 @@ class ActionRow extends StatelessWidget {
               size: 24,
               color: destructive
                   ? c.error
-                  : (neo ? c.text : c.text.withAlpha(160)),
+                  : c.mutedText(160),
             ),
             const SizedBox(width: 14),
             Text(
@@ -75,7 +75,7 @@ class ActionRow extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 16,
-              color: neo ? c.text : c.text.withAlpha(80),
+              color: c.mutedText(80),
             ),
           ],
         ),

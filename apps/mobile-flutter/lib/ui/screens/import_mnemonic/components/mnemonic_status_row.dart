@@ -43,7 +43,7 @@ class MnemonicStatusRow extends StatelessWidget {
             child: Text(
               l10n.wordsCount(int.parse(wordCount)),
               style: TextStyle(
-                color: c.neobrutalism ? c.text : c.text.withAlpha(180),
+                color: c.mutedText(180),
                 fontSize: 13,
                 fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w500,
               ),

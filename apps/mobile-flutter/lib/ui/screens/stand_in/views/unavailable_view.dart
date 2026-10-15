@@ -23,7 +23,7 @@ class UnavailableView extends StatelessWidget {
             Icon(
               Icons.lock_outline,
               size: 48,
-              color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+              color: c.mutedText(120),
             ),
             const SizedBox(height: 16),
             Text(

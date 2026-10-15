@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
+import '../common/neo_rule.dart';
 import 'ble_log_controller.dart';
 import 'ble_log_row.dart';
 
@@ -59,10 +60,7 @@ class BleLogView extends StatelessWidget {
         ),
         // Neo rules the header off with a black line, matching the control
         // view; dark keeps the hairline.
-        if (c.neobrutalism)
-          Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
-        else
-          Divider(height: 1, color: c.border),
+        neoRule(c),
         Expanded(
           child: ListenableBuilder(
             listenable: controller,

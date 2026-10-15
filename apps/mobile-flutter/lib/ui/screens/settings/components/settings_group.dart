@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/color_tokens.dart';
 import '../../../widgets/common/neo_card.dart';
+import '../../../widgets/common/neo_rule.dart';
 import 'group_header.dart';
 
 /// A section of the settings list: an uppercase label above a single
@@ -23,7 +24,6 @@ class SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final neo = c.neobrutalism;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -39,20 +39,16 @@ class SettingsGroup extends StatelessWidget {
               for (var i = 0; i < rows.length; i++) ...[
                 rows[i],
                 if (i < rows.length - 1)
-                  if (neo)
-                    Divider(
-                      height: Neo.edge,
-                      thickness: Neo.edge,
-                      color: c.neoEdge,
-                    )
-                  else
-                    Divider(
+                  neoRule(
+                    c,
+                    legacy: Divider(
                       height: 1,
                       thickness: 0.5,
                       // Align the divider with the title (after the icon).
                       indent: 52,
                       color: c.border.withAlpha(140),
                     ),
+                  ),
               ],
             ],
           ),

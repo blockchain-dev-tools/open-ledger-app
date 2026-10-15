@@ -12,6 +12,7 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_note.dart';
+import '../../widgets/common/neo_rule.dart';
 import 'private_key_qr_screen.dart';
 
 /// Per-account private-key list — the second hub destination.
@@ -97,19 +98,15 @@ class PrivateKeyListScreen extends StatelessWidget {
                       if (i > 0)
                         // Light rules the rows off with a full-bleed black line;
                         // dark keeps the original inset hairline.
-                        if (c.neobrutalism)
-                          Divider(
-                            height: Neo.edge,
-                            thickness: Neo.edge,
-                            color: c.neoEdge,
-                          )
-                        else
-                          Divider(
+                        neoRule(
+                          c,
+                          legacy: Divider(
                             height: 1,
                             thickness: 0.5,
                             indent: 62,
                             color: c.border.withAlpha(140),
                           ),
+                        ),
                       _AccountRow(
                         c: c,
                         account: visibleAccounts[i],

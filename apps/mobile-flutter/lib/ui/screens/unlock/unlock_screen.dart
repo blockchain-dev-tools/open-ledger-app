@@ -266,9 +266,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                             style: TextStyle(
                               // Neo inverts the muted grey link to a heavy
                               // black one; dark keeps the thin grey underline.
-                              color: c.neobrutalism
-                                  ? c.text
-                                  : c.text.withAlpha(120),
+                              color: c.mutedText(120),
                               fontSize: 14,
                               fontWeight: c.neobrutalism
                                   ? FontWeight.w700
@@ -308,7 +306,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
           l10n.resetWallet,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: c.neobrutalism ? c.text : c.text.withAlpha(140),
+            color: c.mutedText(140),
             fontSize: 14,
           ),
         ),

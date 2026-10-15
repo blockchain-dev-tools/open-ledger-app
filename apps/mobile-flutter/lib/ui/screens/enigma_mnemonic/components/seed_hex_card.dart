@@ -45,7 +45,7 @@ class SeedHexCard extends StatelessWidget {
               Icon(
                 Icons.vpn_key_outlined,
                 size: 16,
-                color: c.neobrutalism ? c.accent : c.primary,
+                color: c.accent,
               ),
               const SizedBox(width: 8),
               Text(

@@ -41,7 +41,7 @@ class SectionHeader extends StatelessWidget {
             Icon(
               icon,
               size: 14,
-              color: c.neobrutalism ? c.text : c.text.withAlpha(100),
+              color: c.mutedText(100),
             ),
             const SizedBox(width: 6),
           ],
@@ -50,7 +50,7 @@ class SectionHeader extends StatelessWidget {
             style: TextStyle(
               // Neo (light) prints the heading in solid text black so it reads
               // as a label on the pale page; dark keeps the muted style.
-              color: c.neobrutalism ? c.text : c.text.withAlpha(100),
+              color: c.mutedText(100),
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,

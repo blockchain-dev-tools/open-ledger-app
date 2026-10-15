@@ -15,6 +15,7 @@ import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_code_block.dart';
+import '../../widgets/common/neo_rule.dart';
 import '../../widgets/common/primary_button.dart';
 import '../../widgets/mnemonic/warning_banner.dart';
 import '../../widgets/pin/pin_gate.dart';
@@ -176,7 +177,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
                 '${l10n.accountWithIndex(widget.account.accountIndex)} · '
                 '${widget.account.derivationPath}',
                 style: TextStyle(
-                  color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+                  color: c.mutedText(120),
                   fontSize: 12,
                   fontFamily: 'monospace',
                 ),
@@ -269,10 +270,7 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
             _metaRow(c, l10n.encoding, encodingLabel),
             // Light rules the rows off with a full-bleed black line; dark
             // keeps the original hairline.
-            if (c.neobrutalism)
-              Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
-            else
-              Divider(height: 1, color: c.border),
+            neoRule(c),
           ],
           _metaRow(c, l10n.address, _truncate(widget.account.address)),
         ],

@@ -33,7 +33,7 @@ class PassphraseField extends StatelessWidget {
         Text(
           AppLocalizations.of(context)!.passphraseOptional,
           style: TextStyle(
-            color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+            color: c.mutedText(150),
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -42,7 +42,7 @@ class PassphraseField extends StatelessWidget {
         Text(
           AppLocalizations.of(context)!.bip39PassphraseExplanation,
           style: TextStyle(
-            color: c.neobrutalism ? c.text : c.text.withAlpha(100),
+            color: c.mutedText(100),
             fontSize: 12,
             height: 1.4,
           ),

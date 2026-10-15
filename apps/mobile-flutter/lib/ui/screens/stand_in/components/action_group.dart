@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/color_tokens.dart';
 import '../../../widgets/common/neo_card.dart';
+import '../../../widgets/common/neo_rule.dart';
 
 /// One inset surface card holding tappable [rows] separated by indented
 /// hairlines — the same grouped language as the Settings list.
@@ -16,7 +17,6 @@ class ActionGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final neo = c.neobrutalism;
     return NeoCard(
       clip: true,
       // Legacy chrome was a borderless surface card; dark restores exactly that.
@@ -27,20 +27,16 @@ class ActionGroup extends StatelessWidget {
           for (var i = 0; i < rows.length; i++) ...[
             rows[i],
             if (i < rows.length - 1)
-              if (neo)
-                Divider(
-                  height: Neo.edge,
-                  thickness: Neo.edge,
-                  color: c.neoEdge,
-                )
-              else
-                Divider(
+              neoRule(
+                c,
+                legacy: Divider(
                   height: 1,
                   thickness: 0.5,
                   // Align the divider with the title text (after the icon).
                   indent: 54,
                   color: c.border.withAlpha(140),
                 ),
+              ),
           ],
         ],
       ),

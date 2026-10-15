@@ -30,7 +30,7 @@ class EnigmaVerificationCard extends StatelessWidget {
               Icon(
                 Icons.check_circle_outline,
                 size: 18,
-                color: c.neobrutalism ? c.accent : c.primary,
+                color: c.accent,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -53,7 +53,7 @@ class EnigmaVerificationCard extends StatelessWidget {
               Icon(
                 Icons.check_circle_outline,
                 size: 18,
-                color: c.neobrutalism ? c.accent : c.primary,
+                color: c.accent,
               ),
               const SizedBox(width: 8),
               Expanded(

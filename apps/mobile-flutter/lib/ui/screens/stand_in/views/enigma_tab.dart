@@ -272,7 +272,7 @@ class EnigmaTab extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: radius,
           borderSide: BorderSide(
-            color: neo ? c.accent : c.primary,
+            color: c.accent,
             width: neo ? Neo.edge : 1.5,
           ),
         ),

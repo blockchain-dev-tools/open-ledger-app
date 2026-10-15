@@ -94,7 +94,7 @@ class EntryCard extends StatelessWidget {
                       Text(
                         description,
                         style: TextStyle(
-                          color: neo ? c.text : c.text.withAlpha(140),
+                          color: c.mutedText(140),
                           fontSize: 13,
                           height: 1.3,
                         ),

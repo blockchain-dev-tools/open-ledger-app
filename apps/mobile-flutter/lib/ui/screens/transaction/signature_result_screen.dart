@@ -12,6 +12,7 @@ import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_code_block.dart';
+import '../../widgets/common/neo_rule.dart';
 import '../../widgets/common/primary_button.dart';
 
 /// Signature result screen — shown after a transaction is signed.
@@ -89,7 +90,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                   // Light's lime washes out on the white neo page; the deeper
                   // accent green reads there. Dark keeps the brand lime.
                   color: isSuccess
-                      ? (c.neobrutalism ? c.accent : c.primary)
+                      ? c.accent
                       : c.error,
                 ),
                 const SizedBox(height: 12),
@@ -105,7 +106,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                 Text(
                   AppLocalizations.of(context)!.chainLabel(chain),
                   style: TextStyle(
-                    color: c.neobrutalism ? c.accent : c.primary,
+                    color: c.accent,
                     fontSize: 14,
                   ),
                 ),
@@ -223,13 +224,13 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
               Icon(
                 _expanded ? Icons.expand_less : Icons.expand_more,
                 size: 18,
-                color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                color: c.mutedText(150),
               ),
               const SizedBox(width: 4),
               Text(
                 AppLocalizations.of(context)!.rawSignature,
                 style: TextStyle(
-                  color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                  color: c.mutedText(150),
                   fontSize: 13,
                   fontWeight:
                       c.neobrutalism ? FontWeight.w600 : FontWeight.w500,
@@ -248,7 +249,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
                 child: Icon(
                   Icons.copy,
                   size: 16,
-                  color: c.neobrutalism ? c.accent : c.primary,
+                  color: c.accent,
                 ),
               ),
             ],
@@ -309,9 +310,8 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
 
   /// Hairline rule between detail rows. In neo (light) it becomes the
   /// full-weight brand rule used elsewhere; dark keeps the inset hairline.
-  Widget _separator(ColorTokens c) => c.neobrutalism
-      ? Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
-      : Container(height: 1, color: c.border.withAlpha(60));
+  Widget _separator(ColorTokens c) =>
+      neoRule(c, legacy: Container(height: 1, color: c.border.withAlpha(60)));
 
   static Widget _resultRow(ColorTokens c, String label, String value) {
     return Row(
@@ -322,7 +322,7 @@ class _SignatureResultScreenState extends State<SignatureResultScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: c.neobrutalism ? c.text : c.text.withAlpha(130),
+              color: c.mutedText(130),
               fontSize: 13,
               fontWeight:
                   c.neobrutalism ? FontWeight.w600 : FontWeight.normal,

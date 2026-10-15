@@ -40,7 +40,7 @@ class AccountBackupCard extends StatelessWidget {
                   Icon(
                     Icons.vpn_key_outlined,
                     size: 20,
-                    color: c.neobrutalism ? c.accent : c.primary,
+                    color: c.accent,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -63,9 +63,7 @@ class AccountBackupCard extends StatelessWidget {
                           style: TextStyle(
                             // Light (neo) prints the "QR export" line in solid
                             // text black; dark keeps the original muted tone.
-                            color: c.neobrutalism
-                                ? c.text
-                                : c.text.withAlpha(120),
+                            color: c.mutedText(120),
                             fontSize: 12,
                           ),
                         ),

@@ -182,7 +182,7 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
               child: Text(
                 l10n.walletChip(fingerprint),
                 style: TextStyle(
-                  color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                  color: c.mutedText(150),
                   fontSize: 12,
                   fontFamily: 'monospace',
                 ),

@@ -114,7 +114,7 @@ class ImportTab extends StatelessWidget {
                             valid ? Icons.check_circle : Icons.cancel,
                             size: 18,
                             color: valid
-                                ? (c.neobrutalism ? c.accent : c.primary)
+                                ? c.accent
                                 : c.error,
                           ),
                           const SizedBox(width: 6),
@@ -122,7 +122,7 @@ class ImportTab extends StatelessWidget {
                             valid ? l10n.validMnemonic : l10n.invalidMnemonic,
                             style: TextStyle(
                               color: valid
-                                  ? (c.neobrutalism ? c.accent : c.primary)
+                                  ? c.accent
                                   : c.error,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,

@@ -97,7 +97,7 @@ class _AutoHideCountdownState extends State<AutoHideCountdown> {
           AppLocalizations.of(context)!.autoHideHint(_remaining),
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+            color: c.mutedText(120),
             fontSize: 12,
           ),
         ),

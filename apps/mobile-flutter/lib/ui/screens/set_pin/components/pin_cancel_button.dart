@@ -24,7 +24,7 @@ class PinCancelButton extends StatelessWidget {
         style: TextStyle(
           // Neo inverts the muted grey link to a heavy black one; dark keeps
           // the original thin grey underline.
-          color: neo ? c.text : c.text.withAlpha(120),
+          color: c.mutedText(120),
           fontSize: 14,
           fontWeight: neo ? FontWeight.w700 : FontWeight.normal,
           decoration: TextDecoration.underline,

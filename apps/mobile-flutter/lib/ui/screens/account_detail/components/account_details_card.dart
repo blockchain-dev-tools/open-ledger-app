@@ -8,6 +8,7 @@ import '../../../widgets/common/copy_to_clipboard.dart';
 import '../../../widgets/common/neo_button.dart';
 import '../../../widgets/common/neo_card.dart';
 import '../../../widgets/common/neo_code_block.dart';
+import '../../../widgets/common/neo_rule.dart';
 
 /// One "Details" card with two rows (label left / value right, monospace):
 /// derivation path, and a collapsible public key.
@@ -27,7 +28,7 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
   /// Row-label style. The neo chrome renders labels black and bold so they
   /// read as keys against their values; the legacy chrome keeps them muted grey.
   TextStyle _labelStyle(ColorTokens c) => TextStyle(
-        color: c.neobrutalism ? c.text : c.text.withAlpha(120),
+        color: c.mutedText(120),
         fontSize: 13,
         fontWeight: c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
       );
@@ -50,10 +51,7 @@ class _AccountDetailsCardState extends State<AccountDetailsCard> {
             label: l10n.derivationPath,
             value: account.derivationPath,
           ),
-          if (c.neobrutalism)
-            Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
-          else
-            Divider(height: 1, color: c.border),
+          neoRule(c),
           if (account.publicKey.isNotEmpty)
             _buildPublicKeyRow(context, c, account.publicKey),
         ],

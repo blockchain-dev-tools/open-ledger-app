@@ -234,7 +234,7 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
           Text(
             l10n.enterPinToReveal,
             style: TextStyle(
-              color: c.neobrutalism ? c.text : c.text.withAlpha(140),
+              color: c.mutedText(140),
               fontSize: 14,
             ),
           ),
@@ -290,7 +290,7 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
         Icon(
           Icons.check_circle,
           size: 48,
-          color: c.neobrutalism ? c.accent : c.primary,
+          color: c.accent,
         ),
         const SizedBox(height: 16),
         Text(

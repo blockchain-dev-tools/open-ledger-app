@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/color_tokens.dart';
+import 'neo_rule.dart';
 
 /// One row in a [showNeoOptionSheet]: what it reads, whether it is the current
 /// value, and what to run when it is picked.
@@ -67,12 +68,7 @@ void showNeoOptionSheet({
             // Neo rules a heavy line under the title — twice the option
             // separator's weight — and bounds every option. Dark keeps the
             // original undivided sheet.
-            if (neo)
-              Divider(
-                height: Neo.edge * 2,
-                thickness: Neo.edge * 2,
-                color: c.neoEdge,
-              ),
+            if (neo) neoRule(c, heavy: true),
             for (final (i, opt) in options.indexed) ...[
               InkWell(
                 onTap: () {
@@ -111,12 +107,7 @@ void showNeoOptionSheet({
                   ),
                 ),
               ),
-              if (neo && i < options.length - 1)
-                Divider(
-                  height: Neo.edge,
-                  thickness: Neo.edge,
-                  color: c.neoEdge,
-                ),
+              if (neo && i < options.length - 1) neoRule(c),
             ],
             const SizedBox(height: 8),
           ],

@@ -168,7 +168,7 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
                     Text(
                       l10n.importMnemonicHint,
                       style: TextStyle(
-                        color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                        color: c.mutedText(150),
                         fontSize: 14,
                       ),
                     ),
@@ -210,7 +210,7 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
                       'A passphrase creates a completely different set of wallets. '
                       'Leave empty to use the standard BIP-39 seed.',
                       style: TextStyle(
-                        color: c.neobrutalism ? c.text : c.text.withAlpha(100),
+                        color: c.mutedText(100),
                         fontSize: 11,
                       ),
                     ),

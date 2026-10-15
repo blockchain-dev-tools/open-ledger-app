@@ -117,6 +117,16 @@ class ColorTokens {
     required this.gridLine,
   });
 
+  /// Text one step down from [text]: full-strength ink under neo, a muted tint
+  /// in dark mode.
+  ///
+  /// [darkAlpha] is the tint's alpha. It is a parameter because the pre-neo
+  /// dark greys were tuned per screen by eye (80…200), so passing the original
+  /// value through keeps every screen pixel-identical while the neo half of the
+  /// decision — "secondary text is still full ink" — lives in one place.
+  Color mutedText(int darkAlpha) =>
+      neobrutalism ? text : text.withAlpha(darkAlpha);
+
   static const dark = ColorTokens(
     primary: Color(0xFFA1F44E),
     bg: Color(0xFF000000),

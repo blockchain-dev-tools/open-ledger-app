@@ -154,7 +154,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                   size: 48,
                   // Light's lime washes out on the white neo page; the deeper
                   // accent green reads there. Dark keeps the brand lime.
-                  color: c.neobrutalism ? c.accent : c.primary,
+                  color: c.accent,
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -238,7 +238,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                   style: TextStyle(
                     // Light (neo) prints the label black and bold so it reads as
                     // a key; dark keeps the original muted grey.
-                    color: c.neobrutalism ? c.text : c.text.withAlpha(150),
+                    color: c.mutedText(150),
                     fontSize: 13,
                     fontWeight:
                         c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
@@ -257,7 +257,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
               style: TextStyle(
                 // Light (neo) prints the derivation path in solid text black;
                 // dark keeps the original muted tone.
-                color: c.neobrutalism ? c.text : c.text.withAlpha(100),
+                color: c.mutedText(100),
                 fontSize: 11,
                 fontFamily: 'monospace',
               ),
@@ -271,7 +271,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
   /// Build a [TextSpan] with first 6 and last 6 chars bold+primary.
   TextSpan _highlightedAddress(String address, ColorTokens c) {
     // Light's lime highlights wash out on white; the accent green stands in.
-    final highlight = c.neobrutalism ? c.accent : c.primary;
+    final highlight = c.accent;
     if (address.length <= 12) {
       return TextSpan(text: address, style: TextStyle(color: c.text));
     }

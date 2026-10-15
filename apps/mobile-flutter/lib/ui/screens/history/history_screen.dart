@@ -7,6 +7,7 @@ import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/neo_card.dart';
 import '../../widgets/common/neo_code_block.dart';
+import '../../widgets/common/neo_rule.dart';
 import '../../widgets/tx_details_card.dart';
 
 /// History tab — lists all completed signing operations.
@@ -162,9 +163,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         Text(
                           _truncateAddress(record.signingAddress),
                           style: TextStyle(
-                            color: c.neobrutalism
-                                ? c.text
-                                : c.text.withAlpha(120),
+                            color: c.mutedText(120),
                             fontSize: 12,
                             fontFamily: 'monospace',
                           ),
@@ -221,7 +220,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Text(
                 _formatTimestamp(record.timestamp),
                 style: TextStyle(
-                  color: c.neobrutalism ? c.text : c.text.withAlpha(80),
+                  color: c.mutedText(80),
                   fontSize: 11,
                 ),
               ),
@@ -231,18 +230,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
             if (isExpanded) ...[
               // Light mode rules off the expanded body with a full-bleed brand
               // rule; dark keeps the original inset hairline.
-              if (c.neobrutalism)
-                Divider(
-                  height: Neo.edge,
-                  thickness: Neo.edge,
-                  color: c.neoEdge,
-                )
-              else
-                Container(
+              neoRule(
+                c,
+                legacy: Container(
                   height: 1,
                   color: c.border.withAlpha(60),
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                 ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -309,7 +304,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       children: [
         Text(label,
             style: TextStyle(
-              color: c.neobrutalism ? c.text : c.text.withAlpha(130),
+              color: c.mutedText(130),
               fontSize: 12,
               fontWeight:
                   c.neobrutalism ? FontWeight.w600 : FontWeight.normal,
@@ -349,7 +344,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: c.neobrutalism ? c.text : c.text.withAlpha(130),
+              color: c.mutedText(130),
               fontSize: 12,
               fontWeight:
                   c.neobrutalism ? FontWeight.w600 : FontWeight.normal,

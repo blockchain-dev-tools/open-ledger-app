@@ -52,7 +52,7 @@ class CheckRow extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: neo ? c.text : c.text.withAlpha(200),
+              color: c.mutedText(200),
               fontSize: 14,
             ),
           ),

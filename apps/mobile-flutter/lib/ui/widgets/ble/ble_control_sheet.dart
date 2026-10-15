@@ -9,6 +9,7 @@ import '../../../utils/formatting.dart';
 import '../../theme/color_tokens.dart';
 import '../common/neo_button.dart';
 import '../common/neo_card.dart';
+import '../common/neo_rule.dart';
 import 'ble_log_controller.dart';
 import 'ble_log_view.dart';
 
@@ -301,10 +302,7 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
             ),
             // Neo rules the header off with a black line, matching the option
             // sheets; dark keeps the hairline.
-            if (c.neobrutalism)
-              Divider(height: Neo.edge, thickness: Neo.edge, color: c.neoEdge)
-            else
-              Divider(height: 1, color: c.border),
+            neoRule(c),
             // ── Chain grid (3 columns) ─────────────────────
             // Chain selection is a single-select choice, so a grid of
             // chain tiles reads far denser than full-width rows —
@@ -521,13 +519,13 @@ class _ChainCell extends StatelessWidget {
                         height: 19,
                         decoration: BoxDecoration(
                           // Deep-green tag in neo; dark keeps the lime disc.
-                          color: c.neobrutalism ? c.accent : c.primary,
+                          color: c.accent,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.power_settings_new,
                           size: 13,
-                          color: c.neobrutalism ? c.onAccent : c.onPrimary,
+                          color: c.onAccent,
                         ),
                       ),
                     ),

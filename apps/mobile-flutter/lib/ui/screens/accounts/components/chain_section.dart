@@ -7,6 +7,7 @@ import '../../../../generated/l10n/app_localizations.dart';
 import '../../../../utils/formatting.dart';
 import '../../../theme/color_tokens.dart';
 import '../../../widgets/common/neo_card.dart';
+import '../../../widgets/common/neo_rule.dart';
 import 'account_row.dart';
 import 'add_account_button.dart';
 
@@ -115,9 +116,7 @@ class ChainSection extends StatelessWidget {
                           style: TextStyle(
                             // Light (neo) prints the count in solid text black;
                             // dark keeps the original muted tone.
-                            color: c.neobrutalism
-                                ? c.text
-                                : c.text.withAlpha(115),
+                            color: c.mutedText(115),
                             fontSize: 13,
                           ),
                         ),
@@ -150,14 +149,7 @@ class ChainSection extends StatelessWidget {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (c.neobrutalism)
-                        Divider(
-                          height: Neo.edge,
-                          thickness: Neo.edge,
-                          color: c.neoEdge,
-                        )
-                      else
-                        Divider(height: 1, color: c.borderStrong),
+                      neoRule(c, legacy: Divider(height: 1, color: c.borderStrong)),
                       if (accounts.isEmpty)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
