@@ -60,7 +60,7 @@ BRANCH=""
 NO_PULL=false
 SKIP_RUST=false
 DEVICE=""
-RELEASE=false
+MODE_EXPLICIT=""   # release | debug | ""（未显式指定时按运行模式取默认）
 RUN_ATTACHED=false
 BUILD_ONLY=false
 CHECK_ONLY=false
@@ -74,11 +74,15 @@ usage() {
   --no-pull         跳过 git pull 步骤
   --skip-rust       跳过 Rust 交叉编译（要求 libopen_ledger_crypto.a 已存在）
   --device <udid>   目标 iPhone UDID（默认自动选择唯一连接的 iOS 真机）
-  --release         构建 release（默认 debug）
-  --run             安装并附加调试会话（flutter run，支持热重载）
+  --release         构建 release（默认）
+  --debug           构建 debug（iOS 14+ 下装完不能从桌面图标启动，仅配合 --run 调试用）
+  --run             安装并附加调试会话（flutter run，支持热重载；未指定模式时按 debug 构建）
   --build-only      仅拉取 + 构建，不安装、不执行设备预检
   --check-only      仅执行设备/工具链预检并退出（0=通过，非 0=失败）
   --help            显示本帮助
+
+默认 release：iOS 14+ 只允许由 Flutter 工具链 / Xcode 拉起 debug 版 Flutter App，
+debug 包装到真机后从桌面点不开，故默认产出可直接启动的 release 包。
 
 安装: 构建后用 ios-deploy 原地覆盖安装（不先卸载旧 App），以保留 iPhone 上的开发者信任设置。
 
@@ -97,7 +101,8 @@ while [[ $# -gt 0 ]]; do
     --no-pull)     NO_PULL=true; shift ;;
     --skip-rust)   SKIP_RUST=true; shift ;;
     --device)      DEVICE="$2"; shift 2 ;;
-    --release)     RELEASE=true; shift ;;
+    --release)     MODE_EXPLICIT="release"; shift ;;
+    --debug)       MODE_EXPLICIT="debug"; shift ;;
     --run)         RUN_ATTACHED=true; shift ;;
     --build-only)  BUILD_ONLY=true; shift ;;
     --check-only)  CHECK_ONLY=true; shift ;;
@@ -110,13 +115,6 @@ done
 if [[ -z "$BRANCH" ]]; then
   BRANCH="$(git -C "$REPO_ROOT" symbolic-ref --short HEAD 2>/dev/null || true)"
   BRANCH="${BRANCH:-main}"
-fi
-
-# ─── 构建模式（debug / release）─────────────────────────────────────────────
-if [[ "$RELEASE" == true ]]; then
-  BUILD_MODE="release"
-else
-  BUILD_MODE="debug"
 fi
 
 # ─── 判定运行模式（互斥）────────────────────────────────────────────────────
@@ -132,6 +130,18 @@ MODE="full"
 if [[ "$BUILD_ONLY" == true ]]; then MODE="build-only"; fi
 if [[ "$CHECK_ONLY" == true ]]; then MODE="check-only"; fi
 if [[ "$RUN_ATTACHED" == true ]]; then MODE="run"; fi
+
+# ─── 构建模式（debug / release）─────────────────────────────────────────────
+# 默认 release：iOS 14+ 禁止独立启动 debug 版 Flutter App，debug 包装到真机后
+# 从桌面点不开（只显示 Flutter 的说明文案），故默认产出可直接启动的包。
+# 例外：`--run` 的热重载只在 debug 下可用，未显式指定模式时按 debug 构建。
+if [[ -n "$MODE_EXPLICIT" ]]; then
+  BUILD_MODE="$MODE_EXPLICIT"
+elif [[ "$MODE" == "run" ]]; then
+  BUILD_MODE="debug"
+else
+  BUILD_MODE="release"
+fi
 
 # ─── 派生步骤开关 ───────────────────────────────────────────────────────────
 DO_PULL=false; DO_RUST=false; DO_PUB=false; DO_POD=false

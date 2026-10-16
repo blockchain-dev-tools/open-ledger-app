@@ -24,10 +24,10 @@ install: ## 只安装已构建的 APK（含设备预检）
 check: ## 只做设备连接/模式/权限预检
 	@bash $(SCRIPT) --check-only $(ARGS)
 
-ios: ## iOS：构建并安装到 iPhone（默认 debug）
+ios: ## iOS：构建并安装到 iPhone（默认 release；调试用 ARGS="--debug"）
 	@bash $(IOS_SCRIPT) $(ARGS)
 
-ios-run: ## iOS：构建 + 安装 + 附加调试会话（热重载）
+ios-run: ## iOS：构建 + 安装 + 附加调试会话（热重载，默认 debug）
 	@bash $(IOS_SCRIPT) --run $(ARGS)
 
 ios-build: ## iOS：只构建 Runner.app，不安装

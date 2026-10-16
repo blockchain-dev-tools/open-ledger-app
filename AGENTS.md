@@ -47,3 +47,5 @@ Commands and host prerequisites are in [BUILDING.md](BUILDING.md). Use `--no-ver
 Every changed user-visible flow or BLE/APDU behavior requires a real-device E2E case in `tool/e2e/tests/` as well as relevant unit coverage. State unavailable device coverage candidly. Gallery is web-only and may not import `dart:ffi`, native BLE or FFI implementations.
 
 Keep screenshots, UI dumps and validation logs in ignored root `tmp/` using disposable test wallets. Review staged files, Git identity and all reachable history before publication. Report existing limitations from `SECURITY.md`; do not promote intended behavior into an established guarantee.
+
+On iOS a debug build cannot be launched from the home screen (iOS 14+ restriction), so `apps/mobile-flutter/scripts/build_and_install_ios.sh` defaults to release; use `--debug` only together with an attached debug session (`--run` or `flutter attach`). See [apps/mobile-flutter/scripts/README.md](apps/mobile-flutter/scripts/README.md).

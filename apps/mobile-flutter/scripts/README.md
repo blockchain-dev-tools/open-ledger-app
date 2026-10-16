@@ -81,11 +81,14 @@
 ### iOS
 
 ```bash
-# 默认：git pull + 编译 Rust(iOS) + pub get + pod install + 构建并覆盖安装到唯一的 iPhone
+# 默认：git pull + 编译 Rust(iOS) + pub get + pod install + 构建 release 并覆盖安装到唯一的 iPhone
 ./scripts/build_and_install_ios.sh
 
-# 附加调试会话（构建 + 安装 + 启动 + 热重载）
+# 附加调试会话（构建 debug + 安装 + 启动 + 热重载）
 ./scripts/build_and_install_ios.sh --run
+
+# 构建 debug 包（iOS 14+ 下不能从桌面图标启动，仅配合调试）
+./scripts/build_and_install_ios.sh --debug
 
 # 只改了 Dart 代码：跳过 Rust 编译（要求 ios/libopen_ledger_crypto.a 已存在）
 ./scripts/build_and_install_ios.sh --skip-rust
@@ -103,11 +106,21 @@
 | `--no-pull` | 跳过 git pull |
 | `--skip-rust` | 跳过 Rust 交叉编译（要求静态库已存在） |
 | `--device <udid>` | 目标 iPhone UDID（默认自动选择唯一连接的 iOS 真机） |
-| `--release` | 构建 release（默认 debug） |
-| `--run` | 安装后附加调试会话（`flutter run`，支持热重载） |
+| `--release` | 构建 release（默认） |
+| `--debug` | 构建 debug（仅调试用，见下） |
+| `--run` | 安装后附加调试会话（`flutter run`，支持热重载；未指定模式时按 debug 构建） |
 | `--build-only` | 仅拉取 + 构建，不安装、不执行设备预检 |
 | `--check-only` | 仅执行设备/工具链预检并退出（0=通过，非 0=失败） |
 | `--help` | 显示帮助 |
+
+#### 模式选择（重要）
+
+- **默认 `release`**：因为 iOS 14+ 只允许 Flutter 工具链 / IDE 插件 / Xcode 拉起 debug 版 Flutter App，
+  debug 包装到真机后**从桌面图标点不开**（只显示 Flutter 的英文说明文案）——而这条流水线的用途正是
+  「装到真机给人用」，所以默认产出可直接启动的 release 包。
+- `--debug` 只在需要调试时用；此时用 `--run`（`flutter run`）或在调试态下 `flutter attach` 拉起。
+  debug 包的 `print` 输出不会进设备 syslog，读 Dart 层日志要靠调试会话。
+- 实测（iPhone 11 / iOS 16.7.1）：默认 release 装完桌面点开正常；debug 装完点图标不可用。
 
 设备预检会校验：`flutter` / `xcodebuild` / `pod` / `python3` / `ios-deploy` 可用性、Rust `aarch64-apple-ios` target、以及真机连接情况（自动选中唯一 iOS 真机；多台需 `--device`）。签名团队不在此脚本内配置，取自 `ios/Runner.xcodeproj` 的 `DEVELOPMENT_TEAM`。
 
@@ -127,13 +140,14 @@ make install               # 只安装已构建的 APK（含设备预检）
 make check                 # 只做设备预检
 
 # iOS
-make ios                   # 构建并安装到 iPhone（默认 debug）
-make ios-run               # 构建 + 安装 + 附加调试会话（热重载）
+make ios                   # 构建并安装到 iPhone（默认 release）
+make ios-run               # 构建 + 安装 + 附加调试会话（热重载，默认 debug）
 make ios-build             # 只构建 Runner.app，不安装
 make ios-check             # 设备/工具链预检（不构建）
 
-# 透传额外参数（跳过 Rust / 指定设备 / release）
+# 透传额外参数（跳过 Rust / 指定设备 / 调试模式）
 make deploy ARGS="--skip-rust"
 make deploy ARGS="--device <device-id> --release"
 make ios ARGS="--device <udid>"
+make ios ARGS="--debug"
 ```
