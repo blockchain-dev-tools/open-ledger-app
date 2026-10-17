@@ -1,11 +1,6 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="branding/openledger-community-dark.svg">
-    <img alt="OpenLedger" src="branding/openledger-community-light.svg" width="450">
-  </picture>
+  <img alt="OpenLedger" src="branding/openledger-community-light.svg" width="450">
 </p>
-
-<h1 align="center">Open Ledger App</h1>
 
 <p align="center">
   <strong>A fully open-source, Ledger protocol-compatible cold wallet that runs on iOS.</strong><br>

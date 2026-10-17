@@ -1,11 +1,6 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="branding/openledger-community-dark.svg">
-    <img alt="OpenLedger" src="branding/openledger-community-light.svg" width="450">
-  </picture>
+  <img alt="OpenLedger" src="branding/openledger-community-light.svg" width="450">
 </p>
-
-<h1 align="center">Open Ledger App</h1>
 
 <p align="center">
   <strong>一个完全开源，Ledger协议兼容的可以运行在ios上的冷钱包。</strong><br>
