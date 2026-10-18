@@ -1,0 +1,55 @@
+name: Bug report
+description: Something broke — pairing failure, crash, UI issue, wrong data
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Never include seed phrases, private keys, PINs or real addresses in this report.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android (APK)
+        - iOS (self-signed IPA)
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build under test
+      placeholder: e.g. v1.1.0 pre-release · app-release.apk · commit abc1234
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device & OS
+      placeholder: e.g. Pixel 6 · Android 14 / iPhone 12 · iOS 18.1
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      placeholder: What should happen, and what actually happened (error text / screenshots).
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: This report contains no seed phrases, private keys, PINs or real addresses
+          required: true

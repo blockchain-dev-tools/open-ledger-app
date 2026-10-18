@@ -1,0 +1,67 @@
+name: Compatibility Report (BLE host wallet)
+description: Report a real-world pairing / signing test with a host wallet (OKX, TokenPocket, Phantom, TronLink, …)
+labels: [compatibility-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! Each report gets reproduced by a maintainer, then the
+        [compatibility matrix](https://github.com/blockchain-dev-tools/open-ledger-app/blob/main/docs/testing/ble-wallets.md) cell gets its ✅
+        and you get public credit in the weekly Dev Notes.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android (APK)
+        - iOS (self-signed IPA)
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build under test
+      description: APK / IPA version or source commit
+      placeholder: e.g. v1.1.0 pre-release · app-release.apk · commit abc1234
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Signing device & OS
+      placeholder: e.g. Pixel 6 · Android 14 / iPhone 12 · iOS 18.1
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host wallet & version
+      placeholder: e.g. OKX Wallet 6.x
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Step-by-step results
+      description: For each flow — address query, send, sign message, reject — note success / failure point and error text.
+      placeholder: |
+        1. Pairing: …
+        2. Address query: …
+        3. Send (small amount): …
+        4. Sign message: …
+        5. Reject: …
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots / recordings
+      description: Blur any address, amount or account info you don't want public.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I used a disposable test wallet and will not post seed phrases, private keys, PINs or real addresses
+          required: true
