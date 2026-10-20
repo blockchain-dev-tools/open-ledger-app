@@ -295,9 +295,12 @@ Future<void> coldStart(WidgetTester tester) async {
     [
       find.byKey(const Key(kKeyWelcomeImport)),
       find.byKey(const Key(kKeyUnlockDigit1)),
+      // A wallet that was locked out before the restart goes straight to the
+      // lockout view — the pad is never rendered.
+      find.byKey(const Key('reset-wallet')),
     ],
     timeout: kBootTimeout,
-    reason: 'App 首屏（Welcome 或 Unlock）',
+    reason: 'App 首屏（Welcome / Unlock / 锁定页）',
   );
 }
 

@@ -22,6 +22,7 @@ class PinGate extends StatefulWidget {
     super.key,
     required this.exportService,
     required this.onUnlocked,
+    this.onLockedOut,
     this.keyPrefix = 'export-pin',
   });
 
@@ -30,6 +31,11 @@ class PinGate extends StatefulWidget {
   /// Called with the verified PIN; returns the secret view, or `null` when
   /// the secret could not be resolved (the gate stays on the PIN phase).
   final Future<Widget?> Function(String pin) onUnlocked;
+
+  /// Invoked once when the gate is — or becomes — locked out, so the host
+  /// screen can leave this route for the unlock screen's lockout view, the
+  /// single reset exit (T-003). Not called while attempts remain.
+  final VoidCallback? onLockedOut;
 
   /// Prefix for the pad's widget keys (`$keyPrefix-btn-1`, …).
   final String keyPrefix;
@@ -40,15 +46,45 @@ class PinGate extends StatefulWidget {
 
 class _PinGateState extends State<PinGate> {
   static const int _maxPinLength = 6;
-  static const int _maxAttempts = 5;
 
   final List<int> _pin = [];
-  int _attemptCount = 0;
   bool _shaking = false;
-  bool _lockedOut = false;
+
+  /// The global persisted failed-attempt counter, shared with the unlock
+  /// gate — displayed as-is, never a screen-local count (T-003). Re-read
+  /// after every failure so a restart-proof truth backs the display.
+  late int _attempts = widget.exportService.pinAttempts;
+  late final int _maxAttempts = widget.exportService.maxPinAttempts;
+
+  /// Derived from the persisted counter: the 5th failure anywhere locks the
+  /// wallet for good, so the gate reflects it instead of inventing a local
+  /// lockout that silently resets on exit.
+  bool get _lockedOut => _attempts >= _maxAttempts;
 
   /// The revealed secret view, built once the PIN checks out.
   Widget? _unlocked;
+
+  /// Whether [PinGate.onLockedOut] already fired — the host route only needs
+  /// to be left once.
+  bool _lockoutReported = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Entering the gate on an already-locked wallet must not render a PIN pad
+    // that can never succeed: hand over to the reset exit right away.
+    if (_lockedOut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reportLockout();
+      });
+    }
+  }
+
+  void _reportLockout() {
+    if (_lockoutReported) return;
+    _lockoutReported = true;
+    widget.onLockedOut?.call();
+  }
 
   void _onDigitTap(int digit) {
     if (_lockedOut || _unlocked != null) return;
@@ -89,12 +125,13 @@ class _PinGateState extends State<PinGate> {
     }
 
     setState(() {
-      _attemptCount++;
+      _attempts = widget.exportService.pinAttempts;
       _shaking = true;
-      if (_attemptCount >= _maxAttempts) {
-        _lockedOut = true;
-      }
     });
+
+    // The failure that exhausted the counter locks the whole wallet — leave
+    // this route for the reset exit instead of sitting on a dead pad.
+    if (_lockedOut) _reportLockout();
 
     Future.delayed(const Duration(milliseconds: 400), () {
       if (!mounted) return;
@@ -146,13 +183,15 @@ class _PinGateState extends State<PinGate> {
             l10n.enterPinToReveal,
             style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
           ),
-        if (!_lockedOut && _attemptCount > 0)
+        if (!_lockedOut && _attempts > 0)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              '${l10n.attemptsRemaining}: ${_maxAttempts - _attemptCount}/$_maxAttempts',
+              '${l10n.attemptsRemaining}: ${_maxAttempts - _attempts}/$_maxAttempts',
               style: TextStyle(
-                color: _attemptCount >= 3 ? c.error : c.text.withAlpha(130),
+                color: _maxAttempts - _attempts <= 2
+                    ? c.error
+                    : c.text.withAlpha(130),
                 fontSize: 13,
               ),
             ),
@@ -182,6 +221,9 @@ class _PinGateState extends State<PinGate> {
   }
 
   Widget _buildLockout(ColorTokens c, AppLocalizations l10n) {
+    // No reset button here on purpose: the unlock screen's lockout view is
+    // the single reset exit. The gate only points back to it — no "try again
+    // later", there is no cooldown to wait out (T-003).
     return Column(
       children: [
         Text(
@@ -191,7 +233,7 @@ class _PinGateState extends State<PinGate> {
         ),
         const SizedBox(height: 8),
         Text(
-          l10n.pleaseTryAgainLater,
+          l10n.walletLockedHint,
           textAlign: TextAlign.center,
           style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
         ),

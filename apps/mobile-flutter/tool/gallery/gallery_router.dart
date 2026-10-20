@@ -386,7 +386,14 @@ GoRouter createGalleryRouter(GalleryBoot boot) {
           ),
           GoRoute(
             path: '/screens/unlock',
-            builder: (context, state) => const UnlockScreen(),
+            // `?state=locked` previews the permanent lockout view a wallet
+            // with five exhausted attempts enters directly (no PIN pad).
+            builder: (context, state) =>
+                state.uri.queryParameters['state'] == 'locked'
+                    ? UnlockScreen(
+                        walletService: FakeWalletService(lockedOut: true),
+                      )
+                    : const UnlockScreen(),
           ),
           GoRoute(
             path: '/screens/backup-seed',

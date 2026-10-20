@@ -20,13 +20,17 @@ import '../../widgets/mnemonic/mnemonic_word_grid.dart';
 /// Two-phase screen:
 ///   1. **PIN entry** — user enters their 6-digit wallet PIN via on-screen
 ///      number pad to verify ownership.
-///   2. **Seed reveal** — upon successful verification, the 12-word mnemonic
-///      grid is revealed with a copy-to-clipboard button.
+///   2. **Seed reveal** — upon successful verification, the mnemonic revealed
+///      by [IWalletService.revealMnemonic] is shown with a copy-to-clipboard
+///      button.
 ///
-/// PIN attempts are limited (max 5), mirroring the [UnlockScreen] pattern.
-/// A warning banner persists throughout both phases: "Never share your seed phrase!"
-///
-/// Ported from the original TypeScript implementation.
+/// PIN verification is session-scoped ([IWalletService.verifySessionPin]) and
+/// counts against the **global persisted attempt counter** shared with the
+/// unlock gate (T-003): the displayed remaining attempts and the lockout are
+/// derived from that truth, never from a screen-local count. Without a wallet
+/// service (gallery / dev) the screen stays on the PIN phase — nothing is
+/// revealed. A warning banner persists throughout both phases: "Never share
+/// your seed phrase!"
 class BackupSeedScreen extends StatefulWidget {
   final IWalletService? walletService;
 
@@ -40,27 +44,26 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
   /// Current PIN digits entered.
   final List<int> _pin = [];
 
-  /// Number of failed PIN attempts.
-  int _attemptCount = 0;
-
-  /// Whether the PIN pad should shake on failure.
   bool _shaking = false;
-
-  /// Whether the user is locked out (max attempts reached).
-  bool _lockedOut = false;
 
   /// Whether the mnemonic has been successfully revealed.
   bool _revealed = false;
 
-  /// The revealed mnemonic words (demo words until WalletService is wired).
-  final List<String> _mnemonicWords = [
-    'abandon', 'ability', 'able', 'about',
-    'above', 'absent', 'absorb', 'abstract',
-    'absurd', 'abuse', 'access', 'accident',
-  ];
+  /// The revealed mnemonic words (empty until [IWalletService.revealMnemonic]
+  /// succeeds — no demo words; the reveal view is unreachable without a
+  /// service).
+  List<String> _mnemonicWords = const [];
+
+  /// The global persisted failed-attempt counter, shared with the unlock
+  /// gate — displayed as-is, never a screen-local count (T-003).
+  late int _attempts = widget.walletService?.pinAttempts ?? 0;
+  late final int _maxAttempts = widget.walletService?.maxPinAttempts ?? 5;
+
+  /// Derived from the persisted counter (T-003) — see [PinGate] for the
+  /// rationale.
+  bool get _lockedOut => _attempts >= _maxAttempts;
 
   static const int _maxPinLength = 6;
-  static const int _maxAttempts = 5;
 
   /// Adds [digit] to the PIN entry.
   void _onDigitTap(int digit) {
@@ -82,39 +85,41 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
     setState(() => _pin.removeLast());
   }
 
-  /// Verifies the entered PIN via [WalletService.verifySessionPin].
+  /// Verifies the entered PIN via [WalletService.verifySessionPin], then
+  /// reveals the real mnemonic via [WalletService.revealMnemonic].
   ///
   /// Session-scoped: the seed being revealed belongs to the active vault, so
   /// only the current tier's PIN may unlock it (another tier's valid PIN is
-  /// rejected).
+  /// rejected). Failures count against the global persisted counter.
   Future<void> _verifyPin() async {
     final entered = _pin.join();
     final ws = widget.walletService;
 
-    // Fallback for dev/test without a wallet service.
-    if (ws == null) {
-      setState(() => _revealed = true);
-      return;
-    }
+    // No service (gallery / dev): nothing to verify, nothing to reveal.
+    if (ws == null) return;
 
     try {
       final ok = await ws.verifySessionPin(entered);
       if (!mounted) return;
 
       if (ok) {
-        setState(() => _revealed = true);
-        return;
+        final words = await ws.revealMnemonic(entered);
+        if (!mounted) return;
+        if (words != null && words.isNotEmpty) {
+          setState(() {
+            _mnemonicWords = words.split(' ');
+            _revealed = true;
+          });
+          return;
+        }
       }
     } catch (_) {
       // Verification failed — treat as incorrect PIN.
     }
 
     setState(() {
-      _attemptCount++;
+      _attempts = ws.pinAttempts;
       _shaking = true;
-      if (_attemptCount >= _maxAttempts) {
-        _lockedOut = true;
-      }
     });
 
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -238,13 +243,15 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
               fontSize: 14,
             ),
           ),
-        if (!_lockedOut && _attemptCount > 0)
+        if (!_lockedOut && _attempts > 0)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              '${l10n.attemptsRemaining}: ${_maxAttempts - _attemptCount}/$_maxAttempts',
+              '${l10n.attemptsRemaining}: ${_maxAttempts - _attempts}/$_maxAttempts',
               style: TextStyle(
-                color: _attemptCount >= 3 ? c.error : c.text.withAlpha(130),
+                color: _maxAttempts - _attempts <= 2
+                    ? c.error
+                    : c.text.withAlpha(130),
                 fontSize: 13,
               ),
             ),
@@ -371,6 +378,8 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
   }
 
   Widget _buildLockoutView(ColorTokens c, AppLocalizations l10n) {
+    // No reset button here on purpose: the unlock screen's lockout view is
+    // the single reset exit. The gate only points back to it (T-003).
     return Column(
       children: [
         Text(
@@ -380,7 +389,7 @@ class _BackupSeedScreenState extends State<BackupSeedScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          l10n.pleaseTryAgainLater,
+          l10n.walletLockedHint,
           textAlign: TextAlign.center,
           style: TextStyle(color: c.text.withAlpha(140), fontSize: 14),
         ),

@@ -43,11 +43,25 @@ void main() {
       reason: '锁定后应隐藏数字键盘',
     );
 
-    // ── 5. 重置钱包 → 回到 Welcome ────────────────────────────────
+    // ── 5. 锁定态冷启动：进入页面就直接是锁定视图，无需再输 PIN ────
+    await coldStart(tester);
+    await waitForKey(tester, 'reset-wallet');
+    expect(
+      find.byKey(const Key(kKeyUnlockDigit1)),
+      findsNothing,
+      reason: '已锁定冷启动不应先渲染数字键盘',
+    );
+
+    // ── 6. 重置要二次确认：取消不销毁，确认才销毁 → Welcome ────────
     await tapKey(tester, 'reset-wallet');
+    await tapKey(tester, 'reset-wallet-cancel');
+    await waitForKey(tester, 'reset-wallet');
+
+    await tapKey(tester, 'reset-wallet');
+    await tapKey(tester, 'reset-wallet-confirm');
     await waitForKey(tester, kKeyWelcomeImport, timeout: kCryptoTimeout);
 
-    // ── 6. 冷启动仍是 Welcome —— 证明钱包是被真清掉，不是只切了界面 ─
+    // ── 7. 冷启动仍是 Welcome —— 证明钱包是被真清掉，不是只切了界面 ─
     await coldStart(tester);
     expect(
       find.byKey(const Key(kKeyWelcomeImport)),

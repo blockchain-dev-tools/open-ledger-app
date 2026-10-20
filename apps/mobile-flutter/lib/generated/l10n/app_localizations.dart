@@ -162,6 +162,18 @@ abstract class AppLocalizations {
   /// **'Locked out'**
   String get lockedOut;
 
+  /// No description provided for @lockedOutReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Five incorrect PIN attempts have permanently locked this wallet.'**
+  String get lockedOutReason;
+
+  /// No description provided for @lockedOutConsequence.
+  ///
+  /// In en, this message translates to:
+  /// **'Resetting destroys every key on this device. The wallet can only be restored by re-importing your recovery phrase — without a backup, the funds are lost.'**
+  String get lockedOutConsequence;
+
   /// No description provided for @resetWallet.
   ///
   /// In en, this message translates to:
@@ -849,7 +861,7 @@ abstract class AppLocalizations {
   /// No description provided for @resetWalletConfirm.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure? This will delete all wallet data and cannot be undone.'**
+  /// **'Are you sure? This deletes every key on this device and cannot be undone. The only way to restore the wallet is to re-import your recovery phrase.'**
   String get resetWalletConfirm;
 
   /// No description provided for @reset.
@@ -1152,11 +1164,11 @@ abstract class AppLocalizations {
   /// **'Make sure you are in a private place before viewing.'**
   String get makeSurePrivate;
 
-  /// No description provided for @pleaseTryAgainLater.
+  /// No description provided for @walletLockedHint.
   ///
   /// In en, this message translates to:
-  /// **'Please try again later or reset your wallet.'**
-  String get pleaseTryAgainLater;
+  /// **'The wallet is permanently locked. Go back and reset your wallet to continue.'**
+  String get walletLockedHint;
 
   /// No description provided for @yourRiddle.
   ///

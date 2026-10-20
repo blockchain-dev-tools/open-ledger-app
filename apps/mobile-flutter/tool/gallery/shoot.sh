@@ -90,6 +90,7 @@ scenarios=(
   "enigma-mnemonic|/screens/enigma-mnemonic"
   "set-pin|/screens/set-pin"
   "unlock|/screens/unlock"
+  "unlock-locked|/screens/unlock?state=locked"
   "backup-seed|/screens/backup-seed"
   "transaction|/screens/transaction"
   "confirm-address|/screens/confirm-address"
@@ -166,6 +167,7 @@ shoot stand-in-status '/screens/stand-in?configured=1' light en
 # needs a light capture — the dark pass above never sees their neo chrome.
 shoot welcome /screens/welcome light en
 shoot unlock /screens/unlock light en
+shoot unlock-locked '/screens/unlock?state=locked' light en
 shoot set-pin /screens/set-pin light en
 shoot entropy /screens/entropy light en
 shoot generate-mnemonic /screens/generate-mnemonic light en

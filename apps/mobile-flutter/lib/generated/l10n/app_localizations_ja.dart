@@ -39,6 +39,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get lockedOut => 'ロックアウト';
 
   @override
+  String get lockedOutReason => 'PINを5回誤入力したため、この端末のウォレットは永久にロックされました。';
+
+  @override
+  String get lockedOutConsequence =>
+      'リセットすると本端末のすべての鍵が削除されます。ウォレットはリカバリーフレーズの再インポートでのみ復元でき、バックアップがない場合は資金を永久に失います。';
+
+  @override
   String get resetWallet => 'ウォレットをリセット';
 
   @override
@@ -393,7 +400,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get resetWalletTitle => 'ウォレットをリセット';
 
   @override
-  String get resetWalletConfirm => '本当にすべてのウォレットデータを削除しますか？この操作は元に戻せません。';
+  String get resetWalletConfirm =>
+      '本当にリセットしますか？本端末のすべての鍵を削除し、この操作は元に戻せません。ウォレットはリカバリーフレーズの再インポートでのみ復元できます。';
 
   @override
   String get reset => 'リセット';
@@ -550,7 +558,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get makeSurePrivate => '閲覧する前に、プライベートな場所にいることを確認してください。';
 
   @override
-  String get pleaseTryAgainLater => '後でもう一度試すか、ウォレットをリセットしてください。';
+  String get walletLockedHint => 'ウォレットは永久にロックされました。戻ってウォレットをリセットしてください。';
 
   @override
   String get yourRiddle => 'あなたの合言葉';

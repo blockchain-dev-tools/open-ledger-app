@@ -87,6 +87,9 @@ class _MockWalletService implements IWalletService {
   int get pinAttempts => 0;
 
   @override
+  int get maxPinAttempts => 5;
+
+  @override
   Future<WalletAccounts> setupWallet(
     String mnemonic, {
     required String pin,

@@ -51,6 +51,7 @@ class _MockWalletService implements IWalletService {
   set seedHex(String? v) => _seedHex = v;
 
   @override int get pinAttempts => 0;
+  @override int get maxPinAttempts => 5;
 
   @override Future<bool> hasWallet() async { calls.add('hasWallet'); return true; }
   @override Future<bool> isLocked() async { calls.add('isLocked'); return false; }

@@ -39,6 +39,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get lockedOut => '잠김';
 
   @override
+  String get lockedOutReason => 'PIN을 5회 잘못 입력하여 이 기기의 지갑이 영구적으로 잠겼습니다.';
+
+  @override
+  String get lockedOutConsequence =>
+      '초기화하면 이 기기의 모든 키가 삭제됩니다. 지갑은 복구 문구를 다시 가져와야만 복원할 수 있으며, 백업이 없으면 자금을 영구적으로 잃게 됩니다.';
+
+  @override
   String get resetWallet => '지갑 초기화';
 
   @override
@@ -393,7 +400,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get resetWalletTitle => '지갑 초기화';
 
   @override
-  String get resetWalletConfirm => '정말로 모든 지갑 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.';
+  String get resetWalletConfirm =>
+      '정말로 초기화하시겠습니까? 이 기기의 모든 키를 삭제하며 되돌릴 수 없습니다. 지갑은 복구 문구를 다시 가져와야만 복원할 수 있습니다.';
 
   @override
   String get reset => '초기화';
@@ -550,7 +558,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get makeSurePrivate => '확인하기 전에 개인적인 공간에 있는지 확인하세요.';
 
   @override
-  String get pleaseTryAgainLater => '나중에 다시 시도하거나 지갑을 초기화하세요.';
+  String get walletLockedHint =>
+      '지갑이 영구적으로 잠겼습니다. 돌아가서 지갑을 초기화해야 계속 사용할 수 있습니다.';
 
   @override
   String get yourRiddle => '내 비밀 문구';

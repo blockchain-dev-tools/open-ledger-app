@@ -26,6 +26,16 @@ abstract class IExportService {
   /// The active vault's accounts; empty while locked.
   List<ChainAccount> get accounts;
 
+  // ── PIN gate state ─────────────────────────────────────────────────
+
+  /// The global persisted failed-attempt counter, shared with the cold-start
+  /// unlock gate: the 5th failure anywhere locks the wallet for good (I7).
+  /// Session gates display this value as-is — never a screen-local count.
+  int get pinAttempts;
+
+  /// Max failed attempts before lockout; [pinAttempts] is compared against it.
+  int get maxPinAttempts;
+
   /// Re-verify the **session** PIN before a secret is shown (contract I6).
   ///
   /// Session-scoped on purpose: another tier's valid PIN must be rejected,

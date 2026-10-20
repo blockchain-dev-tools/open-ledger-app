@@ -39,6 +39,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lockedOut => '已锁定';
 
   @override
+  String get lockedOutReason => '连续 5 次 PIN 输入错误，本机钱包已永久锁定。';
+
+  @override
+  String get lockedOutConsequence =>
+      '重置会销毁本机全部密钥。钱包只能通过重新导入助记词恢复；没有助记词备份，资金将永久丢失。';
+
+  @override
   String get resetWallet => '重置钱包';
 
   @override
@@ -390,7 +397,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resetWalletTitle => '重置钱包';
 
   @override
-  String get resetWalletConfirm => '确定要删除所有钱包数据吗？此操作不可撤销。';
+  String get resetWalletConfirm => '确定要重置吗？此操作会销毁本机全部密钥，且不可撤销。钱包只能通过重新导入助记词恢复。';
 
   @override
   String get reset => '重置';
@@ -545,7 +552,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get makeSurePrivate => '请确保您在私密环境中查看。';
 
   @override
-  String get pleaseTryAgainLater => '请稍后重试或重置钱包。';
+  String get walletLockedHint => '钱包已永久锁定，请返回并重置钱包后才能继续使用。';
 
   @override
   String get yourRiddle => '您的暗语';
