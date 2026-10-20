@@ -121,6 +121,13 @@ const List<GalleryItem> _authItems = [
     path: '/screens/unlock',
     pushRoute: true,
   ),
+  GalleryItem(
+    title: 'Unlock · locked out',
+    subtitle: '已锁定态 · 进入即显示锁定页（唯一重置出口）',
+    icon: Icons.lock_outline,
+    path: '/screens/unlock?state=locked',
+    pushRoute: true,
+  ),
 ];
 
 const List<GalleryItem> _signingItems = [

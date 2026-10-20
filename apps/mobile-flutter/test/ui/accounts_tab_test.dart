@@ -64,6 +64,9 @@ class _FakeWalletService implements IWalletService {
   int get pinAttempts => 0;
 
   @override
+  int get maxPinAttempts => 5;
+
+  @override
   Future<WalletAccounts> removeAccount(String chain, String address) async =>
       _accounts!;
 

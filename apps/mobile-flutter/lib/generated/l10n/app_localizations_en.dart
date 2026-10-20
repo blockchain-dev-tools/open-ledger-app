@@ -39,6 +39,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockedOut => 'Locked out';
 
   @override
+  String get lockedOutReason =>
+      'Five incorrect PIN attempts have permanently locked this wallet.';
+
+  @override
+  String get lockedOutConsequence =>
+      'Resetting destroys every key on this device. The wallet can only be restored by re-importing your recovery phrase — without a backup, the funds are lost.';
+
+  @override
   String get resetWallet => 'Reset Wallet';
 
   @override
@@ -402,7 +410,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resetWalletConfirm =>
-      'Are you sure? This will delete all wallet data and cannot be undone.';
+      'Are you sure? This deletes every key on this device and cannot be undone. The only way to restore the wallet is to re-import your recovery phrase.';
 
   @override
   String get reset => 'Reset';
@@ -565,8 +573,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Make sure you are in a private place before viewing.';
 
   @override
-  String get pleaseTryAgainLater =>
-      'Please try again later or reset your wallet.';
+  String get walletLockedHint =>
+      'The wallet is permanently locked. Go back and reset your wallet to continue.';
 
   @override
   String get yourRiddle => 'Your Secret Phrase';

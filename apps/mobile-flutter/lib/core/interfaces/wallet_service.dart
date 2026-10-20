@@ -55,6 +55,11 @@ abstract class IWalletService {
   /// Current PIN attempt count.
   int get pinAttempts;
 
+  /// Max failed PIN attempts before lockout. Shared by every gate — the
+  /// cold-start unlock gate and the session gates all count against the same
+  /// persisted counter (T-003).
+  int get maxPinAttempts;
+
   // ── Session (multi-vault) ──────────────────────────────────────────
 
   /// Vaults visible to the current session.

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/interfaces/export_service.dart';
 import '../../../core/interfaces/screen_security.dart';
@@ -106,6 +107,11 @@ class _SeedQrScreenState extends State<SeedQrScreen> {
                     PinGate(
                       exportService: exportService,
                       keyPrefix: 'export-seed-pin',
+                      // Locked out: leave this pushed route for the unlock
+                      // screen's lockout view — the only reset exit (T-003).
+                      onLockedOut: () {
+                        if (mounted) context.go('/unlock');
+                      },
                       onUnlocked: (pin) async {
                         final revealed = await exportService.revealMnemonic(pin);
                         if (revealed == null || revealed.isEmpty) return null;

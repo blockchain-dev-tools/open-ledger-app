@@ -16,6 +16,8 @@ import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
 import 'package:open_ledger_app/core/models/vault.dart';
 import 'package:open_ledger_app/core/models/wallet_accounts.dart';
 import 'package:open_ledger_app/ui/screens/unlock/unlock_screen.dart';
+import 'package:open_ledger_app/ui/theme/widgets/brand_mark.dart';
+import 'package:open_ledger_app/ui/widgets/pin/pin_dot_indicator.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // Hand-written Mock IWalletService
@@ -68,6 +70,9 @@ class _MockWalletService implements IWalletService {
 
   @override
   int get pinAttempts => 0;
+
+  @override
+  int get maxPinAttempts => 5;
 
   @override
   Future<WalletAccounts> setupWallet(
@@ -216,7 +221,7 @@ GoRouter _testRouter({required Widget unlockScreen}) => GoRouter(
 // ═══════════════════════════════════════════════════════════════════════
 
 void main() {
-  testWidgets('forgot PIN calls resetAll and navigates to welcome',
+  testWidgets('forgot PIN confirms before resetting the wallet',
       (tester) async {
     final mockWallet = _MockWalletService();
 
@@ -247,8 +252,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Tap "Forgot PIN?"
+    // Tapping the link opens the confirmation dialog; nothing is destroyed
+    // until the user confirms (T-019).
     await tester.tap(find.text('Forgot PIN?'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Are you sure'), findsOneWidget);
+    expect(mockWallet.resetAllCalled, isFalse);
+
+    await tester.tap(find.byKey(const Key('reset-wallet-confirm')));
     await tester.pumpAndSettle();
 
     // Verify: resetAll was called (not the session-scoped clearWallet)
@@ -259,7 +271,46 @@ void main() {
     expect(find.text('Welcome Screen'), findsOneWidget);
   });
 
-  testWidgets('reset after lockout calls resetAll and navigates',
+  testWidgets('cancelling the forgot-PIN dialog keeps the wallet',
+      (tester) async {
+    final mockWallet = _MockWalletService();
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: _testRouter(
+          unlockScreen: UnlockScreen(
+            walletService: mockWallet,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Forgot PIN?'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Forgot PIN?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('reset-wallet-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(mockWallet.resetAllCalled, isFalse);
+    // Still on the PIN entry screen.
+    expect(find.text('Enter PIN'), findsOneWidget);
+  });
+
+  testWidgets('an already locked-out wallet shows the lockout view on entry',
       (tester) async {
     final mockWallet = _MockWalletService();
     mockWallet.setLocked();
@@ -282,26 +333,34 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Enter 6 PIN digits to trigger auto-verification.
-    // The mock wallet is locked, so _verifyPin() will set _lockedOut = true.
-    for (int i = 0; i < 6; i++) {
-      await tester.tap(find.byKey(const Key('unlock-btn-1')));
-      await tester.pump();
-    }
-    await tester.pumpAndSettle();
+    // No PIN entry at all: the persisted lockout is checked on entry, so the
+    // pad must never appear.
+    expect(find.byKey(const Key('unlock-btn-1')), findsNothing);
+    // The lockout view is one mark, one title, and no dead input affordances:
+    // the brand mark, the PIN dots and the duplicate headline are all gone
+    // (T-019).
+    expect(find.byType(PinDotIndicator), findsNothing);
+    expect(find.byType(BrandMark), findsNothing);
+    expect(find.byIcon(Icons.lock), findsOneWidget);
+    expect(find.text('Locked out'), findsOneWidget);
 
-    // Lockout view should now show the reset affordance.
+    // The destructive action is labelled once and asks for confirmation.
+    expect(find.text('Reset Wallet'), findsOneWidget);
+    expect(find.textContaining('without a backup'), findsOneWidget);
+
     await tester.scrollUntilVisible(
       find.byKey(const Key('reset-wallet')),
       100,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Reset Wallet'), findsOneWidget);
-
-    // Tap the button itself: the "Reset Wallet" text above it is only the
-    // explanatory label, the tappable control reads "Reset".
     await tester.tap(find.byKey(const Key('reset-wallet')));
+    await tester.pumpAndSettle();
+
+    expect(mockWallet.resetAllCalled, isFalse);
+    expect(find.textContaining('Are you sure'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reset-wallet-confirm')));
     await tester.pumpAndSettle();
 
     // Verify: resetAll was called (not the session-scoped clearWallet)

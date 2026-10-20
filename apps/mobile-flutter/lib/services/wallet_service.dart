@@ -41,6 +41,7 @@ class WalletService implements IWalletService {
   int get pinAttempts => _pinAuth.pinAttempts;
 
   /// Max allowed PIN attempts.
+  @override
   int get maxPinAttempts => _pinAuth.maxPinAttempts;
 
   @override

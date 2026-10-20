@@ -40,6 +40,12 @@ class ExportService implements IExportService {
       _wallet.getAccounts()?.accounts ?? const [];
 
   @override
+  int get pinAttempts => _wallet.pinAttempts;
+
+  @override
+  int get maxPinAttempts => _wallet.maxPinAttempts;
+
+  @override
   Future<bool> verifySessionPin(String pin) => _wallet.verifySessionPin(pin);
 
   @override

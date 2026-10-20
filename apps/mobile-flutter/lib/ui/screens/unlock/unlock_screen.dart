@@ -43,6 +43,32 @@ class _UnlockScreenState extends State<UnlockScreen> {
   static const int _maxPinLength = 6;
   static const int _maxAttempts = 5;
 
+  @override
+  void initState() {
+    super.initState();
+    _reflectPersistedLockout();
+  }
+
+  /// A wallet that is already locked out — five failures anywhere, and the
+  /// counter survives restarts — must show the lockout view on entry, not
+  /// after the user types a full PIN into a pad that can never open anything.
+  Future<void> _reflectPersistedLockout() async {
+    final ws = widget.walletService;
+    if (ws == null) return;
+
+    bool locked;
+    try {
+      locked = await ws.isLocked();
+    } catch (_) {
+      // Unreadable counter: keep normal PIN entry rather than inventing a
+      // lockout.
+      return;
+    }
+
+    if (!mounted || !locked) return;
+    setState(() => _lockedOut = true);
+  }
+
   /// Adds [digit] to the PIN entry (max 6).
   void _onDigitTap(int digit) {
     if (_lockedOut || _verifying) return;
@@ -145,10 +171,50 @@ class _UnlockScreenState extends State<UnlockScreen> {
     }
   }
 
+  /// Confirms the destructive reset before wiping every key (T-019).
+  ///
+  /// Both the lockout view and the "forgot PIN" link land here; the dialog
+  /// spells out that the recovery phrase is the only way back in.
+  Future<void> _confirmResetWallet() async {
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
+    final l10n = AppLocalizations.of(context)!;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text(l10n.resetWalletTitle, style: TextStyle(color: c.text)),
+        content: Text(
+          l10n.resetWalletConfirm,
+          style: TextStyle(color: c.text.withAlpha(200), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('reset-wallet-cancel'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              l10n.cancel,
+              style: TextStyle(color: c.text.withAlpha(150)),
+            ),
+          ),
+          TextButton(
+            key: const Key('reset-wallet-confirm'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.reset, style: TextStyle(color: c.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) await _resetWallet();
+  }
+
   /// Resets the wallet and navigates to Welcome screen via GoRouter.
   ///
-  /// Uses [IWalletService.resetAll] — this path is only reachable when locked
-  /// out, so it must clear **every** tier and credential, not just a session.
+  /// Uses [IWalletService.resetAll] — reached only from the confirmed reset
+  /// path, it must clear **every** tier and credential, not just a session.
   Future<void> _resetWallet() async {
     final appState = widget.appState;
     if (appState != null) {
@@ -197,8 +263,13 @@ class _UnlockScreenState extends State<UnlockScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ── Brand Mark ────────────────────────────────────
-                      const BrandMark(size: 80),
+                      // ── Identity / state mark ─────────────────────────
+                      // Locked out: a single lock glyph replaces the brand
+                      // mark, so the page never shows two logos at once.
+                      if (_lockedOut)
+                        Icon(Icons.lock, size: 56, color: c.error)
+                      else
+                        const BrandMark(size: 80),
 
                       const SizedBox(height: 32),
 
@@ -229,38 +300,37 @@ class _UnlockScreenState extends State<UnlockScreen> {
                           ),
                         ),
 
-                      const SizedBox(height: 28),
+                      // ── PIN entry, or the lockout explanation ─────────
+                      // A locked wallet has nothing left to type: no dots and
+                      // no pad, just the state, its consequence and the reset
+                      // exit.
+                      if (!_lockedOut) ...[
+                        const SizedBox(height: 28),
 
-                      // ── PIN Dots ──────────────────────────────────────
-                      PinShakeWrapper(
-                        shaking: _shaking,
-                        child: PinDotIndicator(
-                          length: _maxPinLength,
-                          filledCount: _pin.length,
+                        PinShakeWrapper(
+                          shaking: _shaking,
+                          child: PinDotIndicator(
+                            length: _maxPinLength,
+                            filledCount: _pin.length,
+                          ),
                         ),
-                      ),
 
-                      const SizedBox(height: 10),
+                        const SizedBox(height: 10),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // ── Number Pad or Lockout ─────────────────────────
-                      if (_lockedOut)
-                        _buildLockoutView(c, l10n)
-                      else
                         PinNumberPad(
                           onDigit: _onDigitTap,
                           onBackspace: _onBackspaceTap,
                           keyPrefix: 'unlock',
                         ),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // ── Forgot PIN ────────────────────────────────────
-                      if (!_lockedOut)
+                        // ── Forgot PIN ──────────────────────────────────
                         GestureDetector(
                           key: const Key('forgot-pin'),
-                          onTap: _resetWallet,
+                          onTap: _confirmResetWallet,
                           child: Text(
                             l10n.forgotPin,
                             style: TextStyle(
@@ -279,6 +349,8 @@ class _UnlockScreenState extends State<UnlockScreen> {
                             ),
                           ),
                         ),
+                      ] else
+                        _buildLockoutView(c, l10n),
                     ],
                   ),
                 ),
@@ -291,29 +363,37 @@ class _UnlockScreenState extends State<UnlockScreen> {
   }
 
   /// Lockout view after max attempts exceeded.
+  ///
+  /// One mark (the lock above the title), one title, then why it is locked,
+  /// what a reset costs, and the single destructive action — no repeated
+  /// headline and no label that only restates the button.
   Widget _buildLockoutView(ColorTokens c, AppLocalizations l10n) {
     return Column(
       children: [
-        Icon(Icons.lock, size: 48, color: c.error),
-        const SizedBox(height: 16),
         Text(
-          l10n.lockedOut,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: c.error, fontSize: 15),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.resetWallet,
+          l10n.lockedOutReason,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: c.mutedText(140),
-            fontSize: 14,
+            color: c.text,
+            fontSize: 15,
+            height: 1.5,
+            fontWeight: c.neobrutalism ? FontWeight.w500 : FontWeight.normal,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
+        Text(
+          l10n.lockedOutConsequence,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: c.mutedText(150),
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 28),
         GestureDetector(
           key: const Key('reset-wallet'),
-          onTap: _resetWallet,
+          onTap: _confirmResetWallet,
           child: NeoCard(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
             // Dark restores the original error-tinted rounded block; light
@@ -324,7 +404,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
             legacyEdgeWidth: 1,
             legacyRadius: R.lg,
             child: Text(
-              l10n.reset,
+              l10n.resetWallet,
               style: TextStyle(
                 color: c.error,
                 fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w600,

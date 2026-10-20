@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/interfaces/export_service.dart';
 import '../../../core/interfaces/screen_security.dart';
@@ -111,6 +112,11 @@ class _PrivateKeyQrScreenState extends State<PrivateKeyQrScreen> {
                     PinGate(
                       exportService: exportService,
                       keyPrefix: 'export-private-key-pin',
+                      // Locked out: leave this pushed route for the unlock
+                      // screen's lockout view — the only reset exit (T-003).
+                      onLockedOut: () {
+                        if (mounted) context.go('/unlock');
+                      },
                       onUnlocked: (pin) async {
                         final encoded =
                             exportService.encodePrivateKey(widget.account);

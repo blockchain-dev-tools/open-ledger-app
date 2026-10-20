@@ -25,12 +25,17 @@ class FakeWalletService implements IWalletService {
   Future<bool> verifySessionPin(String pin) async => true;
   FakeWalletService({
     this.isStandInSession = false,
+    this.lockedOut = false,
     bool standInConfigured = false,
     StandInMode standInMode = StandInMode.hide,
   }) {
     _standInConfigured = standInConfigured;
     _standInMode = standInMode;
   }
+
+  /// Gallery-only: previews the permanent lockout view (5 exhausted attempts)
+  /// instead of the PIN pad. No storage, no counter — purely a UI state.
+  final bool lockedOut;
 
   final WalletAccounts _accounts = sampleWalletAccounts;
   bool _unlocked = true;
@@ -47,7 +52,7 @@ class FakeWalletService implements IWalletService {
   Future<bool> hasWallet() async => true;
 
   @override
-  Future<bool> isLocked() async => false;
+  Future<bool> isLocked() async => lockedOut;
 
   @override
   bool get isUnlocked => _unlocked;
@@ -59,7 +64,10 @@ class FakeWalletService implements IWalletService {
   Future<bool> verifyPin(String pin) async => true;
 
   @override
-  int get pinAttempts => 0;
+  int get pinAttempts => lockedOut ? maxPinAttempts : 0;
+
+  @override
+  int get maxPinAttempts => 5;
 
   @override
   Future<WalletAccounts> setupWallet(

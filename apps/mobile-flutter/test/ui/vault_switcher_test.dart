@@ -98,6 +98,9 @@ class _FakeVaultService implements IWalletService {
   int get pinAttempts => 0;
 
   @override
+  int get maxPinAttempts => 5;
+
+  @override
   int? get sessionDepth => isStandInSession ? 1 : 0;
 
   @override
