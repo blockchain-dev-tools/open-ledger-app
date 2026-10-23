@@ -594,6 +594,35 @@ class SignConfirmation {
     onRequestResolved?.call();
   }
 
+  /// Drop any pending request without recording a history entry.
+  ///
+  /// Used when the wallet locks underneath a pending confirmation: the
+  /// request can no longer be approved (there is no seed to sign with), and
+  /// the confirmation UI must be dismissed. The 60s timeout is cancelled and
+  /// the matching `on…Resolved` callback fires.
+  ///
+  /// No APDU response is sent here — delivery stays with the caller, like
+  /// [reject] / [rejectAddress]. A resolution already in flight
+  /// ([_isResolving]) wins: nothing is cancelled and `false` is returned.
+  ///
+  /// Returns `true` when a pending request was actually dropped.
+  bool cancelPending() {
+    if (_isResolving) return false;
+
+    final hadSign = _pendingRequest != null;
+    final hadAddress = _pendingAddress != null;
+    if (!hadSign && !hadAddress) return false;
+
+    _pendingTimeout?.cancel();
+    _pendingTimeout = null;
+    _pendingRequest = null;
+    _pendingAddress = null;
+
+    if (hadSign) onRequestResolved?.call();
+    if (hadAddress) onAddressRequestResolved?.call();
+    return true;
+  }
+
   /// Sign a [SigningIntent] semantically — no raw APDU re-dispatch.
   ///
   /// Derives the private key from [intent]'s seed + path, then calls

@@ -130,6 +130,8 @@ class _UnlockScreenState extends State<UnlockScreen> {
           // went with them via `onVaultsDestroyed`, so only the records of the
           // vault this session just opened need loading.
           await widget.appState?.loadHistory();
+          // Start the foreground idle window for this session (T-004).
+          widget.appState?.onSessionStarted();
           if (mounted) context.go('/');
         } on StateError catch (e) {
           // Internal error during unlock (corrupted data, etc.).

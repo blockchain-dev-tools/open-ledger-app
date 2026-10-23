@@ -388,6 +388,106 @@ void main() {
   });
 
   // ──────────────────────────────────────────────────────────────────
+  // Foreground idle lock (sliding window)
+  // ──────────────────────────────────────────────────────────────────
+
+  group('foreground idle lock', () {
+    late BleSession idleSession;
+
+    setUp(() {
+      idleSession = BleSession(
+        walletService: walletService,
+        apduHandler: apduHandler,
+        signConfirmation: signConfirmation,
+        autoLockDuration: const Duration(minutes: 1),
+        idleLockDuration: const Duration(seconds: 5),
+      );
+      walletService.isUnlocked = true;
+      walletService.seedHex = 'test-seed';
+      addTearDown(idleSession.dispose);
+    });
+
+    testWidgets('locks after a full window with no interaction',
+        (tester) async {
+      var lockedCallbacks = 0;
+      idleSession.onWalletLocked = () => lockedCallbacks++;
+
+      idleSession.onSessionStarted();
+      await tester.pump(const Duration(seconds: 4));
+      expect(walletService.calls.contains('lock'), isFalse);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(walletService.calls.contains('lock'), isTrue);
+      expect(lockedCallbacks, 1);
+    });
+
+    testWidgets('interaction restarts the window (sliding)', (tester) async {
+      idleSession.onSessionStarted();
+
+      await tester.pump(const Duration(seconds: 4));
+      idleSession.onUserActivity();
+      await tester.pump(const Duration(seconds: 4));
+      expect(walletService.calls.contains('lock'), isFalse);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(walletService.calls.contains('lock'), isTrue);
+    });
+
+    testWidgets('background pauses the idle window', (tester) async {
+      idleSession.onSessionStarted();
+      await tester.pump(const Duration(seconds: 3));
+
+      idleSession.onAppBackgrounded();
+      await tester.pump(const Duration(seconds: 4));
+      expect(walletService.calls.contains('lock'), isFalse);
+
+      idleSession.onAppForegrounded();
+      await tester.pump(const Duration(seconds: 4));
+      expect(walletService.calls.contains('lock'), isFalse);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(walletService.calls.contains('lock'), isTrue);
+    });
+
+    testWidgets('suppressed while a confirmation is pending', (tester) async {
+      idleSession.onSessionStarted();
+      idleSession.setIdleLockSuppressed(true);
+      await tester.pump(const Duration(seconds: 10));
+      expect(walletService.calls.contains('lock'), isFalse);
+
+      idleSession.setIdleLockSuppressed(false);
+      await tester.pump(const Duration(seconds: 4));
+      expect(walletService.calls.contains('lock'), isFalse);
+
+      await tester.pump(const Duration(seconds: 2));
+      expect(walletService.calls.contains('lock'), isTrue);
+    });
+
+    testWidgets('does not start a window while the wallet is locked',
+        (tester) async {
+      walletService.isUnlocked = false;
+
+      idleSession.onSessionStarted();
+      idleSession.onUserActivity();
+      await tester.pump(const Duration(seconds: 20));
+
+      expect(walletService.calls.contains('lock'), isFalse);
+    });
+
+    testWidgets('idle lock leaves BLE advertising untouched', (tester) async {
+      idleSession.blePeripheral = blePeripheral;
+      await blePeripheral.startAdvertising();
+      blePeripheral.calls.clear();
+
+      idleSession.onSessionStarted();
+      await tester.pump(const Duration(seconds: 6));
+
+      expect(walletService.calls.contains('lock'), isTrue);
+      expect(blePeripheral.calls.contains('stopAdvertising'), isFalse);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────
   // dispose
   // ──────────────────────────────────────────────────────────────────
 

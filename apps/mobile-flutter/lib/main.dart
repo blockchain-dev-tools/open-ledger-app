@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -45,7 +46,8 @@ class OpenLedgerAppApp extends StatefulWidget {
   State<OpenLedgerAppApp> createState() => _OpenLedgerAppAppState();
 }
 
-class _OpenLedgerAppAppState extends State<OpenLedgerAppApp> {
+class _OpenLedgerAppAppState extends State<OpenLedgerAppApp>
+    with WidgetsBindingObserver {
   final AppState _appState = AppState(
     settingsService: SettingsService(
       repo: SettingsRepositoryImpl(),
@@ -60,7 +62,37 @@ class _OpenLedgerAppAppState extends State<OpenLedgerAppApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Any pointer down counts as activity for the foreground idle window
+    // (sliding lock). A global route also sees taps no widget claims.
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onGlobalPointer);
     _initApp();
+  }
+
+  /// Restart the foreground idle window on every pointer down.
+  void _onGlobalPointer(PointerEvent event) {
+    if (event is PointerDownEvent) _appState.onUserActivity();
+  }
+
+  /// Feed App lifecycle to the wallet session (contract J8/I8): leaving the
+  /// foreground starts the background lock timer, returning either locks
+  /// immediately (timeout elapsed) or restarts the foreground idle window.
+  ///
+  /// `inactive` is deliberately ignored — it also fires for the control
+  /// centre, permission dialogs and the iOS app switcher, none of which mean
+  /// the device left the app.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _appState.onAppBackgrounded();
+      case AppLifecycleState.resumed:
+        _appState.onAppForegrounded();
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
+    }
   }
 
   Future<void> _initApp() async {
@@ -104,6 +136,10 @@ class _OpenLedgerAppAppState extends State<OpenLedgerAppApp> {
     // Inject address-confirmation navigation callback.
     _appState.onAddressRequest = _navigateToAddressConfirm;
 
+    // Auto-lock (background timeout or foreground idle) sends the user back
+    // to Unlock, clearing the navigation stack (I12).
+    _appState.onLocked = () => _router?.go('/unlock');
+
     // Initialize BLE peripheral for Ledger Nano X compatibility, applying the
     // persisted BLE name before any advertising starts.
     final blePeripheral = BlePeripheral();
@@ -125,6 +161,8 @@ class _OpenLedgerAppAppState extends State<OpenLedgerAppApp> {
 
   @override
   void dispose() {
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onGlobalPointer);
+    WidgetsBinding.instance.removeObserver(this);
     _appState.dispose();
     super.dispose();
   }
