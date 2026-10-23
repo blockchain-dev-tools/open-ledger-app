@@ -57,15 +57,9 @@ class BleSession {
   bool _idleLockSuppressed = false;
 
   /// Background timeout before locking.
-  ///
-  /// TODO(T-004): temporarily 5 seconds for on-device testing — restore to
-  /// `Duration(minutes: 5)` once verified (see `decisions/D-015`).
   final Duration autoLockDuration;
 
   /// Foreground idle timeout (sliding window: every interaction restarts it).
-  ///
-  /// TODO(T-004): temporarily 5 seconds for on-device testing — restore to
-  /// `Duration(minutes: 5)` once verified (see `decisions/D-015`).
   final Duration idleLockDuration;
 
   /// Called when the auto-lock timer fires and the wallet is locked.
@@ -94,8 +88,8 @@ class BleSession {
     required this._walletService,
     required this._apduHandler,
     required this._signConfirmation,
-    this.autoLockDuration = const Duration(seconds: 5),
-    this.idleLockDuration = const Duration(seconds: 5),
+    this.autoLockDuration = const Duration(minutes: 5),
+    this.idleLockDuration = const Duration(minutes: 5),
   });
 
   // ═══════════════════════════════════════════════════════════════════════

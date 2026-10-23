@@ -6,8 +6,7 @@
   2. 停止操作满 N 分钟 → 自动锁，回到 UnlockScreen；
   3. J8 生命周期接线：HOME 压后台满 N 分钟再回前台 → 立即锁。
 
-慢用例：默认时长 5 分钟时会跑 ~15 分钟。当前 BleSession 的时长临时调成 5 秒
-以便真机验证（见 `lib/biz/ble_session.dart` 的 TODO(T-004)），因此按 5 秒等待。
+慢用例：默认时长 5 分钟，全流程会跑 ~15 分钟（见 `decisions/D-015`）。
 """
 from __future__ import annotations
 
@@ -21,10 +20,10 @@ from harness.env import adb  # noqa: E402
 from harness.session import DeviceSession  # noqa: E402
 from harness.wallet import unlock  # noqa: E402
 
-# 与 BleSession 的临时 5 秒一致；改回 5 分钟后这里也要改成 5 * 60 + 15。
-LOCK_AFTER_SECONDS = 5
-WAIT_BUFFER_SECONDS = 10
-SLIDE_INTERVAL_SECONDS = 3
+# 与 BleSession 的默认 5 分钟一致。
+LOCK_AFTER_SECONDS = 5 * 60
+WAIT_BUFFER_SECONDS = 15
+SLIDE_INTERVAL_SECONDS = 40
 
 
 async def _tap_activity(dev, app) -> None:
@@ -45,7 +44,7 @@ async def run() -> int:
         dev, app = session.dev, session.app
         assert "MainScreen" in await app.screen(), await app.screen()
 
-        # ── 1. 滑动窗口：每 3s 一次操作，跨过两个完整窗口仍不锁 ──────
+        # ── 1. 滑动窗口：每 40s 一次操作，跨过两个完整窗口仍不锁 ──────
         for _ in range(3):
             await asyncio.sleep(SLIDE_INTERVAL_SECONDS)
             assert "MainScreen" in await app.screen(), "操作间隙被提前锁定"
