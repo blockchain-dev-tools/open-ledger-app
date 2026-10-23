@@ -111,9 +111,6 @@ class FakeCryptoService implements ICryptoService {
   String? pbkdf2Derive(String pin, String saltHex, int keyLen) => null;
 
   @override
-  String? deriveMasterKey(String pin, String saltHex, int version) => null;
-
-  @override
   String? chacha20Encrypt(String plaintext, String pin, String saltHex) =>
       null;
 

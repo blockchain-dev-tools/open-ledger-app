@@ -118,8 +118,6 @@ class CryptoBridge {
 
   static String? pbkdf2Derive(String pin, String saltHex, int keyLen) => null;
 
-  static String? deriveMasterKey(String pin, String saltHex, int version) => null;
-
   static String? mnemonicToSeed(String mnemonic, {String passphrase = ''}) => null;
 
   static String? chacha20Encrypt(String plaintext, String pin, String saltHex) =>

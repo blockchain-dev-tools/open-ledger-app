@@ -67,7 +67,6 @@ class MockPinAuthService implements IPinAuthService {
   final List<RandomHexCall> randomHexCalls = [];
   int ensureDeviceSaltCalls = 0;
   final List<String> deriveKeyCalls = [];
-  final List<String> deriveKeyWithVersionCalls = [];
   final List<EncryptCall> encryptCalls = [];
   final List<EncryptCall> decryptCalls = [];
   final List<String> matchCredentialCalls = [];
@@ -94,14 +93,6 @@ class MockPinAuthService implements IPinAuthService {
   Future<String> deriveKey(String pin) async {
     deriveKeyCalls.add(pin);
     return deriveKeyResult;
-  }
-
-  @override
-  Future<String> deriveKeyWithVersion(String pin, int version) async {
-    deriveKeyWithVersionCalls.add('$pin@$version');
-    return version == kdfVersionPbkdf2Legacy
-        ? 'legacy-$deriveKeyResult'
-        : deriveKeyResult;
   }
 
   @override

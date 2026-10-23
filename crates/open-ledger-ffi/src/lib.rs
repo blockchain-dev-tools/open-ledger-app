@@ -348,35 +348,6 @@ pub unsafe extern "C" fn pbkdf2_derive(pin_ptr: *const c_char, salt_hex_ptr: *co
     FfiResult::ok_hex(&key).into_ptr()
 }
 
-/// 版本化 PIN → 主密钥派生（ADR-007）。
-///
-/// `version` 0 = legacy PBKDF2-HMAC-SHA256（仅用于解锁旧凭据），1 = Argon2id。
-/// 返回 32 字节主密钥的 hex。未知版本返回错误而不是静默回退——错误的 KDF
-/// 只会得到一个打不开任何密文的密钥，表现和「PIN 错误」完全一样。
-#[no_mangle]
-pub unsafe extern "C" fn derive_master_key_ffi(
-    pin_ptr: *const c_char, salt_hex_ptr: *const c_char, version: u32,
-) -> *mut FfiResult {
-    let pin = match cstr_to_str(pin_ptr) { Some(s) => s, None => return null_err() };
-    let salt = match cstr_to_hex(salt_hex_ptr) { Some(v) => v, None => return null_err() };
-    match open_ledger_crypto::kdf::derive_master_key(pin, &salt, version) {
-        Ok(mut key) => {
-            let out = FfiResult::ok_hex(&key).into_ptr();
-            key.zeroize();
-            out
-        }
-        Err(e) => FfiResult::from_chain_error(
-            open_ledger_biz::errors::ChainError::CryptoError(e),
-        ).into_ptr(),
-    }
-}
-
-/// 当前 build 写入新凭据时使用的 KDF 版本。
-#[no_mangle]
-pub extern "C" fn kdf_current_version() -> u32 {
-    open_ledger_crypto::kdf::CURRENT_KDF_VERSION
-}
-
 /// 常量时间比较两个字节串（按 UTF-8 字节），相等返回 1，否则返回 0。
 ///
 /// 用于 PIN 哈希比较，避免基于「首个不匹配字节位置」的时序侧信道。

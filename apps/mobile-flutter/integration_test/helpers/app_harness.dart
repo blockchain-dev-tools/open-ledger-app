@@ -45,7 +45,7 @@ const List<int> kQuizPositions = [3, 7, 11];
 /// App 启动（读设置 → 建依赖 → 查钱包 → 建路由）。
 const Duration kBootTimeout = Duration(seconds: 30);
 
-/// 涉及加密/派生的步骤（Argon2id m=64MiB,t=3,p=4、助记词→种子→5 链派生）会明显更慢。
+/// 涉及加密/派生的步骤（PBKDF2 100k 迭代、助记词→种子→5 链派生）会明显更慢。
 const Duration kCryptoTimeout = Duration(seconds: 90);
 
 // ══════════════════════════════════════════════════════════════════════
@@ -367,7 +367,7 @@ Future<void> importWalletAndSetPin(
   expect(find.byType(PrimaryButton), findsOneWidget);
   await tapHittable(tester, find.byType(PrimaryButton));
 
-  // 两遍 6 位 PIN → setupWallet（Argon2id 64MiB，慢）
+  // 两遍 6 位 PIN → setupWallet（PBKDF2 100k 迭代，慢）
   await waitForKey(tester, 'pin-btn-1');
   await enterPin(tester, keyPrefix: 'pin', pin: pin);
   await enterPin(tester, keyPrefix: 'pin', pin: pin);

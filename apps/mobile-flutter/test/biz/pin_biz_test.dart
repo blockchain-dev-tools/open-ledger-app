@@ -42,30 +42,18 @@ class _MockCryptoService implements ICryptoService {
   /// Override the master key some PIN derives (default `k:<pin>`).
   final Map<String, String> masterKeys = {};
 
-  /// Simulate an FFI failure in [deriveMasterKey].
+  /// Simulate an FFI failure in [pbkdf2Derive].
   bool pbkdf2Fails = false;
 
   final List<_Pbkdf2Call> pbkdf2Calls = [];
-  final List<_MasterKeyCall> masterKeyCalls = [];
   final List<_SealAttempt> sealAttempts = [];
 
   String _key(String pin) => masterKeys[pin] ?? 'k:$pin';
-
-  /// Key for a KDF [version]. Argon2id is prefixed so the two versions can never
-  /// be confused — the real Rust KDF guarantees the same property.
-  String _keyFor(String pin, int version) =>
-      version == kdfVersionPbkdf2Legacy ? _key(pin) : 'argon2:${_key(pin)}';
 
   @override
   String? pbkdf2Derive(String pin, String saltHex, int keyLen) {
     pbkdf2Calls.add(_Pbkdf2Call(pin, saltHex, keyLen));
     return pbkdf2Fails ? null : _key(pin);
-  }
-
-  @override
-  String? deriveMasterKey(String pin, String saltHex, int version) {
-    masterKeyCalls.add(_MasterKeyCall(pin, saltHex, version));
-    return pbkdf2Fails ? null : _keyFor(pin, version);
   }
 
   @override
@@ -84,11 +72,10 @@ class _MockCryptoService implements ICryptoService {
         : null;
   }
 
-  /// The credential value a tier unlocked by [pin] would store at [version].
-  String verifierFor(String pin, [int version = kdfVersionPbkdf2Legacy]) =>
-      aeadEncryptWithKey(
+  /// The credential value a tier unlocked by [pin] would store.
+  String verifierFor(String pin) => aeadEncryptWithKey(
         tierVerifyPlaintext,
-        hkdfExpand32(_keyFor(pin, version), tierVerifyContext)!,
+        hkdfExpand32(_key(pin), tierVerifyContext)!,
       )!;
 
   @override
@@ -151,13 +138,6 @@ class _Pbkdf2Call {
   final String saltHex;
   final int keyLen;
   const _Pbkdf2Call(this.pin, this.saltHex, this.keyLen);
-}
-
-class _MasterKeyCall {
-  final String pin;
-  final String saltHex;
-  final int version;
-  const _MasterKeyCall(this.pin, this.saltHex, this.version);
 }
 
 class _SealAttempt {
@@ -289,12 +269,10 @@ void main() {
       final result = await pinBiz.verifyPin('123456');
 
       expect(result, isTrue);
-      // One derivation for the whole unlock — the tier is not part of it.
-      expect(crypto.masterKeyCalls.length, 1);
-      expect(crypto.masterKeyCalls.first.pin, '123456');
-      expect(crypto.masterKeyCalls.first.saltHex, deviceSalt);
-      // A legacy-only device derives with the legacy version, nothing else.
-      expect(crypto.masterKeyCalls.first.version, kdfVersionPbkdf2Legacy);
+      // One PBKDF2 for the whole unlock — the tier is not part of derivation.
+      expect(crypto.pbkdf2Calls.length, 1);
+      expect(crypto.pbkdf2Calls.first.pin, '123456');
+      expect(crypto.pbkdf2Calls.first.saltHex, deviceSalt);
       // Successful verify resets attempts.
       expect(pinBiz.pinAttempts, 0);
     });
@@ -309,7 +287,7 @@ void main() {
 
       await pinBiz.verifyPin('123456');
 
-      expect(crypto.masterKeyCalls.length, 1);
+      expect(crypto.pbkdf2Calls.length, 1);
     });
 
     test('returns false when no verifier opens', () async {
@@ -399,7 +377,7 @@ void main() {
 
       // One derivation, then one AEAD attempt per slot (0..maxDepth) — the
       // empty depth-1 slot is probed with a placeholder of equal length.
-      expect(crypto.masterKeyCalls.length, 1);
+      expect(crypto.pbkdf2Calls.length, 1);
       expect(crypto.sealAttempts.length, maxDepth + 1);
     });
 
@@ -457,77 +435,6 @@ void main() {
       pinBiz.clearMasterKey();
 
       expect(pinBiz.lastMasterKey, isNull);
-    });
-  });
-
-  // ──────────────────────────────────────────────────────────────────
-  // KDF versions (ADR-007)
-  // ──────────────────────────────────────────────────────────────────
-
-  group('KDF versions', () {
-    test('derives only the versions present on the device', () async {
-      await repo.setCredential(WalletCredential(
-        depth: 0,
-        verifier: crypto.verifierFor('123456', kdfVersionArgon2id),
-        kdfVersion: kdfVersionArgon2id,
-      ));
-
-      expect(await pinBiz.matchCredential('123456'), 0);
-      expect(crypto.masterKeyCalls.single.version, kdfVersionArgon2id);
-    });
-
-    test('legacy and current tiers coexist during a partial upgrade', () async {
-      await repo.setCredential(
-        WalletCredential(depth: 0, verifier: crypto.verifierFor('111111')),
-      );
-      await repo.setCredential(WalletCredential(
-        depth: 1,
-        verifier: crypto.verifierFor('222222', kdfVersionArgon2id),
-        kdfVersion: kdfVersionArgon2id,
-      ));
-
-      expect(await pinBiz.matchCredential('111111'), 0);
-      expect(await pinBiz.matchCredential('222222'), 1);
-      // Both versions must be derived for either PIN — the device holds both.
-      expect(
-        crypto.masterKeyCalls.map((c) => c.version).toSet(),
-        {kdfVersionPbkdf2Legacy, kdfVersionArgon2id},
-      );
-    });
-
-    test('caches the master key of the matched tier version', () async {
-      await repo.setCredential(WalletCredential(
-        depth: 0,
-        verifier: crypto.verifierFor('123456', kdfVersionArgon2id),
-        kdfVersion: kdfVersionArgon2id,
-      ));
-
-      await pinBiz.matchCredential('123456');
-
-      expect(pinBiz.lastMasterKey, 'argon2:k:123456');
-    });
-
-    test('a legacy key does not open an Argon2id-marked verifier', () async {
-      // The marker says Argon2id but the ciphertext was sealed with the legacy
-      // key — a version mismatch must never authenticate.
-      await repo.setCredential(WalletCredential(
-        depth: 0,
-        verifier: crypto.verifierFor('123456', kdfVersionPbkdf2Legacy),
-        kdfVersion: kdfVersionArgon2id,
-      ));
-
-      expect(await pinBiz.matchCredential('123456'), isNull);
-    });
-
-    test('matchesAnyCredential honours the credential version', () async {
-      await repo.setCredential(WalletCredential(
-        depth: 0,
-        verifier: crypto.verifierFor('123456', kdfVersionArgon2id),
-        kdfVersion: kdfVersionArgon2id,
-      ));
-
-      expect(await pinBiz.matchesAnyCredential('123456'), isTrue);
-      expect(await pinBiz.matchesAnyCredential('999999'), isFalse);
     });
   });
 }

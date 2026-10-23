@@ -32,7 +32,7 @@ BIP-39 passphrase is not encoded into backup QR codes. The UI must communicate i
 - **I1 Signing approval:** every APDU that produces a signature must pass device-side confirmation. Only explicit approval may release signature bytes. Address/public-key/version queries are separate.
 - **I2 Terminal decision:** a pending request resolves exactly once: approve `9000`, reject `6985`, timeout `6400`. Guard repeated taps; await BLE response delivery before clearing the pending request.
 - **I3 Locked state:** locked APDU context has no seed. Signing must fail with the appropriate security-status response and must never unlock implicitly.
-- **I4 Encryption at rest:** mnemonic and saved passphrase use PIN-derived ChaCha20-Poly1305 encryption. Store the verifier ciphertext `AEAD(HKDF(KDF(PIN, device salt), verify label), fixed verifier text)`, not a plaintext PIN, decryption key or KDF output used as a readable verifier. Wallet data must live in OS-backed secure storage (Android Keystore, iOS Keychain) so extracted app data is not decryptable off-device, and the PIN KDF must be a memory-hard function (Argon2id) for new credentials. Never log secrets.
+- **I4 Encryption at rest:** mnemonic and saved passphrase use PIN-derived ChaCha20-Poly1305 encryption. Store the verifier ciphertext `AEAD(HKDF(PBKDF2(PIN, device salt), verify label), fixed verifier text)`, not a plaintext PIN, decryption key or PBKDF2 key used as a readable verifier. Wallet data must live in OS-backed secure storage (Android Keystore, iOS Keychain) so extracted app data is not decryptable off-device. Never log secrets.
 - **I5 Session cleanup:** lock clears cached mnemonic, passphrase, seed, accounts and credential key material.
 - **I6 Reauthentication:** every secret display requires fresh verification of the current session layer's PIN. Prior unlocked state is insufficient.
 - **I7 Attempt budget:** five consecutive failed credential attempts cause persisted lockout. All layers share the failure budget. Successful verification resets it; lockout has no timed recovery and requires destructive reset.
@@ -46,14 +46,14 @@ BIP-39 passphrase is not encoded into backup QR codes. The UI must communicate i
 
 ## Vaults, credentials and storage
 
-Vaults belong to `depth` layers; depth 0 allows up to two normal vaults. Stand-in depth is capped at 2. Vaults in one layer share its PIN-derived key. Credential matching derives one key per KDF version present on the device and attempts every verifier slot through `maxDepth` without short-circuiting, using dummy ciphertext for empty slots. This keeps work independent of the number of configured credentials; it is not a proof of perfect timing uniformity on all devices.
+Vaults belong to `depth` layers; depth 0 allows up to two normal vaults. Stand-in depth is capped at 2. Vaults in one layer share its PIN-derived key. Credential matching does one PBKDF2 derivation and attempts every verifier slot through `maxDepth` without short-circuiting, using dummy ciphertext for empty slots. This keeps work independent of the number of configured credentials; it is not a proof of perfect timing uniformity on all devices.
 
-Wallet data is stored through the OS keystore (Android Keystore-wrapped encryption, iOS Keychain), so a copy of the app data directory is not decryptable off-device. The PIN KDF is versioned: new credentials use Argon2id (`m=64 MiB, t=3, p=4`), legacy credentials use PBKDF2-HMAC-SHA256 with 100,000 iterations and are upgraded in place the first time their layer unlocks. The version marker lives inside the credential record so it can never disagree with the verifier. A random 16-byte device salt is shared by every layer and survives PIN changes and KDF upgrades. Each encryption uses a fresh nonce, followed by domain separation for verifier encryption. Online attempt counters cannot stop guesses by an attacker who can execute code on the device; keystore binding is what closes the offline-extraction vector.
+Wallet data is stored through the OS keystore (Android Keystore-wrapped encryption, iOS Keychain), so a copy of the app data directory is not decryptable off-device. The PIN is stretched with PBKDF2-HMAC-SHA256 (100,000 iterations) and a random 16-byte device salt that is shared by every layer and survives PIN changes. Each encryption uses a fresh nonce, followed by domain separation for verifier encryption. A six-digit PIN has too little entropy for any KDF to rescue: online attempt counters govern online use, and keystore binding is what closes the offline-extraction vector.
 
 | Storage key | Content |
 |---|---|
 | `wallet.salt` | Public random device salt |
-| `wallet.verifier.<depth>` | Encrypted PIN verifier plus the `kdfVersion` that produced it |
+| `wallet.verifier.<depth>` | Encrypted PIN verifier |
 | `wallet.vaultIndex` | Ordered vault identifiers |
 | `wallet.vault.<id>` | Layer, label, encrypted mnemonic/passphrase, public accounts and creation metadata |
 | `wallet.standIn.mode.<depth>` | Stand-in hide/wipe mode |
@@ -77,10 +77,10 @@ The active Ledger app is separate from BLE connection state. Starting a chain op
 
 1. `AppState.onAppBackgrounded`/`onAppForegrounded` are not called from an App lifecycle observer. The only lifecycle observer handles privacy shielding, not wallet locking. The intended five-minute background lock and BLE pause/resume cannot be relied upon. Foreground idle locking and a manual lock entry point are also absent.
 2. The registered legacy `/backup-seed` route still supports clipboard export; it is separate from the current QR export journey.
-3. Wallet keys are keystore-bound, but an attacker who can execute code on the unlocked device can ask the keystore for them; the Argon2id memory cost has not been benchmarked on low-end Android hardware, and the iOS path is unverified. Metadata is not separately encrypted.
+3. Wallet keys are keystore-bound, but an attacker who can execute code on the unlocked device can ask the keystore for them; the iOS path is unverified. Metadata is not separately encrypted.
 4. Android release builds still use debug signing. An official APK requires a deliberate release-signing setup and independent validation.
 5. iOS, host-wallet compatibility, air-gap product flow and recovery behavior require separate validation. The corpus includes regression snapshots and declared gaps; passing them is not a blanket protocol certification.
 
 ## Implementation references
 
-[Wallet lifecycle](../../apps/mobile-flutter/lib/biz/wallet_biz.dart), [PIN logic](../../apps/mobile-flutter/lib/biz/pin_biz.dart), [signing gate](../../apps/mobile-flutter/lib/biz/sign_confirmation.dart), [BLE session](../../apps/mobile-flutter/lib/biz/ble_session.dart), [App assembly](../../apps/mobile-flutter/lib/app/app_state.dart), [Rust KDF](../../crates/open-ledger-crypto/src/kdf.rs), [Rust encryption](../../crates/open-ledger-crypto/src/pbkdf2_chacha20.rs), [storage repository](../../apps/mobile-flutter/lib/data/repositories/vault_repository_impl.dart).
+[Wallet lifecycle](../../apps/mobile-flutter/lib/biz/wallet_biz.dart), [PIN logic](../../apps/mobile-flutter/lib/biz/pin_biz.dart), [signing gate](../../apps/mobile-flutter/lib/biz/sign_confirmation.dart), [BLE session](../../apps/mobile-flutter/lib/biz/ble_session.dart), [App assembly](../../apps/mobile-flutter/lib/app/app_state.dart), [Rust encryption](../../crates/open-ledger-crypto/src/pbkdf2_chacha20.rs), [storage repository](../../apps/mobile-flutter/lib/data/repositories/vault_repository_impl.dart).
