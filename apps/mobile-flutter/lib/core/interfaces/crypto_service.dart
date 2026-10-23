@@ -136,7 +136,18 @@ abstract class ICryptoService {
   // ── PIN auth + Mnemonic Encryption ─────────────────────────────────
 
   /// Derive a key from PIN + salt using PBKDF2-HMAC-SHA256 (100k iterations).
+  ///
+  /// Legacy path only: new credentials use [deriveMasterKey]. Kept because
+  /// `chacha20Encrypt` / `chacha20Decrypt` still bind a key straight to a PIN.
   String? pbkdf2Derive(String pin, String saltHex, int keyLen);
+
+  /// Derive the 32-byte master key from [pin] and [saltHex] with the KDF
+  /// [version] (ADR-007): 0 = legacy PBKDF2-100k, 1 = Argon2id.
+  ///
+  /// Returns hex, or `null` on failure (unknown version, FFI error). Version 1
+  /// is deliberately expensive (~64 MiB, tens of ms on a phone) — it is the
+  /// whole point, so callers must not derive per vault.
+  String? deriveMasterKey(String pin, String saltHex, int version);
 
   /// Derive a 64-byte BIP-39 seed from mnemonic + optional passphrase.
   String? mnemonicToSeed(String mnemonic, {String passphrase = ''});

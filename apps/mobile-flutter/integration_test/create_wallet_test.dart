@@ -22,8 +22,8 @@ import 'helpers/app_harness.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(snapshotPrefs);
-  tearDownAll(restorePrefs);
+  setUpAll(snapshotDeviceState);
+  tearDownAll(restoreDeviceState);
 
   testWidgets('创建钱包 → 熵 → 助记词 → 校验问答 → 设 PIN → 金库', (tester) async {
     await launchAppFresh(tester);

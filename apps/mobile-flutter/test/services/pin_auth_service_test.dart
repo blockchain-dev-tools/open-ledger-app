@@ -40,8 +40,8 @@ class MockCryptoService implements ICryptoService {
 
   // ── Configurable return values ───────────────────────────────────────
 
-  /// Return value for [pbkdf2Derive]. `null` = simulate failure.
-  String? pbkdf2DeriveResult;
+  /// Return value for [deriveMasterKey]. `null` = simulate failure.
+  String? deriveMasterKeyResult;
 
   /// Return value for [chacha20Encrypt]. `null` = simulate failure.
   String? chacha20EncryptResult;
@@ -64,6 +64,7 @@ class MockCryptoService implements ICryptoService {
   // ── Call recording ───────────────────────────────────────────────────
 
   final List<Pbkdf2CallRecord> pbkdf2Calls = [];
+  final List<MasterKeyCallRecord> deriveMasterKeyCalls = [];
   final List<ChaChaCallRecord> encryptCalls = [];
   final List<ChaChaCallRecord> decryptCalls = [];
   final List<Uint8List> hexEncodeCalls = [];
@@ -76,7 +77,13 @@ class MockCryptoService implements ICryptoService {
   @override
   String? pbkdf2Derive(String pin, String saltHex, int keyLen) {
     pbkdf2Calls.add(Pbkdf2CallRecord(pin, saltHex, keyLen));
-    return pbkdf2DeriveResult;
+    return deriveMasterKeyResult;
+  }
+
+  @override
+  String? deriveMasterKey(String pin, String saltHex, int version) {
+    deriveMasterKeyCalls.add(MasterKeyCallRecord(pin, saltHex, version));
+    return deriveMasterKeyResult;
   }
 
   @override
@@ -253,6 +260,13 @@ class Pbkdf2CallRecord {
   const Pbkdf2CallRecord(this.pin, this.saltHex, this.keyLen);
 }
 
+class MasterKeyCallRecord {
+  final String pin;
+  final String saltHex;
+  final int version;
+  const MasterKeyCallRecord(this.pin, this.saltHex, this.version);
+}
+
 class ChaChaCallRecord {
   final String data;
   final String pin;
@@ -292,29 +306,40 @@ void main() {
   // ──────────────────────────────────────────────────────────────────
 
   group('deriveKey', () {
-    test('stretches the PIN once with the device salt', () async {
+    test('stretches the PIN once with the device salt, at the current version',
+        () async {
       await repo.setDeviceSalt('deadbeef');
-      crypto.pbkdf2DeriveResult =
+      crypto.deriveMasterKeyResult =
           'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
       final result = await service.deriveKey('123456');
 
-      expect(result, crypto.pbkdf2DeriveResult);
-      expect(crypto.pbkdf2Calls.length, 1);
-      expect(crypto.pbkdf2Calls.first.pin, '123456');
-      expect(crypto.pbkdf2Calls.first.saltHex, 'deadbeef');
-      expect(crypto.pbkdf2Calls.first.keyLen, 32);
+      expect(result, crypto.deriveMasterKeyResult);
+      expect(crypto.deriveMasterKeyCalls.length, 1);
+      expect(crypto.deriveMasterKeyCalls.first.pin, '123456');
+      expect(crypto.deriveMasterKeyCalls.first.saltHex, 'deadbeef');
+      expect(crypto.deriveMasterKeyCalls.first.version, currentKdfVersion);
+    });
+
+    test('deriveKeyWithVersion asks for exactly that version', () async {
+      await repo.setDeviceSalt('deadbeef');
+      crypto.deriveMasterKeyResult = 'legacy-key';
+
+      final result = await service.deriveKeyWithVersion('123456', 0);
+
+      expect(result, 'legacy-key');
+      expect(crypto.deriveMasterKeyCalls.single.version, 0);
     });
 
     test('throws StateError when crypto returns null', () async {
       await repo.setDeviceSalt('deadbeef');
-      crypto.pbkdf2DeriveResult = null;
+      crypto.deriveMasterKeyResult = null;
 
       expect(() => service.deriveKey('123456'), throwsA(isA<StateError>()));
     });
 
     test('throws StateError when no device salt exists', () async {
-      crypto.pbkdf2DeriveResult = 'key-hex';
+      crypto.deriveMasterKeyResult = 'key-hex';
 
       expect(() => service.deriveKey('123456'), throwsA(isA<StateError>()));
     });
@@ -379,7 +404,7 @@ void main() {
       await repo.setCredential(
         const WalletCredential(depth: 0, verifier: 'stored-verifier'),
       );
-      crypto.pbkdf2DeriveResult = 'master-key';
+      crypto.deriveMasterKeyResult = 'master-key';
       crypto.hkdfExpand32Result = 'verify-key';
     });
 
@@ -389,8 +414,8 @@ void main() {
       final result = await service.verifyPin('123456');
 
       expect(result, isTrue);
-      expect(crypto.pbkdf2Calls.first.pin, '123456');
-      expect(crypto.pbkdf2Calls.first.saltHex, deviceSalt);
+      expect(crypto.deriveMasterKeyCalls.first.pin, '123456');
+      expect(crypto.deriveMasterKeyCalls.first.saltHex, deviceSalt);
     });
 
     test('returns false when the verifier does not open', () async {

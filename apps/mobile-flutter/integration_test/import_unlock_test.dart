@@ -15,8 +15,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   // 跑前把设备的持久化快照存下来，跑完原样还原（不破坏已有钱包）。
-  setUpAll(snapshotPrefs);
-  tearDownAll(restorePrefs);
+  setUpAll(snapshotDeviceState);
+  tearDownAll(restoreDeviceState);
 
   testWidgets('导入助记词 → 设 PIN → 冷启动解锁 → 进金库', (tester) async {
     // ── 1. 全新安装态：首屏是 Welcome ──────────────────────────────

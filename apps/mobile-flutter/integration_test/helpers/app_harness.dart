@@ -3,8 +3,9 @@
 // 设计要点：
 // 1. 测试与 App 跑在同一个进程里，直接读内存中的 widget 树（find.byKey），
 //    不截图、不依赖系统无障碍树 —— 因此定位精确、零渲染成本，还能读内部状态。
-// 2. 持久化是真实的 SharedPreferences（与 App 同一 applicationId），
-//    所以本脚手架默认「先快照、结束还原」，不会弄丢设备上已有的钱包。
+// 2. 持久化是真实的：钱包走 Keystore/Keychain 支撑的安全存储，设置走
+//    SharedPreferences（与 App 同一 applicationId）。所以本脚手架默认
+//    「先快照、结束还原」，不会弄丢设备上已有的钱包。
 // 3. 一律用 Key / 类型 / BIP-39 单词定位，尽量不用文案；必须用文案时，
 //    通过 [l10n] 从 App 自己的本地化表里取，因此 en/zh/ja/ko 都能跑。
 
@@ -13,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
+import 'package:open_ledger_app/infrastructure/persistence/secure_storage.dart';
 import 'package:open_ledger_app/main.dart' as app;
 import 'package:open_ledger_app/ui/widgets/common/primary_button.dart';
 import 'package:open_ledger_app/ui/widgets/pin/pin_dot_indicator.dart';
@@ -43,7 +45,7 @@ const List<int> kQuizPositions = [3, 7, 11];
 /// App 启动（读设置 → 建依赖 → 查钱包 → 建路由）。
 const Duration kBootTimeout = Duration(seconds: 30);
 
-/// 涉及加密/派生的步骤（PBKDF2 100k 迭代、助记词→种子→5 链派生）会明显更慢。
+/// 涉及加密/派生的步骤（Argon2id m=64MiB,t=3,p=4、助记词→种子→5 链派生）会明显更慢。
 const Duration kCryptoTimeout = Duration(seconds: 90);
 
 // ══════════════════════════════════════════════════════════════════════
@@ -51,17 +53,22 @@ const Duration kCryptoTimeout = Duration(seconds: 90);
 // ══════════════════════════════════════════════════════════════════════
 
 Map<String, Object?> _prefsSnapshot = const {};
+Map<String, String> _secureSnapshot = const {};
 
-/// 记录设备当前的 SharedPreferences。测试文件在 `setUpAll` 里调用。
+/// 记录设备当前的持久化状态：设置（SharedPreferences）+ 钱包（安全存储）。
+/// 测试文件在 `setUpAll` 里调用。
 ///
 /// 有了它，测试即使把库清空跑完，`tearDownAll` 也能把设备还原成跑之前的样子。
-Future<void> snapshotPrefs() async {
+/// 两者都要快照 —— 钱包已迁到 Keystore/Keychain 支撑的存储（ADR-007），
+/// 只快照 prefs 会在还原时弄丢设备上已有的钱包。
+Future<void> snapshotDeviceState() async {
   final prefs = await SharedPreferences.getInstance();
   _prefsSnapshot = {for (final key in prefs.getKeys()) key: prefs.get(key)};
+  _secureSnapshot = await SecureStorage().readAll();
 }
 
-/// 还原 `snapshotPrefs()` 记录的状态。测试文件在 `tearDownAll` 里调用。
-Future<void> restorePrefs() async {
+/// 还原 `snapshotDeviceState()` 记录的状态。测试文件在 `tearDownAll` 里调用。
+Future<void> restoreDeviceState() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
   for (final entry in _prefsSnapshot.entries) {
@@ -77,6 +84,12 @@ Future<void> restorePrefs() async {
     } else if (value is List<String>) {
       await prefs.setStringList(entry.key, value);
     }
+  }
+
+  final secure = SecureStorage();
+  await secure.deleteAll();
+  for (final entry in _secureSnapshot.entries) {
+    await secure.setItem(entry.key, entry.value);
   }
 }
 
@@ -306,10 +319,13 @@ Future<void> coldStart(WidgetTester tester) async {
 
 /// 清空持久化后冷启动 —— 等价于「全新安装首次打开」。
 ///
+/// 设置与钱包都要清：钱包在安全存储里，只清 prefs 会留下旧钱包，
+/// App 会直接进解锁页而不是 Welcome。
 /// 返回时 App 已停在 Welcome。
 Future<void> launchAppFresh(WidgetTester tester) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
+  await SecureStorage().deleteAll();
 
   await coldStart(tester);
   expect(
@@ -351,7 +367,7 @@ Future<void> importWalletAndSetPin(
   expect(find.byType(PrimaryButton), findsOneWidget);
   await tapHittable(tester, find.byType(PrimaryButton));
 
-  // 两遍 6 位 PIN → setupWallet（PBKDF2 100k 迭代，慢）
+  // 两遍 6 位 PIN → setupWallet（Argon2id 64MiB，慢）
   await waitForKey(tester, 'pin-btn-1');
   await enterPin(tester, keyPrefix: 'pin', pin: pin);
   await enterPin(tester, keyPrefix: 'pin', pin: pin);

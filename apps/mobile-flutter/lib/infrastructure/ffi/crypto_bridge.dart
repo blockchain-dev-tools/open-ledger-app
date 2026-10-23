@@ -185,6 +185,9 @@ class CryptoBridge {
   static final _Pbkdf2Dart _pbkdf2 = _lib
       .lookupFunction<_Pbkdf2C, _Pbkdf2Dart>('pbkdf2_derive');
 
+  static final _Pbkdf2Dart _deriveMasterKey = _lib
+      .lookupFunction<_Pbkdf2C, _Pbkdf2Dart>('derive_master_key_ffi');
+
   static final _Fn2Dart _mnemonicToSeed = _lib
       .lookupFunction<_Fn2C, _Fn2Dart>('mnemonic_to_seed');
 
@@ -606,6 +609,21 @@ class CryptoBridge {
     final s = _str(saltHex);
     try {
       return _resultToOptionalStr(_pbkdf2(p, s, keyLen));
+    } finally {
+      calloc.free(p);
+      calloc.free(s);
+    }
+  }
+
+  /// Versioned PIN → master-key derivation (ADR-007).
+  ///
+  /// [version] 0 = legacy PBKDF2-100k, 1 = Argon2id. Unknown versions fail
+  /// (return `null`) in Rust rather than falling back to another KDF.
+  static String? deriveMasterKey(String pin, String saltHex, int version) {
+    final p = _str(pin);
+    final s = _str(saltHex);
+    try {
+      return _resultToOptionalStr(_deriveMasterKey(p, s, version));
     } finally {
       calloc.free(p);
       calloc.free(s);

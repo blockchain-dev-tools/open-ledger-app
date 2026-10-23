@@ -29,12 +29,14 @@ dependencies:
   # Settings persistence
   shared_preferences: ^2.0.0
 
+  # Wallet data at rest: Android Keystore-wrapped encryption, iOS Keychain
+  # (ADR-007). Replaces shared_preferences for every `wallet.*` key.
+  flutter_secure_storage: ^11.2.0
+
   # === BLE peripheral (Ledger Nano X GATT server) ===
   permission_handler: ^11.3.0
 
   # === Planned dependencies (add when implementing corresponding features) ===
-  # Secure key storage
-  # flutter_secure_storage: ^9.0.0
   # State management
   # flutter_riverpod: ^2.0.0
   # Routing

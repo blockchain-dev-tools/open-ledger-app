@@ -14,7 +14,7 @@ A general-purpose phone, its operating system, input method and storage are part
 
 ## Known limitations in this snapshot
 
-- Wallet storage is backed by SharedPreferences. Mnemonic/passphrase fields and history are encrypted, but indexes, metadata and counters are readable in app storage. Extracted ciphertext enables offline guesses against a six-digit PIN; the five-attempt UI lockout does not apply offline.
+- Wallet storage is backed by the OS keystore (Android Keystore-wrapped encryption, iOS Keychain), so extracted app data is not decryptable off-device. Mnemonic/passphrase fields and history remain individually encrypted as well; indexes, metadata and counters are not separately obscured. An attacker able to execute code on an unlocked device can still ask the keystore for the data, and the Argon2id memory cost has not been benchmarked on low-end hardware. The five-attempt UI lockout does not apply to that case.
 - Background-lock and BLE pause/resume handlers exist but are not connected to the App lifecycle in `main.dart`. Do not rely on the intended five-minute background lock. Foreground inactivity also has no automatic timeout.
 - The legacy `/backup-seed` route remains registered and supports copying the seed phrase to the clipboard. The current QR export flow does not remove that route's exposure.
 - BLE-name edits in Settings do not persist or change the active advertiser name.

@@ -15,8 +15,8 @@ import 'helpers/app_harness.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(snapshotPrefs);
-  tearDownAll(restorePrefs);
+  setUpAll(snapshotDeviceState);
+  tearDownAll(restoreDeviceState);
 
   testWidgets('PIN 连错 5 次 → 锁定 → 重置钱包 → 冷启动回 Welcome', (tester) async {
     // ── 1. 先造一个钱包（导入 + 设 PIN）────────────────────────────
