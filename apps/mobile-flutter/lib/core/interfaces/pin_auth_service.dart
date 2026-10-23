@@ -3,14 +3,11 @@
 /// Implemented by [PinAuthService] in `lib/services/`.
 /// [WalletService] depends on this interface, never on the concrete implementation.
 ///
-/// **Key hierarchy** (ADR-009 §3 revision): one KDF stretches the PIN with
+/// **Key hierarchy** (ADR-009 §3 revision): one PBKDF2 stretches the PIN with
 /// the device salt into a *master key*, which doubles as the tier's vault key.
 /// Each tier stores a **verifier** — AEAD over a fixed plaintext under
 /// `HKDF(masterKey, "verify")` — so opening it is the PIN check, and no stored
 /// value equals a decryption key.
-///
-/// The KDF is versioned (ADR-007): new credentials use Argon2id, and a legacy
-/// PBKDF2 credential is upgraded the first time its tier is unlocked.
 ///
 /// There is one credential per tier (`0..maxDepth`); the depth a PIN belongs to
 /// is *verified*, never looked up. PIN *matching* lives here; PIN *change*
@@ -21,17 +18,11 @@ abstract class IPinAuthService {
   /// Called once when the first wallet is created; the salt then never changes.
   Future<void> ensureDeviceSalt();
 
-  /// `KDF_current(pin, deviceSalt)` → 32 bytes as hex.
+  /// `PBKDF2-HMAC-SHA256(pin, deviceSalt)` → 32 bytes as hex.
   ///
-  /// The single expensive step (one Argon2id run). The result is both the
-  /// tier's vault key and the input of [verifyKey].
+  /// The single expensive step (100k iterations). The result is both the tier's
+  /// vault key and the input of [verifyKey].
   Future<String> deriveKey(String pin);
-
-  /// [deriveKey] pinned to a specific KDF version (ADR-007).
-  ///
-  /// Version 0 = legacy PBKDF2, 1 = Argon2id. Used to open a credential written
-  /// before the Argon2id switch, and to re-derive during the upgrade.
-  Future<String> deriveKeyWithVersion(String pin, int version);
 
   /// Verifier key for [masterKeyHex] — `HKDF-Expand` domain separation so the
   /// master key itself never seals the stored verifier.

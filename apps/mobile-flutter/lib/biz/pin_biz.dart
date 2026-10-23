@@ -4,26 +4,19 @@ import '../core/models/vault.dart';
 
 /// PIN authentication business logic.
 ///
-/// Unlocking is **one KDF**: the entered PIN is stretched once with the device
-/// salt ([deriveKey]) into the master key, which doubles as the tier's vault
-/// key. Each tier stores only a *verifier* — AEAD over a fixed plaintext under
-/// `HKDF(masterKey, "verify")` — so "which tier does this PIN belong to?" is
-/// answered by trying to open each verifier. Nothing equal to a decryption key
-/// is ever stored (ADR-009 §3 revision).
-///
-/// The KDF is **versioned** (ADR-007): a credential records whether its
-/// verifier was sealed under legacy PBKDF2 or Argon2id. Tiers are migrated one
-/// at a time — and a tier's PIN is needed to migrate it — so the two versions
-/// coexist until every tier has been unlocked at least once. Only the versions
-/// that actually appear on the device are derived, so a fully-upgraded wallet
-/// pays for one Argon2id run and nothing else.
+/// Unlocking is **one PBKDF2**: the entered PIN is stretched once with the
+/// device salt ([deriveKey]) into the master key, which doubles as the tier's
+/// vault key. Each tier stores only a *verifier* — AEAD over a fixed plaintext
+/// under `HKDF(masterKey, "verify")` — so "which tier does this PIN belong to?"
+/// is answered by trying to open each verifier. Nothing equal to a decryption
+/// key is ever stored (ADR-009 §3 revision).
 ///
 /// The slot loop still walks **every** depth without short-circuiting, so
 /// unlock cost never reveals how many tiers the device holds. Empty slots are
 /// probed with [_dummyVerifier] — an AEAD attempt is microseconds, but keeping
 /// the shape uniform means the constant-work property stays obvious.
 ///
-/// The crypto plumbing (KDF, HKDF, AEAD) stays in
+/// The crypto plumbing (PBKDF2, HKDF, AEAD) stays in
 /// `lib/services/pin_auth_service.dart`; this class holds the decision logic and
 /// depends only on `core/interfaces/`.
 class PinBiz {
@@ -81,27 +74,20 @@ class PinBiz {
 
   // ── Key derivation ───────────────────────────────────────────────────
 
-  /// `KDF_current(pin, deviceSalt)` → 32 bytes as hex.
+  /// `PBKDF2-HMAC-SHA256(pin, deviceSalt)` → 32 bytes as hex.
   ///
-  /// This is the **only** expensive step of an unlock (one Argon2id run). The
+  /// This is the **only** expensive step of an unlock (100k iterations). The
   /// result is the tier's vault key *and* the input of [verifyKey]; the stored
   /// verifier is a ciphertext under the latter, never under the key itself.
-  Future<String> deriveKey(String pin) =>
-      deriveKeyWithVersion(pin, currentKdfVersion);
-
-  /// [deriveKey] pinned to a specific KDF [version].
-  ///
-  /// Used to open credentials written before the Argon2id switch, and by the
-  /// upgrade path that re-derives under the current version.
-  Future<String> deriveKeyWithVersion(String pin, int version) async {
+  Future<String> deriveKey(String pin) async {
     final salt = await _repo.getDeviceSalt();
     if (salt == null || salt.isEmpty) {
       throw StateError('Device salt missing — no wallet has been set up.');
     }
-    final key = _crypto.deriveMasterKey(pin, salt, version);
+    final key = _crypto.pbkdf2Derive(pin, salt, 32);
     if (key == null) {
       throw StateError(
-        'Key derivation failed (version=$version, pin=${pin.length} chars, '
+        'PBKDF2 derivation failed (pin=${pin.length} chars, '
         'salt=${salt.length} hex chars)',
       );
     }
@@ -128,27 +114,23 @@ class PinBiz {
   /// **Side effects:** on a match caches the master key (see [lastMasterKey])
   /// and resets the attempt counter; otherwise clears it and increments.
   ///
-  /// Work is constant per KDF version in use: one derivation per version (plus
-  /// one AEAD attempt per slot in `0..maxDepth` — real verifier when
-  /// configured, [_dummyVerifier] otherwise) and the loop never short-circuits.
+  /// Work is constant: one PBKDF2 (the derivation does not depend on the tier)
+  /// plus one AEAD attempt per slot in `0..maxDepth` — real verifier when
+  /// configured, [_dummyVerifier] otherwise — and the loop never short-circuits.
   Future<int?> matchCredential(String pin) async {
     await _ensurePinAttemptsLoaded();
     _lastMasterKey = null;
 
-    final credentials = await _readAllCredentials();
-    final keys = await _deriveKeysFor(pin, credentials);
-    final verifyKeys = {
-      for (final entry in keys.entries) entry.key: verifyKey(entry.value),
-    };
+    final masterKey = await deriveKey(pin);
+    final verifyKeyHex = verifyKey(masterKey);
 
     // One AEAD attempt per slot, no early exit. Lowest depth wins ties.
     int? matched;
     for (var d = 0; d <= maxDepth; d++) {
-      final cred = credentials[d];
-      final verifierKey = verifyKeys[_probeVersion(cred, verifyKeys)];
+      final cred = await _repo.getCredential(d);
       final opened = _crypto.aeadDecryptWithKey(
         cred?.verifier ?? _dummyVerifier,
-        verifierKey!,
+        verifyKeyHex,
       );
       if (cred != null && opened == tierVerifyPlaintext) {
         matched ??= d;
@@ -158,7 +140,7 @@ class PinBiz {
     if (matched == null) {
       await incrementPinAttempts();
     } else {
-      _lastMasterKey = keys[credentials[matched]!.kdfVersion];
+      _lastMasterKey = masterKey;
       await resetPinAttempts();
     }
     return matched;
@@ -168,19 +150,12 @@ class PinBiz {
   /// failed-attempt counter and no master key cached. Used to enforce global
   /// PIN uniqueness.
   Future<bool> matchesAnyCredential(String pin) async {
-    final credentials = await _readAllCredentials();
-    final keys = await _deriveKeysFor(pin, credentials);
-    final verifyKeys = {
-      for (final entry in keys.entries) entry.key: verifyKey(entry.value),
-    };
-
+    final masterKey = await deriveKey(pin);
+    final verifyKeyHex = verifyKey(masterKey);
     for (var d = 0; d <= maxDepth; d++) {
-      final cred = credentials[d];
+      final cred = await _repo.getCredential(d);
       if (cred == null) continue;
-      if (_crypto.aeadDecryptWithKey(
-            cred.verifier,
-            verifyKeys[cred.kdfVersion]!,
-          ) ==
+      if (_crypto.aeadDecryptWithKey(cred.verifier, verifyKeyHex) ==
           tierVerifyPlaintext) {
         return true;
       }
@@ -193,40 +168,6 @@ class PinBiz {
       (await matchCredential(pin)) != null;
 
   // ── Private helpers ──────────────────────────────────────────────────
-
-  Future<Map<int, WalletCredential?>> _readAllCredentials() async {
-    final credentials = <int, WalletCredential?>{};
-    for (var d = 0; d <= maxDepth; d++) {
-      credentials[d] = await _repo.getCredential(d);
-    }
-    return credentials;
-  }
-
-  /// One key per KDF version actually present on the device.
-  ///
-  /// A device with no credentials still derives once, under the current
-  /// version, so the work shape matches a configured slot.
-  Future<Map<int, String>> _deriveKeysFor(
-    String pin,
-    Map<int, WalletCredential?> credentials,
-  ) async {
-    final versions = <int>{
-      for (final cred in credentials.values)
-        if (cred != null) cred.kdfVersion,
-    };
-    if (versions.isEmpty) versions.add(currentKdfVersion);
-
-    final keys = <int, String>{};
-    for (final version in versions) {
-      keys[version] = await deriveKeyWithVersion(pin, version);
-    }
-    return keys;
-  }
-
-  /// KDF version used to probe [cred]'s slot. Empty slots have no version of
-  /// their own; any derived key works, since [_dummyVerifier] never opens.
-  int _probeVersion(WalletCredential? cred, Map<int, String> verifyKeys) =>
-      cred?.kdfVersion ?? verifyKeys.keys.first;
 
   /// Lazy-load the PIN attempt counter from storage on first access.
   Future<void> _ensurePinAttemptsLoaded() async {

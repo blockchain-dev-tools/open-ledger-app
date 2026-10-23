@@ -11,8 +11,7 @@ import '../core/models/vault.dart';
 /// PIN authentication service — crypto plumbing + attempt tracking.
 ///
 /// Responsibilities:
-/// - Versioned PIN KDF → the tier master key ([deriveKey], Argon2id since
-///   ADR-007; legacy PBKDF2 credentials via [deriveKeyWithVersion])
+/// - PBKDF2-HMAC-SHA256(pin, deviceSalt) → the tier master key ([deriveKey])
 /// - HKDF-Expand domain separation for the tier verifier ([verifyKey])
 /// - AEAD encrypt/decrypt under a raw key ([encryptWithKey], [decryptWithKey])
 /// - PIN matching against tier verifiers, in constant work ([matchCredential])
@@ -44,10 +43,6 @@ class PinAuthService implements IPinAuthService {
 
   @override
   Future<String> deriveKey(String pin) => _biz.deriveKey(pin);
-
-  @override
-  Future<String> deriveKeyWithVersion(String pin, int version) =>
-      _biz.deriveKeyWithVersion(pin, version);
 
   @override
   String verifyKey(String masterKeyHex) => _biz.verifyKey(masterKeyHex);

@@ -91,23 +91,6 @@ class _MockPinAuth implements IPinAuthService {
   }
 
   @override
-  Future<String> deriveKeyWithVersion(String pin, int version) async {
-    calls.add(_PinAuthCall('deriveKeyWithVersion', [pin, version]));
-    if (deriveKeyWithVersionFails) {
-      throw StateError('simulated KDF failure');
-    }
-    // Legacy and current keys are deliberately different strings, so a test can
-    // tell which one a re-encryption used.
-    return version == kdfVersionPbkdf2Legacy
-        ? 'legacy-key-$pin'
-        : 'key-$pin';
-  }
-
-  /// Makes [deriveKeyWithVersion] throw, modelling a KDF/storage failure during
-  /// the in-place upgrade.
-  bool deriveKeyWithVersionFails = false;
-
-  @override
   String verifyKey(String masterKeyHex) => 'vk:$masterKeyHex';
 
   @override
@@ -592,82 +575,6 @@ void main() {
           .where((c) => c.method == 'decryptWithKey');
       expect(decryptCalls.length, greaterThanOrEqualTo(2));
       expect(decryptCalls.any((c) => c.args[0] == 'enc-pass'), isTrue);
-    });
-  });
-
-  // ──────────────────────────────────────────────────────────────────
-  // KDF upgrade (ADR-007)
-  // ──────────────────────────────────────────────────────────────────
-
-  group('KDF upgrade on unlock', () {
-    setUp(() async {
-      // A pre-upgrade credential: no kdfVersion → legacy PBKDF2.
-      await repo.setCredential(
-        const WalletCredential(depth: 0, verifier: 'stored-verifier'),
-      );
-      await repo.saveVault(Vault(
-        id: 'v1',
-        label: '',
-        depth: 0,
-        mnemonicEncrypted: 'enc-mnemonic',
-        accounts: const WalletAccounts(accounts: [], mnemonicFingerprint: ''),
-        createdAt: 0,
-      ));
-      pinAuth.matchResult = 0;
-      pinAuth.decryptResult = testMnemonic;
-      mnemonicService.seedHexResult = 'unlocked-seed';
-    });
-
-    test('rewrites a legacy credential at the current version', () async {
-      await walletBiz.unlockWallet(testPin);
-
-      final cred = await repo.getCredential(0);
-      expect(cred!.kdfVersion, currentKdfVersion);
-      expect(cred.verifier, 'verifier:vk:key-$testPin');
-      expect(
-        pinAuth.calls.any((c) =>
-            c.method == 'deriveKeyWithVersion' && c.args[1] == currentKdfVersion),
-        isTrue,
-      );
-    });
-
-    test('re-encrypts the tier vault under the new key', () async {
-      await walletBiz.unlockWallet(testPin);
-
-      final encryptions = pinAuth.calls
-          .where((c) => c.method == 'encryptWithKey')
-          .map((c) => c.args[1]);
-      expect(encryptions, contains('key-$testPin'));
-    });
-
-    test('keeps the session usable when the upgrade fails', () async {
-      pinAuth.deriveKeyWithVersionFails = true;
-
-      await walletBiz.unlockWallet(testPin);
-
-      // Unlock still succeeded…
-      expect(walletBiz.isUnlocked, isTrue);
-      expect(walletBiz.mnemonic, testMnemonic);
-      // …and the tier is still on its legacy credential, retried next time.
-      final cred = await repo.getCredential(0);
-      expect(cred!.kdfVersion, kdfVersionPbkdf2Legacy);
-      expect(cred.verifier, 'stored-verifier');
-    });
-
-    test('does no upgrade work when the credential is already current',
-        () async {
-      await repo.setCredential(WalletCredential(
-        depth: 0,
-        verifier: 'verifier:vk:key-$testPin',
-        kdfVersion: currentKdfVersion,
-      ));
-
-      await walletBiz.unlockWallet(testPin);
-
-      expect(
-        pinAuth.calls.any((c) => c.method == 'deriveKeyWithVersion'),
-        isFalse,
-      );
     });
   });
 

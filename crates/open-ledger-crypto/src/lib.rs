@@ -11,7 +11,6 @@ pub mod constant_time;
 pub mod ed25519;
 pub mod errors;
 pub mod hash160;
-pub mod kdf;
 pub mod keccak256;
 pub mod pbkdf2_chacha20;
 pub mod rlp;

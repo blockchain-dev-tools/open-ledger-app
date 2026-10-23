@@ -33,20 +33,6 @@ const String tierVerifyPlaintext = 'openledger-verify-v1';
 /// PBKDF2 master key never encrypts two kinds of payload under the same bytes.
 const String tierVerifyContext = 'openledger.verify.v1';
 
-// ── KDF versions (ADR-007) ─────────────────────────────────────────────
-//
-// Keep in sync with `open-ledger-crypto::kdf` (`CURRENT_KDF_VERSION` is
-// asserted against `KDF_VERSION_ARGON2ID_V1` there).
-
-/// Legacy: PBKDF2-HMAC-SHA256, 100k rounds. Unlock only — never written anew.
-const int kdfVersionPbkdf2Legacy = 0;
-
-/// Current: Argon2id, memory-hard (64 MiB / 3 passes / 4 lanes).
-const int kdfVersionArgon2id = 1;
-
-/// Version every new credential is written with.
-const int currentKdfVersion = kdfVersionArgon2id;
-
 /// Stand-in behaviour (ADR-009): `hide` only switches the visible wallet,
 /// `wipe` also erases the tier the stand-in replaced (`depth - 1`) before
 /// loading this one.
@@ -199,30 +185,17 @@ class WalletCredential {
   /// plaintext ([tierVerifyPlaintext]).
   final String verifier;
 
-  /// KDF version that produced the key this [verifier] is sealed under
-  /// (ADR-007). Stored **with** the verifier rather than in a separate key:
-  /// the two must never disagree, and one write keeps them atomic. Absent in
-  /// pre-upgrade JSON → [kdfVersionPbkdf2Legacy].
-  final int kdfVersion;
-
   const WalletCredential({
     required this.depth,
     required this.verifier,
-    this.kdfVersion = kdfVersionPbkdf2Legacy,
   });
 
   factory WalletCredential.fromJson(Map<String, dynamic> json) {
     return WalletCredential(
       depth: (json['depth'] as num?)?.toInt() ?? 0,
       verifier: json['verifier'] as String,
-      kdfVersion:
-          (json['kdfVersion'] as num?)?.toInt() ?? kdfVersionPbkdf2Legacy,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'depth': depth,
-        'verifier': verifier,
-        'kdfVersion': kdfVersion,
-      };
+  Map<String, dynamic> toJson() => {'depth': depth, 'verifier': verifier};
 }
