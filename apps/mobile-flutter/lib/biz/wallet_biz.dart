@@ -161,6 +161,7 @@ class WalletBiz {
       WalletCredential(
         depth: 0,
         verifier: _pinAuth.sealVerifier(_pinAuth.verifyKey(vaultKey)),
+        kdfVersion: currentKdfVersion,
       ),
     );
     await _repo.saveVault(vault);
@@ -234,8 +235,58 @@ class WalletBiz {
     for (final v in vaults) {
       await _loadVaultIntoSession(v, vaultKey);
     }
+    // The PIN is proven and the plaintext is cached, so a pre-Argon2id tier can
+    // be upgraded in place without asking the user for anything.
+    await _upgradeTierKdf(d, pin, cred.kdfVersion);
     await _pinAuth.resetPinAttempts();
     return accounts!;
+  }
+
+  /// Migrate tier [depth] from its legacy KDF to the current one (ADR-007).
+  ///
+  /// Re-derives the master key under [currentKdfVersion], re-encrypts every
+  /// vault of the tier (mnemonic + passphrase) and rewrites the verifier. The
+  /// vault writes and the credential write go through [_rekeyTier], so a
+  /// failure rolls the ciphertexts back and the tier stays consistent — and
+  /// merely legacy.
+  ///
+  /// **Best effort:** a failure here must not block an unlock whose PIN was
+  /// just accepted; the next unlock simply retries.
+  Future<void> _upgradeTierKdf(int depth, String pin, int version) async {
+    if (version == currentKdfVersion) return;
+
+    try {
+      final newKey = await _pinAuth.deriveKeyWithVersion(pin, currentKdfVersion);
+
+      final originals = {for (final v in _vaults) v.id: v};
+      final rewritten = <Vault>[];
+      for (final v in _vaults) {
+        final encPass = v.passphraseEncrypted;
+        rewritten.add(v.copyWith(
+          mnemonicEncrypted:
+              _pinAuth.encryptWithKey(_mnemonics[v.id]!, newKey),
+          passphraseEncrypted: (encPass != null && encPass.isNotEmpty)
+              ? _pinAuth.encryptWithKey(_passphrases[v.id] ?? '', newKey)
+              : null,
+        ));
+      }
+
+      await _rekeyTier(rewritten, originals, () async {
+        await _repo.setCredential(
+          WalletCredential(
+            depth: depth,
+            verifier: _pinAuth.sealVerifier(_pinAuth.verifyKey(newKey)),
+            kdfVersion: currentKdfVersion,
+          ),
+        );
+      });
+
+      for (final v in rewritten) {
+        _replaceVault(v);
+      }
+    } catch (_) {
+      // Left on the legacy credential on purpose — retried next unlock.
+    }
   }
 
   /// Decrypt [vault]'s secrets with the tier key [vaultKey], discarding the
@@ -438,6 +489,7 @@ class WalletBiz {
         WalletCredential(
           depth: d,
           verifier: _pinAuth.sealVerifier(_pinAuth.verifyKey(newKey)),
+          kdfVersion: currentKdfVersion,
         ),
       );
     });
@@ -508,6 +560,7 @@ class WalletBiz {
         WalletCredential(
           depth: child,
           verifier: _pinAuth.sealVerifier(_pinAuth.verifyKey(childKey)),
+          kdfVersion: currentKdfVersion,
         ),
       );
     } catch (_) {
@@ -568,6 +621,7 @@ class WalletBiz {
         WalletCredential(
           depth: child,
           verifier: _pinAuth.sealVerifier(_pinAuth.verifyKey(newChildKey)),
+          kdfVersion: currentKdfVersion,
         ),
       );
     });

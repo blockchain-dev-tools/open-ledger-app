@@ -4,12 +4,9 @@ import '../../core/interfaces/storage.dart';
 
 /// [Storage] backed by [SharedPreferences] for persistent key-value storage.
 ///
-/// Uses `shared_preferences` (already a project dependency) for persistence.
-/// Data survives app restarts. Suitable for prototype phase.
-///
-/// In production, this should be replaced with [FlutterSecureStorage]
-/// for encrypted on-device persistence (once `flutter_secure_storage`
-/// is added as a dependency).
+/// **No longer the production implementation** — `SecureStorage` replaced it
+/// for wallet data (ADR-007). Kept as the source of the one-time migration
+/// ([LegacyWalletMigration]) and for tests that need a plain key-value sink.
 class SharedPreferencesStorage implements Storage {
   SharedPreferences? _prefs;
 

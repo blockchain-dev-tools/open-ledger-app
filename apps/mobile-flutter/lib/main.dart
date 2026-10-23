@@ -15,7 +15,7 @@ import 'generated/l10n/app_localizations.dart';
 import 'infrastructure/ble/ble_peripheral_universal.dart';
 import 'infrastructure/ffi/crypto_service_adapter.dart';
 import 'infrastructure/platform/launcher_disguise_channel.dart';
-import 'infrastructure/persistence/shared_prefs_storage.dart';
+import 'infrastructure/persistence/secure_storage.dart';
 import 'services/account_service.dart';
 import 'services/mnemonic_service.dart';
 import 'services/pin_auth_service.dart';
@@ -104,7 +104,12 @@ class _OpenLedgerAppAppState extends State<OpenLedgerAppApp>
     //   ICryptoService (CryptoServiceAdapter)
     //   → PinAuthService, AccountService, MnemonicService
     //   → WalletService
-    final storage = SharedPreferencesStorage();
+    //
+    // Wallet data lives in OS-backed secure storage (ADR-007). On a device that
+    // still has the pre-upgrade plaintext keys, the one-time migration runs
+    // first so the repository only ever sees the secure copy.
+    final storage = SecureStorage();
+    await LegacyWalletMigration(storage).run();
     final crypto = const CryptoServiceAdapter();
     final vaultRepo = VaultRepositoryImpl(storage);
     _appState.attachHistoryRepository(HistoryRepositoryImpl(storage, crypto));

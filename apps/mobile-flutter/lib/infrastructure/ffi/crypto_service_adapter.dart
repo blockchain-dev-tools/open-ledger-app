@@ -157,6 +157,10 @@ class CryptoServiceAdapter implements ICryptoService {
       CryptoBridge.pbkdf2Derive(pin, saltHex, keyLen);
 
   @override
+  String? deriveMasterKey(String pin, String saltHex, int version) =>
+      CryptoBridge.deriveMasterKey(pin, saltHex, version);
+
+  @override
   String? mnemonicToSeed(String mnemonic, {String passphrase = ''}) =>
       CryptoBridge.mnemonicToSeed(mnemonic, passphrase: passphrase);
 
