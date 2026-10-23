@@ -225,6 +225,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
         enigmaLanguage: widget.enigmaLanguage,
       );
       await widget.appState?.loadHistory();
+      // Start the foreground idle window for this session (T-004).
+      widget.appState?.onSessionStarted();
       if (mounted) context.go('/');
     } catch (e) {
       debugPrint('[SetPin] setupWallet failed: $e');

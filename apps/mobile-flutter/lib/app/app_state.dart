@@ -49,12 +49,21 @@ class AppState extends ChangeNotifier {
       apduHandler: _apduHandler,
     );
     _signConfirmation.onRequestPending = () {
+      // Reviewing a request must not be interrupted by the idle timer.
+      setIdleLockSuppressed(true);
       // Forward to the navigation callback set by main.dart.
       onSignRequest?.call();
     };
+    _signConfirmation.onRequestResolved = () {
+      setIdleLockSuppressed(false);
+    };
     _signConfirmation.onAddressRequestPending = () {
+      setIdleLockSuppressed(true);
       // Forward to the navigation callback set by main.dart.
       onAddressRequest?.call();
+    };
+    _signConfirmation.onAddressRequestResolved = () {
+      setIdleLockSuppressed(false);
     };
   }
 
@@ -125,10 +134,25 @@ class AppState extends ChangeNotifier {
       signConfirmation: _signConfirmation,
     );
     _bleSession!.onWalletLocked = () {
+      // A pending confirmation cannot be approved without a seed: answer the
+      // host with SECURITY_STATUS_NOT_SATISFIED (best effort) and dismiss it.
+      final hadPending = _signConfirmation.pendingRequest != null ||
+          _signConfirmation.pendingAddressRequest != null;
+      final ble = _blePeripheral;
+      if (hadPending && ble != null) {
+        final resp = ApduResponse(data: null, sw1: 0x69, sw2: 0x82);
+        unawaited(ble.sendApduResponse(resp.toBytes()));
+      }
+      _signConfirmation.cancelPending();
+      // A new BleSession starts unsuppressed; mirror the current state in case
+      // a confirmation is still pending across a wallet re-resolution.
+      setIdleLockSuppressed(false);
       _signConfirmation.clearHistory();
       _historyLoadedForVault = null;
       notifyListeners();
+      onLocked?.call();
     };
+    _bleSession!.setIdleLockSuppressed(_idleLockSuppressed);
     // Keep the BLE signing context in step with the active vault: a connected
     // host must never sign with the previous vault's seed after a switch or
     // removal (the callback also drops any in-flight tx assembly).
@@ -159,12 +183,34 @@ class AppState extends ChangeNotifier {
 
   // ── Auto-lock (delegated) ──────────────────────────────────────────
 
+  /// Whether the idle lock is currently suspended (a confirmation is pending).
+  bool _idleLockSuppressed = false;
+
   void onAppBackgrounded() {
     _bleSession?.onAppBackgrounded();
   }
 
   void onAppForegrounded() {
     _bleSession?.onAppForegrounded();
+  }
+
+  /// Start the foreground idle window for the session that just opened.
+  void onSessionStarted() {
+    _bleSession?.onSessionStarted();
+  }
+
+  /// Foreground interaction (pointer down) — restarts the idle window.
+  void onUserActivity() {
+    _bleSession?.onUserActivity();
+  }
+
+  /// Suspend or resume the foreground idle lock.
+  ///
+  /// Wire to the sign / address confirmation lifecycle: a pending request
+  /// pins the session open, resolving it restarts the idle window.
+  void setIdleLockSuppressed(bool suppressed) {
+    _idleLockSuppressed = suppressed;
+    _bleSession?.setIdleLockSuppressed(suppressed);
   }
 
   // ── BLE Peripheral ─────────────────────────────────────────────────
@@ -209,6 +255,10 @@ class AppState extends ChangeNotifier {
   /// Callback fired when an ETH GET_PUBLIC_KEY P1=0x01 request needs the
   /// user to confirm the displayed address. Injected by [main.dart].
   void Function()? onAddressRequest;
+
+  /// Callback fired after an auto-lock dropped the session. Injected by
+  /// [main.dart] to send the user back to the Unlock screen.
+  void Function()? onLocked;
 
   /// Proxy to [_signConfirmation.pendingRequest].
   PendingSignRequest? get pendingRequest => _signConfirmation.pendingRequest;

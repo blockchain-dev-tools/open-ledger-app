@@ -4,8 +4,9 @@
 /// app state management (ChangeNotifier, navigation, settings).
 ///
 /// Responsibilities:
-///   1. **Auto-lock timer** — 5-minute background timeout; locks wallet and
-///      fires [onWalletLocked] callback.
+///   1. **Auto-lock timers** — a background timeout and a foreground idle
+///      timeout (sliding window: every user interaction restarts it); both
+///      lock the wallet and fire [onWalletLocked].
 ///   2. **APDU-BLE bridge** — parses incoming raw APDU bytes, dispatches
 ///      sign commands to [SignConfirmation] and all others to [ApduHandler].
 ///   3. **BLE advertising management** — thin wrappers around
@@ -43,9 +44,29 @@ class BleSession {
 
   DateTime? _backgroundedAt;
   Timer? _lockTimer;
+  Timer? _idleTimer;
   bool _wasAdvertising = false;
 
-  static const Duration _autoLockDuration = Duration(minutes: 5);
+  /// Whether the app is in the foreground. Maintained by
+  /// [onAppBackgrounded] / [onAppForegrounded]; the idle timer only runs
+  /// while this is `true`.
+  bool _isForeground = true;
+
+  /// True while a sign / address confirmation is pending. The idle timer is
+  /// suspended so a user reviewing a request is never locked out mid-review.
+  bool _idleLockSuppressed = false;
+
+  /// Background timeout before locking.
+  ///
+  /// TODO(T-004): temporarily 5 seconds for on-device testing — restore to
+  /// `Duration(minutes: 5)` once verified (see `decisions/D-015`).
+  final Duration autoLockDuration;
+
+  /// Foreground idle timeout (sliding window: every interaction restarts it).
+  ///
+  /// TODO(T-004): temporarily 5 seconds for on-device testing — restore to
+  /// `Duration(minutes: 5)` once verified (see `decisions/D-015`).
+  final Duration idleLockDuration;
 
   /// Called when the auto-lock timer fires and the wallet is locked.
   ///
@@ -73,6 +94,8 @@ class BleSession {
     required this._walletService,
     required this._apduHandler,
     required this._signConfirmation,
+    this.autoLockDuration = const Duration(seconds: 5),
+    this.idleLockDuration = const Duration(seconds: 5),
   });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -112,13 +135,15 @@ class BleSession {
 
   /// Call when the app enters the background.
   ///
-  /// Records the current time, starts a [Duration(minutes: 5)] auto-lock
-  /// timer, and stops BLE advertising if active (preserving the intent
-  /// to restart on foreground via [_wasAdvertising] flag).
+  /// Records the current time, starts the [autoLockDuration] timer, pauses the
+  /// foreground idle timer, and stops BLE advertising if active (preserving
+  /// the intent to restart on foreground via [_wasAdvertising] flag).
   void onAppBackgrounded() {
+    _isForeground = false;
     _backgroundedAt = DateTime.now();
+    _cancelIdleTimer();
     _lockTimer?.cancel();
-    _lockTimer = Timer(_autoLockDuration, _onAutoLockFire);
+    _lockTimer = Timer(autoLockDuration, _onAutoLockFire);
 
     if (_blePeripheral != null &&
         (_blePeripheral!.state == BleState.broadcasting ||
@@ -130,16 +155,18 @@ class BleSession {
 
   /// Call when the app returns to the foreground.
   ///
-  /// Cancels the auto-lock timer. If the elapsed background time exceeds
-  /// [Duration(minutes: 5)], locks the wallet immediately. Restarts BLE
-  /// advertising if it was stopped by [onAppBackgrounded].
+  /// Cancels the background timer. If the elapsed background time exceeds
+  /// [autoLockDuration], locks the wallet immediately; otherwise restarts the
+  /// foreground idle timer from zero. Restarts BLE advertising if it was
+  /// stopped by [onAppBackgrounded].
   void onAppForegrounded() {
+    _isForeground = true;
     _lockTimer?.cancel();
     _lockTimer = null;
 
     if (_backgroundedAt != null) {
       final elapsed = DateTime.now().difference(_backgroundedAt!);
-      if (elapsed >= _autoLockDuration) {
+      if (elapsed >= autoLockDuration) {
         _performLock();
       }
       _backgroundedAt = null;
@@ -149,15 +176,77 @@ class BleSession {
       _wasAdvertising = false;
       _blePeripheral!.startAdvertising();
     }
+
+    _restartIdleTimerIfEligible();
+  }
+
+  /// Call when a wallet session opens (successful unlock or wallet setup).
+  ///
+  /// Unlocking does not produce a lifecycle event, so the idle window has to
+  /// be started explicitly; it then slides on every [onUserActivity].
+  void onSessionStarted() {
+    _restartIdleTimerIfEligible();
+  }
+
+  /// Call on any foreground user interaction (pointer down).
+  ///
+  /// Implements the sliding window: cancels the running timer and starts a
+  /// fresh [idleLockDuration], so the wallet locks only after a full window
+  /// with no interaction.
+  void onUserActivity() {
+    _restartIdleTimerIfEligible();
+  }
+
+  /// Suspend or resume the foreground idle timer.
+  ///
+  /// Set while a sign / address confirmation is pending so the user is never
+  /// locked out mid-review. Resuming restarts the window from zero.
+  void setIdleLockSuppressed(bool suppressed) {
+    if (_idleLockSuppressed == suppressed) return;
+    _idleLockSuppressed = suppressed;
+    if (suppressed) {
+      _cancelIdleTimer();
+    } else {
+      _restartIdleTimerIfEligible();
+    }
+  }
+
+  /// Start (or restart) the idle timer when the session is lockable.
+  void _restartIdleTimerIfEligible() {
+    if (!_isForeground || _idleLockSuppressed) return;
+    if (!_walletService.isUnlocked) return;
+    _idleTimer?.cancel();
+    _idleTimer = Timer(idleLockDuration, _onIdleLockFire);
+  }
+
+  void _cancelIdleTimer() {
+    _idleTimer?.cancel();
+    _idleTimer = null;
   }
 
   /// Called when the auto-lock timer fires while in background.
   void _onAutoLockFire() {
+    _lockTimer = null;
+    _performLock();
+  }
+
+  /// Called when the foreground idle window elapses with no interaction.
+  void _onIdleLockFire() {
+    _idleTimer = null;
     _performLock();
   }
 
   /// Lock the wallet and clear all session state.
+  ///
+  /// BLE advertising and any live connection are left untouched: a locked
+  /// device may keep advertising, and signing commands are refused by the
+  /// missing APDU context (I3) rather than by tearing the link down.
   void _performLock() {
+    _cancelIdleTimer();
+    _lockTimer?.cancel();
+    _lockTimer = null;
+    _backgroundedAt = null;
+
     if (!_walletService.isUnlocked) return;
 
     _walletService.lock();
@@ -535,12 +624,13 @@ class BleSession {
 
   /// Dispose all managed resources.
   ///
-  /// Cancels the auto-lock timer, unsubscribes from the APDU and state
+  /// Cancels both auto-lock timers, unsubscribes from the APDU and state
   /// streams, and clears the APDU handler context. Does NOT dispose the
   /// peripheral — the caller owns its lifecycle.
   void dispose() {
     _lockTimer?.cancel();
     _lockTimer = null;
+    _cancelIdleTimer();
     _apduSub?.cancel();
     _apduSub = null;
     _stateSub?.cancel();

@@ -31,7 +31,9 @@ The resolving guard prevents repeat decisions. Await delivery before clearing pe
 
 BLE states are `idle → broadcasting → connected`, with transitions back to idle/error on stop/disconnect/failure. The active Ledger app is an independent state: dashboard or one chain app. Selecting a chain opens that app and starts advertising; stopping returns to BOLOS/dashboard. App-specific CLA `E0` commands on dashboard return `6D00`.
 
-Intended background behavior pauses broadcasting and remembers its intent; returning before timeout resumes, and a five-minute background interval locks. The handler logic is present but the App lifecycle does not currently call it. PrivacyShield observes lifecycle only to cover sensitive UI; it does not perform wallet lock.
+Background behavior pauses broadcasting and remembers its intent; returning before timeout resumes, and a five-minute background interval locks. `main.dart` observes the App lifecycle (`paused`/`hidden` → background, `resumed` → foreground; `inactive` is ignored) and forwards it to `AppState`.
+
+Foreground idle locking is a sliding window: any pointer down restarts a five-minute timer, so the session locks only after a full window without interaction. The timer runs only while unlocked and in the foreground, and is suspended while a sign or address confirmation is pending (the 60s request timeout bounds that pause). Either lock path leaves BLE advertising and connections untouched; signing is refused by the absent APDU context. Locking drops a pending confirmation, answers it with `6982` on a best-effort basis, clears in-memory history, and navigates to Unlock with `go()`. PrivacyShield still observes lifecycle only to cover sensitive UI; it does not perform wallet lock.
 
 ## Startup and navigation
 

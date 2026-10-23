@@ -560,6 +560,48 @@ void main() {
     });
   });
 
+  group('cancelPending', () {
+    test('drops a pending sign request and notifies', () async {
+      final pathData = _buildPathData(1, [0x80000000]);
+      final cmd = _makeSignCommand(ins: Ins.ethSign, data: pathData);
+      await sc.interceptSignCommand(cmd, 'seed-hex');
+
+      bool resolvedCalled = false;
+      sc.onRequestResolved = () => resolvedCalled = true;
+
+      expect(sc.cancelPending(), isTrue);
+      expect(sc.pendingRequest, isNull);
+      expect(resolvedCalled, isTrue);
+    });
+
+    test('drops a pending address request and notifies', () async {
+      await sc.interceptAddressCommand(
+          const ApduCommand(
+            cla: Cla.os,
+            ins: Ins.getPublicKey,
+            p1: P1.ethConfirm,
+            p2: P2.ethNoChainCode,
+          ),
+          '0xabc123',
+          "m/44'/60'/0'/0/0");
+
+      bool resolvedCalled = false;
+      sc.onAddressRequestResolved = () => resolvedCalled = true;
+
+      expect(sc.cancelPending(), isTrue);
+      expect(sc.pendingAddressRequest, isNull);
+      expect(resolvedCalled, isTrue);
+    });
+
+    test('is a no-op when nothing is pending', () {
+      bool resolvedCalled = false;
+      sc.onRequestResolved = () => resolvedCalled = true;
+
+      expect(sc.cancelPending(), isFalse);
+      expect(resolvedCalled, isFalse);
+    });
+  });
+
   group('clearLastSignResult', () {
     test('clears the last sign result', () async {
       // Create pending and approve
