@@ -181,12 +181,12 @@ fn final_mnemonic_chinese_short() {
 }
 
 #[test]
-fn long_chinese_riddle_skips_and_truncates() {
+fn long_chinese_riddle_skips_unmatched() {
     // 《静夜思》：标点「，」「。」被跳过，「霜」不在简中词表被跳过，
-    // 20 个命中字取前 16 个 → 床前明月光疑是地上举头望明月低头
+    // 19 个命中字全部参与熵（未超过 48 上限）
     let tokens = match_tokens("床前明月光，疑是地上霜。举头望明月，低头思故乡。", Language::SimplifiedChinese);
-    assert_eq!(tokens.len(), 16);
-    assert_eq!(tokens.join(""), "床前明月光疑是地上举头望明月低头");
+    assert_eq!(tokens.len(), 19);
+    assert_eq!(tokens.join(""), "床前明月光疑是地上举头望明月低头思故乡");
 }
 
 #[test]
@@ -194,52 +194,52 @@ fn long_chinese_riddle_full_pipeline() {
     let riddle = "床前明月光，疑是地上霜。举头望明月，低头思故乡。";
     let tokens = match_tokens(riddle, Language::SimplifiedChinese);
     let indices = tokens_to_indices(&tokens, Language::SimplifiedChinese);
-    assert_eq!(indices, vec![1051, 114, 143, 168, 263, 1357, 2, 27, 13, 528, 212, 522, 143, 168, 384, 212]);
+    assert_eq!(indices, vec![1051, 114, 143, 168, 263, 1357, 2, 27, 13, 528, 212, 522, 143, 168, 384, 212, 289, 611, 941]);
 
     let bytes = indices_to_bytes(&indices);
     assert_eq!(
         hex::encode(&bytes),
-        "041b0072008f00a80107054d0002001b000d021000d4020a008f00a8018000d4"
+        "041b0072008f00a80107054d0002001b000d021000d4020a008f00a8018000d40121026303ad"
     );
     assert_eq!(
         hex::encode(finalize_entropy(&bytes, "1234")),
-        "9733c1410091f7bf19d1ec5aa4dc5a10d02b0993b206891b431ea546e94d4bf1"
+        "852be79f9f24282c0ec602efc0080625d088f09c3da2dc86b0c538ea4bc0f5ca"
     );
     // 步骤组合等价于 derive_entropy 全链路
     assert_eq!(
         hex::encode(derive_entropy(riddle, "1234", Language::SimplifiedChinese)),
-        "9733c1410091f7bf19d1ec5aa4dc5a10d02b0993b206891b431ea546e94d4bf1"
+        "852be79f9f24282c0ec602efc0080625d088f09c3da2dc86b0c538ea4bc0f5ca"
     );
     // 全链路最终助记词（《静夜思》全文 + 密钥 1234）
     assert_eq!(
         zh(riddle, "1234"),
-        "now own expect abuse buyer test guard diesel follow cheap bird canvas actor luggage excite dolphin math sure sibling enhance hub pluck cool chicken"
+        "lunch game tree dinner dream bid deposit scare used able account entry ancient joke ill reform symptom culture course impact pigeon there strong expect"
     );
 }
 
 #[test]
-fn long_riddle_over_100_chars_uses_first_16_matches() {
+fn long_riddle_over_100_chars_uses_first_48_matches() {
     // 《将进酒》204 个 token（> 100），「樽」「馔」等生僻字不在词表被跳过，
-    // 只取前 16 个命中字 → 君不见黄河之水天上来奔流到海不复
+    // 命中 159 个，只取前 48 个命中字参与熵
     let riddle = "君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。烹羊宰牛且为乐，会须一饮三百杯。岑夫子，丹丘生，将进酒，杯莫停。与君歌一曲，请君为我倾耳听。钟鼓馔玉不足贵，但愿长醉不复醒。古来圣贤皆寂寞，惟有饮者留其名。陈王昔时宴平乐，斗酒十千恣欢谑。主人何为言少钱，径须沽取对君酌。五花马，千金裘，呼儿将出换美酒，与尔同销万古愁。";
 
     let tokens = match_tokens(riddle, Language::SimplifiedChinese);
-    assert_eq!(tokens.len(), 16);
-    assert_eq!(tokens.join(""), "君不见黄河之水天上来奔流到海不复");
+    assert_eq!(tokens.len(), 48);
+    assert_eq!(tokens.join(""), "君不见黄河之水天上来奔流到海不复回君不见高堂明镜悲白发朝如青丝成雪人生得意须尽欢莫使金空对月天生");
 
     let indices = tokens_to_indices(&tokens, Language::SimplifiedChinese);
-    assert_eq!(indices, vec![1135, 4, 228, 511, 550, 65, 76, 116, 13, 21, 1464, 216, 25, 275, 4, 390]);
+    assert_eq!(indices, vec![1135, 4, 228, 511, 550, 65, 76, 116, 13, 21, 1464, 216, 25, 275, 4, 390, 253, 1135, 4, 228, 78, 1017, 143, 1341, 1506, 313, 37, 577, 75, 412, 708, 33, 1085, 8, 24, 61, 166, 393, 662, 819, 1298, 95, 283, 354, 32, 168, 116, 24]);
     let bytes = indices_to_bytes(&indices);
     assert_eq!(
         hex::encode(&bytes),
-        "046f000400e401ff02260041004c0074000d001505b800d80019011300040186"
+        "046f000400e401ff02260041004c0074000d001505b800d8001901130004018600fd046f000400e4004e03f9008f053d05e2013900250241004b019c02c40021043d00080018003d00a60189029603330512005f011b0162002000a800740018"
     );
     assert_eq!(
         hex::encode(finalize_entropy(&bytes, "1234")),
-        "9b91c654be55001e25d31e279c4ad2bdd3a856f9b2d193a71ae6d31ddc48982a"
+        "b045bcbc7e8dfdebe46ab7c57061507f643d33d51cb8b7c6ef16083eec0a5f3d"
     );
 
-    // 长文本结果 == 前 16 个命中字结果（第 17 个命中字起不影响）
+    // 长文本结果 == 前 48 个命中字结果（第 49 个命中字起不影响）
     let short = tokens.join("");
     assert_eq!(
         derive_entropy(riddle, "1234", Language::SimplifiedChinese),
@@ -248,6 +248,6 @@ fn long_riddle_over_100_chars_uses_first_16_matches() {
     // 全链路最终助记词（《将进酒》全文 + 密钥 1234）
     assert_eq!(
         zh(riddle, "1234"),
-        "oppose mixed news lake exotic audit nuclear glow chest time regret knife dentist clock traffic focus neck decide rifle plate tape cattle gaze floor"
+        "raccoon combine congress wonder thank vote museum finger shell loan favorite yard duck okay federal novel result danger sheriff away uphold ahead language rally"
     );
 }
