@@ -5,8 +5,8 @@
 //! # 算法概述
 //!
 //! 谜语文本按词表语言切分后，逐 token 查 BIP-39 词表索引，每个索引以固定
-//! 2 字节大端（u16）编码，最多 [`MAX_INDICES`] 个词右对齐到 32 字节熵块
-//! （不足时高位补零），再经 keccak256 与密钥盐哈希混合，得到最终 32 字节熵，
+//! 2 字节大端（u16）编码，最多 [`MAX_INDICES`] 个词按顺序拼接为字节序列，
+//! 再经 keccak256 与密钥盐哈希混合，得到最终 32 字节熵，
 //! 最后编码为 24 词助记词（[`generate`] 固定英文输出）。
 //!
 //! 确定性：相同 (谜语, 密钥, 语言) 永远得到相同结果。
@@ -26,7 +26,7 @@ const ENTROPY_BYTES: usize = 32;
 const BYTES_PER_WORD: usize = 2;
 
 /// 最多参与熵的索引数（安全上限，防止超长谜语耗尽输入）。
-const MAX_INDICES: usize = 48;
+const MAX_INDICES: usize = 1024;
 
 /// 谜语文本长度上限（字符数），超出部分被截断忽略。
 const MAX_ENIGMA_CAP: usize = 1024;
