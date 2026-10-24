@@ -183,7 +183,7 @@ fn final_mnemonic_chinese_short() {
 #[test]
 fn long_chinese_riddle_skips_unmatched() {
     // 《静夜思》：标点「，」「。」被跳过，「霜」不在简中词表被跳过，
-    // 19 个命中字全部参与熵（未超过 48 上限）
+    // 19 个命中字全部参与熵（未超过 1024 上限）
     let tokens = match_tokens("床前明月光，疑是地上霜。举头望明月，低头思故乡。", Language::SimplifiedChinese);
     assert_eq!(tokens.len(), 19);
     assert_eq!(tokens.join(""), "床前明月光疑是地上举头望明月低头思故乡");
@@ -218,36 +218,54 @@ fn long_chinese_riddle_full_pipeline() {
 }
 
 #[test]
-fn long_riddle_over_100_chars_uses_first_48_matches() {
-    // 《将进酒》204 个 token（> 100），「樽」「馔」等生僻字不在词表被跳过，
-    // 命中 159 个，只取前 48 个命中字参与熵
+fn long_riddle_uses_all_matches_up_to_1024() {
+    // 《将进酒》204 个 token，「樽」「馔」等生僻字不在词表被跳过，
+    // 命中 159 个，未超过 1024 上限，全部参与熵
     let riddle = "君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。人生得意须尽欢，莫使金樽空对月。天生我材必有用，千金散尽还复来。烹羊宰牛且为乐，会须一饮三百杯。岑夫子，丹丘生，将进酒，杯莫停。与君歌一曲，请君为我倾耳听。钟鼓馔玉不足贵，但愿长醉不复醒。古来圣贤皆寂寞，惟有饮者留其名。陈王昔时宴平乐，斗酒十千恣欢谑。主人何为言少钱，径须沽取对君酌。五花马，千金裘，呼儿将出换美酒，与尔同销万古愁。";
 
     let tokens = match_tokens(riddle, Language::SimplifiedChinese);
-    assert_eq!(tokens.len(), 48);
-    assert_eq!(tokens.join(""), "君不见黄河之水天上来奔流到海不复回君不见高堂明镜悲白发朝如青丝成雪人生得意须尽欢莫使金空对月天生");
+    assert_eq!(tokens.len(), 159);
+    assert_eq!(
+        tokens.join(""),
+        "君不见黄河之水天上来奔流到海不复回君不见高堂明镜悲白发朝如青丝成雪人生得意须尽欢莫使金空对月天生我材必有用千金散尽还复来羊牛且为乐会须一饮三百杯夫子丹丘生将进酒杯莫停与君歌一曲请君为我倾耳听钟鼓玉不足贵但愿长不复醒古来圣贤皆有饮者留其名陈王时宴平乐斗酒十千欢主人何为言少钱径须取对君五花马千金呼儿将出换美酒与尔同销万古"
+    );
 
     let indices = tokens_to_indices(&tokens, Language::SimplifiedChinese);
-    assert_eq!(indices, vec![1135, 4, 228, 511, 550, 65, 76, 116, 13, 21, 1464, 216, 25, 275, 4, 390, 253, 1135, 4, 228, 78, 1017, 143, 1341, 1506, 313, 37, 577, 75, 412, 708, 33, 1085, 8, 24, 61, 166, 393, 662, 819, 1298, 95, 283, 354, 32, 168, 116, 24]);
-    let bytes = indices_to_bytes(&indices);
+    assert_eq!(indices.len(), 159);
+    // 前 48 个索引与 48 上限版本的向量一致（前缀未变）
     assert_eq!(
-        hex::encode(&bytes),
-        "046f000400e401ff02260041004c0074000d001505b800d8001901130004018600fd046f000400e4004e03f9008f053d05e2013900250241004b019c02c40021043d00080018003d00a60189029603330512005f011b0162002000a800740018"
-    );
-    assert_eq!(
-        hex::encode(finalize_entropy(&bytes, "1234")),
-        "b045bcbc7e8dfdebe46ab7c57061507f643d33d51cb8b7c6ef16083eec0a5f3d"
+        &indices[..48],
+        &[1135, 4, 228, 511, 550, 65, 76, 116, 13, 21, 1464, 216, 25, 275, 4, 390, 253, 1135, 4, 228, 78, 1017, 143, 1341, 1506, 313, 37, 577, 75, 412, 708, 33, 1085, 8, 24, 61, 166, 393, 662, 819, 1298, 95, 283, 354, 32, 168, 116, 24][..]
     );
 
-    // 长文本结果 == 前 48 个命中字结果（第 49 个命中字起不影响）
-    let short = tokens.join("");
-    assert_eq!(
+    // 第 49 个命中字起也参与熵，因此与只取前 48 个的结果不同
+    let first_48 = tokens[..48].join("");
+    assert_ne!(
         derive_entropy(riddle, "1234", Language::SimplifiedChinese),
-        derive_entropy(&short, "1234", Language::SimplifiedChinese)
+        derive_entropy(&first_48, "1234", Language::SimplifiedChinese)
     );
-    // 全链路最终助记词（《将进酒》全文 + 密钥 1234）
+
+    // 全链路最终熵与助记词（《将进酒》全文 + 密钥 1234）
+    assert_eq!(
+        hex::encode(derive_entropy(riddle, "1234", Language::SimplifiedChinese)),
+        "5dd9a7bb11f2a10f355b69774a17278a056e4a0aa8590aa0ffb5aa0b991bc8ce"
+    );
     assert_eq!(
         zh(riddle, "1234"),
-        "raccoon combine congress wonder thank vote museum finger shell loan favorite yard duck okay federal novel result danger sheriff away uphold ahead language rally"
+        "fruit snake uphold catalog claw maple step honey jar expose size beef finger celery click arctic apple among uniform favorite ridge mistake case soda"
+    );
+}
+
+#[test]
+fn max_indices_caps_at_1024() {
+    // 1100 个字先被 MAX_ENIGMA_CAP 截断到 1024，再由 MAX_INDICES 限制到 1024
+    let riddle = "床".repeat(1100);
+    let tokens = match_tokens(&riddle, Language::SimplifiedChinese);
+    assert_eq!(tokens.len(), 1024);
+
+    let capped = "床".repeat(1024);
+    assert_eq!(
+        hex::encode(derive_entropy(&riddle, "1234", Language::SimplifiedChinese)),
+        hex::encode(derive_entropy(&capped, "1234", Language::SimplifiedChinese))
     );
 }
