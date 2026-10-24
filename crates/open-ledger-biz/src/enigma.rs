@@ -26,7 +26,7 @@ const ENTROPY_BYTES: usize = 32;
 const BYTES_PER_WORD: usize = 2;
 
 /// 最多参与熵的索引数（安全上限，防止超长谜语耗尽输入）。
-const MAX_INDICES: usize = 16;
+const MAX_INDICES: usize = 48;
 
 /// 谜语文本长度上限（字符数），超出部分被截断忽略。
 const MAX_ENIGMA_CAP: usize = 1024;
