@@ -44,7 +44,11 @@ dependencies:
   # QR code display
   qr_flutter: ^4.1.0
   flutter_svg: ^2.3.0
-  universal_ble: ^2.2.0
+  # Vendored 2.3.0 fork: upstream never drops its cached GATT server when the
+  # adapter toggles, so advertising died silently after Bluetooth off/on.
+  # See third_party/universal_ble/README.md.
+  universal_ble:
+    path: third_party/universal_ble
   # QR code scanning
   # mobile_scanner: ^6.0.0
 

@@ -21,14 +21,18 @@ import dbus
 import dbus.mainloop.glib
 from gi.repository import GLib
 
+from .ble_framing import (  # noqa: F401 - re-exported for existing callers
+    DEFAULT_MTU,
+    TAG_APDU,
+    TAG_GET_MTU,
+    Reassembler,
+    fragment,
+)
+
 SERVICE_UUID = "13d63400-2c97-0004-0000-4c6564676572"
 RESP_CHAR_UUID = "13d63400-2c97-0004-0001-4c6564676572"   # read + notify
 CMD_CHAR_UUID = "13d63400-2c97-0004-0002-4c6564676572"    # write
 CMD_WWR_UUID = "13d63400-2c97-0004-0003-4c6564676572"     # write without response
-
-TAG_APDU = 0x05
-TAG_GET_MTU = 0x08
-DEFAULT_MTU = 20
 
 # 设备本地名（Android 端默认）。BlueZ 的 Device1.ServiceUUIDs 只反映主广播包，
 # 而本设备把 128 位 UUID 放在 scan response（addServicesInScanResponse），
@@ -40,65 +44,6 @@ BLUEZ = "org.bluez"
 
 class BleError(RuntimeError):
     pass
-
-
-# ── 分帧 ────────────────────────────────────────────────────────────────
-
-def fragment(apdu: bytes, mtu: int = DEFAULT_MTU, tag: int = TAG_APDU) -> list[bytes]:
-    """把一条 APDU 切成 tag-first 分块（首块 5B 头 / 续块 3B 头）。"""
-    first_cap = mtu - 5
-    cont_cap = mtu - 3
-    chunks: list[bytes] = []
-    offset = 0
-    total = len(apdu)
-    seq = 0
-    while offset < total or seq == 0:
-        if seq == 0:
-            payload = apdu[offset:offset + first_cap]
-            chunks.append(bytes([tag, (seq >> 8) & 0xFF, seq & 0xFF,
-                                 (total >> 8) & 0xFF, total & 0xFF]) + payload)
-            offset += len(payload)
-        else:
-            payload = apdu[offset:offset + cont_cap]
-            chunks.append(bytes([tag, (seq >> 8) & 0xFF, seq & 0xFF]) + payload)
-            offset += len(payload)
-        seq += 1
-    return chunks
-
-
-class _Reassembler:
-    """按 seq 组装 tag-first 分块，凑齐 total 后返回上层协议数据。"""
-
-    def __init__(self) -> None:
-        self._parts: dict[int, bytes] = {}
-        self._total: int | None = None
-        self._got = 0
-        self.result: bytes | None = None
-
-    def feed(self, chunk: bytes) -> bytes | None:
-        if len(chunk) < 3:
-            return None
-        tag = chunk[0]
-        seq = (chunk[1] << 8) | chunk[2]
-        if seq == 0 and len(chunk) >= 5:
-            self._total = (chunk[3] << 8) | chunk[4]
-            payload = chunk[5:]
-        else:
-            payload = chunk[3:]
-        if seq not in self._parts:
-            self._parts[seq] = payload
-            self._got += len(payload)
-        if self._total is not None and self._got >= self._total:
-            ordered = b"".join(self._parts[i] for i in sorted(self._parts))
-            self.result = ordered[:self._total]
-            self._reset()
-            return self.result
-        return None
-
-    def _reset(self) -> None:
-        self._parts.clear()
-        self._total = None
-        self._got = 0
 
 
 # ── GATT central ────────────────────────────────────────────────────────
@@ -123,7 +68,7 @@ class GattCentral:
         self._resp_char: str | None = None
         self._cmd_char: str | None = None
         self._notify_chunks: list[bytes] = []
-        self._reasm = _Reassembler()
+        self._reasm = Reassembler()
         self._rx: bytes | None = None
         self._rx_event = threading.Event()
         self.mtu = DEFAULT_MTU          # 我方出站分块 MTU（保守）
@@ -305,7 +250,7 @@ class GattCentral:
     def prepare_recv(self) -> None:
         """开始一次新的请求/响应：清空上一轮的响应状态。"""
         self._rx = None
-        self._reasm = _Reassembler()
+        self._reasm = Reassembler()
         self._notify_chunks.clear()
         self._rx_event.clear()
 

@@ -74,7 +74,11 @@ async def start_broadcast(dev: Device, app, chain_id: str = "ethereum") -> None:
 
     点选后 sheet 会切到日志视图（那里没有关闭按钮），故用系统返回键关掉 modal；
     不关会盖住所弹出的签名确认页。
+
+    解锁刚结束时 FAB 还在路由转场里，先 settle 一下再点，避免偶发的
+    `ble-chain-*` NOT_FOUND。
     """
+    await app.settle(1.0)
     await app.tap_type("BleFab")
     await app.settle(1.2)
     hit = await app.tap_key(f"ble-chain-{chain_id}")

@@ -8,14 +8,18 @@
 from __future__ import annotations
 
 import contextlib
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator
 
 from .app import FlutterApp
 from .attach import AttachSession
-from .ble import GattCentral
 from .device import Device
 from .env import APP_DIR, PACKAGE
 from .wallet import ensure_unlocked, start_broadcast
+
+if TYPE_CHECKING:  # pragma: no cover - import-time only
+    # `harness.ble` needs Linux BlueZ (dbus/gi); keep it out of module import so
+    # adb-only cases (e.g. ble_recovery.py) still run on macOS.
+    from .ble import GattCentral
 
 
 class DeviceSession:
@@ -55,6 +59,8 @@ class DeviceSession:
     @contextlib.contextmanager
     def ble_connected(self, scan_timeout: float = 25.0) -> Iterator[GattCentral]:
         """作为 host 扫描并连接设备的 GATT，订阅响应 notify。"""
+        from .ble import GattCentral  # Linux-only dependency, loaded on demand
+
         ble = GattCentral()
         ble.start()
         try:

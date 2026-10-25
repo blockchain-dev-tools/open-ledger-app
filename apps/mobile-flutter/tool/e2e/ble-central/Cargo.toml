@@ -1,0 +1,17 @@
+[package]
+name = "ble-central"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "BLE GATT central for the Open Ledger E2E regression suite (JSON lines over stdio)"
+
+# Standalone tool: keep it out of the crypto SDK workspace under crates/.
+[workspace]
+
+[dependencies]
+anyhow = "1"
+btleplug = "0.13"
+futures = "0.3"
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util", "sync", "time"] }
+uuid = "1"

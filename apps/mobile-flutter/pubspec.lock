@@ -732,10 +732,9 @@ packages:
   universal_ble:
     dependency: "direct main"
     description:
-      name: universal_ble
-      sha256: bdebe7d4ff3a24f28b5e56c999104ea1584a9de55da4ee0b4c2346bcf8f8c528
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/universal_ble"
+      relative: true
+    source: path
     version: "2.3.0"
   vector_graphics:
     dependency: transitive

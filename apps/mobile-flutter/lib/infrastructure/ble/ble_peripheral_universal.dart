@@ -26,11 +26,29 @@ import '../../core/models/ble_types.dart';
 import 'ble_permissions.dart';
 
 class BlePeripheralUniversal implements IBlePeripheral {
-  BlePeripheralUniversal({IBlePermissions permissions = const BlePermissions()})
-      : _permissions = permissions; // ignore: prefer_initializing_formals
+  BlePeripheralUniversal({
+    IBlePermissions permissions = const BlePermissions(),
+    Stream<AvailabilityState>? availabilityStream,
+    Future<bool> Function()? requestBluetoothEnable,
+  })  : _permissions = permissions, // ignore: prefer_initializing_formals
+        // Named so callers can inject a test feed; a private initializing
+        // formal would make the parameter unusable outside this library.
+        _availabilityStream = availabilityStream, // ignore: prefer_initializing_formals
+        _requestBluetoothEnable = requestBluetoothEnable ??
+            // The system dialog stays open until the user answers; the plugin's
+            // default 10s command timeout is far too short for that.
+            (() => UniversalBle.enableBluetooth(timeout: _bluetoothPromptTimeout));
 
   /// Gate that requests the OS-level BLE runtime permissions before advertising.
   final IBlePermissions _permissions;
+
+  /// Adapter state feed; injectable so tests can drive it without the platform
+  /// channel. Defaults to `universal_ble`'s stream.
+  final Stream<AvailabilityState>? _availabilityStream;
+
+  /// Raises the system "turn Bluetooth on" request. Injectable for the same
+  /// reason as [_availabilityStream]; defaults to the plugin's activity prompt.
+  final Future<bool> Function() _requestBluetoothEnable;
 
   // ── Ledger BLE framing ───────────────────────────────────────────────
 
@@ -39,12 +57,29 @@ class BlePeripheralUniversal implements IBlePeripheral {
 
   static const int _defaultMtu = 20;
 
+  /// Budget for the user to answer the system "turn Bluetooth on" dialog.
+  static const Duration _bluetoothPromptTimeout = Duration(minutes: 2);
+
   // ── State ────────────────────────────────────────────────────────────
 
   BleState _state = BleState.idle;
   String _deviceName = defaultBleDeviceName;
   int _mtu = _defaultMtu;
   bool _disposed = false;
+
+  /// Set when Bluetooth goes off while advertising, so the adapter coming back
+  /// can rebuild the GATT server and advertising without user action.
+  bool _resumeAdvertisingOnBluetoothOn = false;
+  bool _resumingAdvertising = false;
+
+  /// The user's intent, not the current platform state: a Bluetooth toggle
+  /// pushes `advertising → idle` before the availability event arrives, so
+  /// [_state] is already idle by the time we decide whether to resume.
+  bool _wantsAdvertising = false;
+
+  /// Guards against overlapping starts: a chain tap that asks the system to
+  /// enable Bluetooth races with the automatic resume on `poweredOn`.
+  bool _startInFlight = false;
 
   String? _connectedDeviceId;
 
@@ -104,13 +139,67 @@ class BlePeripheralUniversal implements IBlePeripheral {
     return readiness;
   }
 
+  /// Poll until the peripheral reports [PeripheralReadinessState.ready].
+  ///
+  /// Used after the user accepts the system "turn Bluetooth on" request: the
+  /// adapter takes a moment to come up, and [_awaitReadiness] returns the
+  /// terminal `bluetoothOff` straight away.
+  Future<PeripheralReadinessState> _waitUntilReady({
+    Duration budget = const Duration(seconds: 15),
+  }) async {
+    const pollInterval = Duration(milliseconds: 250);
+    var waited = Duration.zero;
+
+    var readiness = await UniversalBlePeripheral.getAvailabilityState();
+    while (readiness != PeripheralReadinessState.ready && waited < budget) {
+      await Future<void>.delayed(pollInterval);
+      waited += pollInterval;
+      readiness = await UniversalBlePeripheral.getAvailabilityState();
+    }
+    return readiness;
+  }
+
   @override
   Future<void> startAdvertising() async {
     _ensureNotDisposed();
 
-    if (_state == BleState.broadcasting || _state == BleState.connected) {
-      _log('Already advertising or connected.');
+    if (_startInFlight) {
+      _log('Advertising start already in progress.');
       return;
+    }
+    _startInFlight = true;
+    try {
+      await _startAdvertising();
+    } finally {
+      _startInFlight = false;
+    }
+    if (_state == BleState.broadcasting) {
+      // The rebuild succeeded; nothing left to resume.
+      _resumeAdvertisingOnBluetoothOn = false;
+    } else if (_resumeAdvertisingOnBluetoothOn && !_disposed) {
+      // Only when the adapter is actually back: a declined prompt must not
+      // immediately re-open the system dialog.
+      final readiness = await UniversalBlePeripheral.getAvailabilityState();
+      if (readiness == PeripheralReadinessState.ready && !_disposed) {
+        _resumeAdvertising();
+      }
+    }
+  }
+
+  Future<void> _startAdvertising() async {
+    if (_state == BleState.broadcasting || _state == BleState.connected) {
+      // The cached state can outlive the platform's: a Bluetooth off/on toggle
+      // kills the framework GATT server and its advertising, while the panel
+      // still reads `broadcasting`. Reconcile before early-returning, otherwise
+      // the app can never recover without a process restart.
+      final platformState = await UniversalBlePeripheral.getAdvertisingState();
+      if (platformState == PeripheralAdvertisingState.advertising) {
+        _log('Already advertising.');
+        return;
+      }
+      _log('Cached state ${_state.name} but platform reports '
+          '${platformState.name} — rebuilding.');
+      _transition(BleState.idle);
     }
 
     // Android 12+ gates advertising behind runtime permissions; ask before
@@ -124,7 +213,24 @@ class BlePeripheralUniversal implements IBlePeripheral {
     }
 
     try {
-      final readiness = await _awaitReadiness();
+      var readiness = await _awaitReadiness();
+      if (readiness == PeripheralReadinessState.bluetoothOff) {
+        // The plugin only raises the system "turn Bluetooth on" dialog inside
+        // its own startAdvertising; this readiness gate would otherwise turn a
+        // Bluetooth-off tap into a dead error state.
+        _log('Bluetooth is off — asking the system to turn it on.');
+        var granted = false;
+        try {
+          granted = await _requestBluetoothEnable();
+        } catch (e) {
+          _log('⚠ Bluetooth enable request failed: $e');
+        }
+        if (granted) {
+          readiness = await _waitUntilReady();
+        } else {
+          _log('⚠ Bluetooth enable request was declined.');
+        }
+      }
       if (readiness != PeripheralReadinessState.ready) {
         _log('⚠ Peripheral not ready: ${readiness.name}');
         _transition(BleState.error);
@@ -169,6 +275,7 @@ class BlePeripheralUniversal implements IBlePeripheral {
       // case the stream event landed before the listener attached.
       final advState = await UniversalBlePeripheral.getAdvertisingState();
       _log('Advertising state: ${advState.name}');
+      _wantsAdvertising = true;
       if (advState == PeripheralAdvertisingState.advertising) {
         _transition(BleState.broadcasting);
       }
@@ -182,6 +289,9 @@ class BlePeripheralUniversal implements IBlePeripheral {
   Future<void> stopAdvertising() async {
     _ensureNotDisposed();
 
+    // Explicit stop: do not come back automatically after a Bluetooth toggle.
+    _wantsAdvertising = false;
+
     try {
       await UniversalBlePeripheral.stopAdvertising();
       await UniversalBlePeripheral.clearServices();
@@ -189,14 +299,62 @@ class BlePeripheralUniversal implements IBlePeripheral {
       _log('⚠ BLE stop error: $e');
     }
 
+    _clearConnectionState();
+    _transition(BleState.idle);
+    _log('BLE advertising stopped.');
+  }
+
+  void _clearConnectionState() {
     _connectedDeviceId = null;
     _bufferedResponse = null;
     _incomingChunks.clear();
     _incomingTotalLen = 0;
     _mtu = _defaultMtu;
+  }
 
-    _transition(BleState.idle);
-    _log('BLE advertising stopped.');
+  /// Adapter state changes drive recovery. Bluetooth going off kills the
+  /// peripheral stack (see the vendored plugin patch); when it comes back the
+  /// GATT server is rebuilt and, if the user was advertising, so is advertising.
+  void _onAvailabilityChanged(AvailabilityState availability) {
+    if (availability == AvailabilityState.poweredOff ||
+        availability == AvailabilityState.resetting) {
+      if (_wantsAdvertising) {
+        if (!_resumeAdvertisingOnBluetoothOn) {
+          _log('Bluetooth off — advertising stopped.');
+        }
+        _resumeAdvertisingOnBluetoothOn = true;
+      }
+      _clearConnectionState();
+      _transition(BleState.idle);
+      return;
+    }
+
+    if (availability != AvailabilityState.poweredOn ||
+        !_resumeAdvertisingOnBluetoothOn) {
+      return;
+    }
+    if (_startInFlight) {
+      // A user-initiated start asked the system to enable Bluetooth. Keep the
+      // flag: startAdvertising() re-checks it when that start finishes, which
+      // also covers the request timing out after the user answered late.
+      return;
+    }
+    _resumeAdvertising();
+  }
+
+  Future<void> _resumeAdvertising() async {
+    if (_resumingAdvertising || _disposed) return;
+    _resumeAdvertisingOnBluetoothOn = false;
+    _resumingAdvertising = true;
+    try {
+      _log('Bluetooth back on — rebuilding advertising.');
+      await startAdvertising();
+    } catch (e) {
+      _log('⚠ BLE auto-restart failed: $e');
+      _transition(BleState.error);
+    } finally {
+      _resumingAdvertising = false;
+    }
   }
 
   @override
@@ -364,6 +522,13 @@ class BlePeripheralUniversal implements IBlePeripheral {
         _log('${e.deviceId} ${e.isSubscribed ? "subscribed to" : "unsubscribed from"} '
             '${e.characteristicId}');
       }),
+    );
+
+    _subscriptions.add(
+      (_availabilityStream ?? UniversalBle.availabilityStream).listen(
+        _onAvailabilityChanged,
+        onError: (Object e) => _log('⚠ BLE availability error: $e'),
+      ),
     );
 
     UniversalBlePeripheral.setWriteRequestHandlers(_onWriteRequest);
