@@ -5,6 +5,9 @@ This checklist is a test specification, not a record of passed tests. Run on a d
 ## Wallet lifecycle
 
 - [ ] Create/import/Enigma paths reach the intended PIN setup and Vault screens.
+- [ ] Import accepts 12- and 24-word phrases; the counter shows the matching target (`n / 12` or `n / 24`).
+- [ ] Typing an unfinished prefix shows at most five BIP-39 candidates; tapping one completes the word with a trailing space and the strip disappears.
+- [ ] Scanning a recovery-phrase QR fills the field; a payload that is not 12/24 words shows the invalid-code message and leaves the input unchanged; denying camera permission shows the permission message instead of failing silently.
 - [ ] Generated-word verification checks positions 3, 7 and 11.
 - [ ] Cold start with existing wallet shows Unlock before public accounts.
 - [ ] Correct PIN opens only its layer; incorrect PIN increments the persisted global counter.
@@ -35,4 +38,4 @@ This checklist is a test specification, not a record of passed tests. Run on a d
 
 ## Known gaps that require dedicated fixes
 
-Background lock/pause-resume is not connected to App lifecycle; foreground idle lock is absent. The legacy `/backup-seed` route supports clipboard copy. BLE-name edits do not affect advertising. Storage is SharedPreferences and release signing uses debug credentials. Do not mark these guarantees passed without a dedicated fix and a new test result. See [SECURITY.md](../../SECURITY.md).
+Background lock/pause-resume is not connected to App lifecycle; foreground idle lock is absent. Storage is SharedPreferences and release signing uses debug credentials. Do not mark these guarantees passed without a dedicated fix and a new test result. See [SECURITY.md](../../SECURITY.md).

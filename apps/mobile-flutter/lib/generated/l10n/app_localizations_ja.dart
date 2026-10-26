@@ -82,14 +82,32 @@ class AppLocalizationsJa extends AppLocalizations {
   String get importMnemonicTitle => 'ウォレットをインポート';
 
   @override
-  String get importMnemonicHint => '12語のリカバリーフレーズをスペース区切りで入力';
+  String get importMnemonicHint => '12語または24語のリカバリーフレーズをスペース区切りで入力';
 
   @override
   String get pasteFromClipboard => '貼り付け';
 
   @override
-  String wordsCount(Object count) {
-    return '$count / 12 語';
+  String get scanQrCode => 'QRをスキャン';
+
+  @override
+  String get qrScanTitle => 'リカバリーフレーズをスキャン';
+
+  @override
+  String get qrScanHint => 'カメラをリカバリーフレーズのQRコードに向けてください';
+
+  @override
+  String get qrScanPermissionDenied => 'カメラへのアクセスが拒否されました。設定で許可してください。';
+
+  @override
+  String get qrScanCameraError => 'カメラを利用できません。リカバリーフレーズは手入力または貼り付けできます。';
+
+  @override
+  String get qrScanInvalid => 'このQRコードには12語または24語のリカバリーフレーズが含まれていません。';
+
+  @override
+  String wordsCount(int count, int target) {
+    return '$count / $target 語';
   }
 
   @override

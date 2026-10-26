@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/bip39_english.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../services/mnemonic_service.dart';
 import '../../theme/color_tokens.dart';
@@ -11,15 +12,20 @@ import '../../widgets/common/neo_back_button.dart';
 import 'components/import_button.dart';
 import 'components/mnemonic_input_field.dart';
 import 'components/mnemonic_status_row.dart';
+import 'components/mnemonic_suggestions.dart';
 import 'components/passphrase_field.dart';
 import 'components/paste_button.dart';
+import 'components/qr_scan_button.dart';
+import 'qr_scan_screen.dart';
 
-/// Free-text import of an existing 12-word BIP-39 mnemonic phrase.
+/// Free-text import of an existing 12- or 24-word BIP-39 mnemonic phrase.
 ///
-/// User types or pastes 12 BIP-39 words (space-separated). The input
-/// is validated on every change via [CryptoBridge.validateMnemonic].
-/// A valid mnemonic shows a green checkmark and enables the Import
-/// button. On successful import, navigates to PIN setup.
+/// User types, pastes or scans a QR code with the space-separated words. The
+/// input is validated on every change via [CryptoBridge.validateMnemonic].
+/// While the current word is unfinished, an alphabetically ordered BIP-39
+/// prefix suggestion strip under the field completes it on tap. A valid
+/// mnemonic shows a green checkmark and enables the Import button. On
+/// successful import, navigates to PIN setup.
 ///
 /// Each block lives in `components/`; this file owns the controllers,
 /// validation and navigation.
@@ -32,10 +38,15 @@ class ImportMnemonicScreen extends StatefulWidget {
   /// new vault (via `walletService.addVault`) instead of creating a wallet.
   final bool addVault;
 
+  /// Test seam: returns a scanned payload instead of opening the camera. When
+  /// null the screen pushes [MnemonicQrScanScreen].
+  final Future<String?> Function()? qrScanOverride;
+
   const ImportMnemonicScreen({
     super.key,
     this.mnemonicService,
     this.addVault = false,
+    this.qrScanOverride,
   });
 
   @override
@@ -43,9 +54,19 @@ class ImportMnemonicScreen extends StatefulWidget {
 }
 
 class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
+  /// BIP-39 word counts accepted by the import flow.
+  static const Set<int> _validWordCounts = <int>{12, 24};
+
+  /// Maximum number of prefix suggestions shown at once.
+  static const int _maxSuggestions = 5;
+
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _passphraseController = TextEditingController();
   String _wordCount = '0';
+
+  /// Word total shown by the counter: 12 until the input grows past it.
+  int _targetWordCount = 12;
+  List<String> _suggestions = const <String>[];
   bool _isValid = false;
   bool _hasChecked = false;
   bool _obscurePassphrase = true;
@@ -57,24 +78,49 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     super.dispose();
   }
 
-  /// Parses the input text, counts words, and validates via CryptoBridge.
+  /// Splits user input into lowercase, whitespace-separated words.
+  List<String> _parseWords(String text) => text
+      .trim()
+      .toLowerCase()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .toList();
+
+  /// Prefix candidates for the word currently being typed, if any.
+  List<String> _suggestionsFor(String text) =>
+      bip39InputSuggestions(text, limit: _maxSuggestions);
+
+  /// Parses the input text, counts words, refreshes suggestions, and validates
+  /// via CryptoBridge.
   void _onTextChanged(String text) {
-    final trimmed = text.trim().toLowerCase();
-    final words = trimmed.isEmpty
-        ? <String>[]
-        : trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = _parseWords(text);
+    final validLength = _validWordCounts.contains(words.length);
 
     setState(() {
       _wordCount = '${words.length}';
+      _targetWordCount = words.length > 12 ? 24 : 12;
+      _suggestions = _suggestionsFor(text);
 
-      if (words.length == 12) {
+      if (validLength) {
         _isValid = widget.mnemonicService!.validateMnemonic(words.join(' '));
         _hasChecked = true;
       } else {
         _isValid = false;
-        _hasChecked = words.isNotEmpty && words.length != 12;
+        _hasChecked = words.isNotEmpty;
       }
     });
+  }
+
+  /// Completes the in-progress word with [word] and appends a trailing space.
+  void _applySuggestion(String word) {
+    final text = _controller.text;
+    final start = RegExp(r'\S+$').firstMatch(text)?.start ?? text.length;
+    final next = '${text.substring(0, start)}$word ';
+    _controller.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _onTextChanged(next);
   }
 
   /// Pastes clipboard content into the text field.
@@ -86,6 +132,34 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     _onTextChanged(data.text!);
   }
 
+  /// Scans a recovery-phrase QR code and fills the field with the payload.
+  Future<void> _scanQr() async {
+    final override = widget.qrScanOverride;
+    final raw = override != null
+        ? await override()
+        : await Navigator.of(context).push<String>(
+            MaterialPageRoute<String>(
+              builder: (_) => const MnemonicQrScanScreen(),
+            ),
+          );
+    if (!mounted || raw == null) return;
+
+    final words = _parseWords(raw);
+    if (!_validWordCounts.contains(words.length)) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.qrScanInvalid)));
+      return;
+    }
+
+    final mnemonic = words.join(' ');
+    _controller.value = TextEditingValue(
+      text: mnemonic,
+      selection: TextSelection.collapsed(offset: mnemonic.length),
+    );
+    _onTextChanged(mnemonic);
+  }
+
   /// Clears the text field.
   void _clear() {
     _controller.clear();
@@ -94,14 +168,9 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
 
   /// Navigates to PIN setup with the validated mnemonic.
   void _import() {
-    final words = _controller.text
-        .trim()
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
+    final words = _parseWords(_controller.text);
 
-    if (words.length != 12) return;
+    if (!_validWordCounts.contains(words.length)) return;
 
     final mnemonic = words.join(' ');
     if (!widget.mnemonicService!.validateMnemonic(mnemonic)) return;
@@ -173,8 +242,14 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
 
                     const SizedBox(height: 28),
 
-                    // ── Paste from clipboard button ─────────────────────
-                    PasteButton(onPressed: _pasteFromClipboard),
+                    // ── Paste / scan actions ────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(child: PasteButton(onPressed: _pasteFromClipboard)),
+                        const SizedBox(width: 12),
+                        Expanded(child: QrScanButton(onPressed: _scanQr)),
+                      ],
+                    ),
 
                     // Light gives the neo button's offset shadow room to clear.
                     SizedBox(height: c.neobrutalism ? 22 : 18),
@@ -187,6 +262,15 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
                       hasChecked: _hasChecked,
                       isValid: _isValid,
                     ),
+
+                    // ── BIP-39 prefix suggestions ────────────────────────
+                    if (_suggestions.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      MnemonicSuggestions(
+                        suggestions: _suggestions,
+                        onTap: _applySuggestion,
+                      ),
+                    ],
 
                     SizedBox(height: c.neobrutalism ? 18 : 14),
 
@@ -218,6 +302,7 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
                     // ── Status row: word count + validation ──────────────
                     MnemonicStatusRow(
                       wordCount: _wordCount,
+                      targetWordCount: _targetWordCount,
                       hasChecked: _hasChecked,
                       isValid: _isValid,
                     ),
@@ -225,7 +310,11 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
                     const SizedBox(height: 16),
 
                     // ── Import button ────────────────────────────────────
-                    ImportButton(isValid: _isValid, onTap: _import),
+                    ImportButton(
+                      key: const Key('import-mnemonic-submit'),
+                      isValid: _isValid,
+                      onTap: _import,
+                    ),
 
                     const SizedBox(height: 24),
                   ],

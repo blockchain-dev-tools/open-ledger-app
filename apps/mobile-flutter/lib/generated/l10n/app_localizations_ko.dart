@@ -82,14 +82,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get importMnemonicTitle => '지갑 가져오기';
 
   @override
-  String get importMnemonicHint => '12단어 복구 구문을 공백으로 구분하여 입력';
+  String get importMnemonicHint => '12개 또는 24개 단어로 된 복구 구문을 공백으로 구분하여 입력';
 
   @override
   String get pasteFromClipboard => '붙여넣기';
 
   @override
-  String wordsCount(Object count) {
-    return '$count / 12 단어';
+  String get scanQrCode => 'QR 스캔';
+
+  @override
+  String get qrScanTitle => '복구 구문 스캔';
+
+  @override
+  String get qrScanHint => '카메라를 복구 구문 QR 코드에 맞추세요';
+
+  @override
+  String get qrScanPermissionDenied => '카메라 접근이 거부되었습니다. 설정에서 허용해 주세요.';
+
+  @override
+  String get qrScanCameraError =>
+      '카메라를 사용할 수 없습니다. 복구 구문을 직접 입력하거나 붙여넣을 수 있습니다.';
+
+  @override
+  String get qrScanInvalid => '이 QR 코드에는 12개 또는 24개 단어의 복구 구문이 없습니다.';
+
+  @override
+  String wordsCount(int count, int target) {
+    return '$count / $target개 단어';
   }
 
   @override

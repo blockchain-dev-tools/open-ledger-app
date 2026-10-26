@@ -243,7 +243,7 @@ abstract class AppLocalizations {
   /// No description provided for @importMnemonicHint.
   ///
   /// In en, this message translates to:
-  /// **'Enter your 12-word recovery phrase, separated by spaces'**
+  /// **'Enter your 12- or 24-word recovery phrase, separated by spaces'**
   String get importMnemonicHint;
 
   /// No description provided for @pasteFromClipboard.
@@ -252,11 +252,47 @@ abstract class AppLocalizations {
   /// **'Paste'**
   String get pasteFromClipboard;
 
+  /// No description provided for @scanQrCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR'**
+  String get scanQrCode;
+
+  /// No description provided for @qrScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan recovery phrase'**
+  String get qrScanTitle;
+
+  /// No description provided for @qrScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the recovery-phrase QR code'**
+  String get qrScanHint;
+
+  /// No description provided for @qrScanPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is denied. Enable it in Settings to scan a QR code.'**
+  String get qrScanPermissionDenied;
+
+  /// No description provided for @qrScanCameraError.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable. You can still type or paste your recovery phrase.'**
+  String get qrScanCameraError;
+
+  /// No description provided for @qrScanInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'This QR code does not contain a 12- or 24-word recovery phrase.'**
+  String get qrScanInvalid;
+
   /// No description provided for @wordsCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} / 12 words'**
-  String wordsCount(Object count);
+  /// **'{count} / {target} words'**
+  String wordsCount(int count, int target);
 
   /// No description provided for @validMnemonic.
   ///

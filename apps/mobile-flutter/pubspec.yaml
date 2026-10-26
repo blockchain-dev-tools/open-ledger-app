@@ -49,8 +49,8 @@ dependencies:
   # See third_party/universal_ble/README.md.
   universal_ble:
     path: third_party/universal_ble
-  # QR code scanning
-  # mobile_scanner: ^6.0.0
+  # QR code scanning (recovery-phrase import, T-009)
+  mobile_scanner: ^6.0.0
 
 dev_dependencies:
   flutter_test:

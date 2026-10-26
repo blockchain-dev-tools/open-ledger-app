@@ -82,14 +82,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importMnemonicTitle => '导入钱包';
 
   @override
-  String get importMnemonicHint => '输入 12 个恢复短语单词，用空格分隔';
+  String get importMnemonicHint => '输入 12 或 24 个恢复短语单词，用空格分隔';
 
   @override
   String get pasteFromClipboard => '粘贴';
 
   @override
-  String wordsCount(Object count) {
-    return '$count / 12 个单词';
+  String get scanQrCode => '扫描二维码';
+
+  @override
+  String get qrScanTitle => '扫描恢复短语';
+
+  @override
+  String get qrScanHint => '将相机对准恢复短语二维码';
+
+  @override
+  String get qrScanPermissionDenied => '相机权限已被拒绝，请在系统设置中开启后重试。';
+
+  @override
+  String get qrScanCameraError => '相机不可用，你仍可手动输入或粘贴恢复短语。';
+
+  @override
+  String get qrScanInvalid => '该二维码不包含 12 或 24 个单词的恢复短语。';
+
+  @override
+  String wordsCount(int count, int target) {
+    return '$count / $target 个单词';
   }
 
   @override

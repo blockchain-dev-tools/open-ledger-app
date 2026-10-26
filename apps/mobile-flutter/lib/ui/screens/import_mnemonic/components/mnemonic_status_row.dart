@@ -12,12 +12,17 @@ import '../../../widgets/common/neo_card.dart';
 /// dark keeps the original muted chrome.
 class MnemonicStatusRow extends StatelessWidget {
   final String wordCount;
+
+  /// Word total the counter is measured against: 12 until the input grows past
+  /// it, then 24 (both are valid BIP-39 lengths).
+  final int targetWordCount;
   final bool hasChecked;
   final bool isValid;
 
   const MnemonicStatusRow({
     super.key,
     required this.wordCount,
+    required this.targetWordCount,
     required this.hasChecked,
     required this.isValid,
   });
@@ -41,7 +46,7 @@ class MnemonicStatusRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Text(
-              l10n.wordsCount(int.parse(wordCount)),
+              l10n.wordsCount(int.parse(wordCount), targetWordCount),
               style: TextStyle(
                 color: c.mutedText(180),
                 fontSize: 13,

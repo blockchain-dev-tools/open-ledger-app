@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Open Ledger App acts as a Ledger Nano X-compatible hardware wallet over Bluetooth LE, so wallet apps can discover, connect and exchange APDU commands with it.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan a recovery-phrase QR code to import an existing wallet instead of typing every word.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

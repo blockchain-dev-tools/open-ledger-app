@@ -11,6 +11,12 @@
     <!-- BLE hardware feature -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
+    <!-- QR scanning of recovery phrases (T-009). Declared optional: the wallet
+         must remain installable on devices without a camera (import by text
+         stays available). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:label="Open Ledger App"
         android:name="${applicationName}"

@@ -15,6 +15,7 @@ import 'package:open_ledger_app/core/interfaces/mnemonic_service.dart';
 import 'package:open_ledger_app/core/interfaces/wallet_service.dart';
 import 'package:open_ledger_app/core/models/vault.dart';
 import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
+import 'package:open_ledger_app/ui/screens/import_mnemonic/components/mnemonic_suggestions.dart';
 import 'package:open_ledger_app/ui/screens/stand_in/stand_in_screen.dart';
 
 import '../support/fake_wallet_service.dart';
@@ -38,8 +39,14 @@ class _FakeMnemonic implements IMnemonicService {
   String generateMnemonic({int strength = 128}) => _mnemonic;
 
   @override
-  bool validateMnemonic(String mnemonic) =>
-      mnemonic.trim().split(RegExp(r'\s+')).length == 12;
+  bool validateMnemonic(String mnemonic) {
+    final count = mnemonic
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .length;
+    return count == 12 || count == 24;
+  }
 
   @override
   String mnemonicToSeedHex(String mnemonic, String passphrase) => '';
@@ -267,5 +274,59 @@ void main() {
 
     // Lands on the configured status view.
     expect(find.text('Set up'), findsOneWidget);
+  });
+
+  testWidgets('import tab accepts a 24-word phrase', (tester) async {
+    final ws = FakeWalletService();
+
+    await tester.pumpWidget(_app(ws));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('standin-intro-continue')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('standin-mnemonic-input')),
+      _enigmaWords.join(' '),
+    );
+    await tester.pump();
+
+    expect(find.text('24 / 24 words'), findsOneWidget);
+    expect(find.text('Valid recovery phrase'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('standin-import-continue')));
+    await tester.pumpAndSettle();
+    await _enterPin(tester, '111111');
+    await _enterPin(tester, '111111');
+    await _enterPin(tester, '999999');
+
+    expect(ws.configureCalls.single.mnemonic, _enigmaWords.join(' '));
+  });
+
+  testWidgets('import tab offers and applies BIP-39 prefix suggestions',
+      (tester) async {
+    final ws = FakeWalletService();
+
+    await tester.pumpWidget(_app(ws));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('standin-intro-continue')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('standin-mnemonic-input')),
+      'aban',
+    );
+    await tester.pump();
+    expect(
+      find.byKey(MnemonicSuggestions.keyFor('abandon')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(MnemonicSuggestions.keyFor('abandon')));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('standin-mnemonic-input')),
+    );
+    expect(field.controller!.text, 'abandon ');
   });
 }

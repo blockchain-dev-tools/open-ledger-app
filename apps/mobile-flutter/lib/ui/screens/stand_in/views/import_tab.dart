@@ -4,10 +4,12 @@ import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
 import '../../../widgets/common/adaptive_action_button.dart';
 import '../../../widgets/common/neo_card.dart';
+import '../../import_mnemonic/components/mnemonic_suggestions.dart';
+import '../../import_mnemonic/components/qr_scan_button.dart';
 import '../stand_in_style.dart';
 
-/// Import tab — paste a 12-word phrase, live-validate it, then continue to the
-/// two-pass PIN entry.
+/// Import tab — paste, scan or type a 12- or 24-word phrase, live-validate it,
+/// then continue to the two-pass PIN entry.
 class ImportTab extends StatelessWidget {
   final ColorTokens c;
   final AppLocalizations l10n;
@@ -17,13 +19,19 @@ class ImportTab extends StatelessWidget {
   /// Whether the field has been touched (non-empty) — drives the validation row.
   final bool checked;
 
-  /// Whether the current input parses to a valid 12-word phrase.
+  /// Whether the current input parses to a valid 12- or 24-word phrase.
   final bool valid;
 
-  /// Number of parsed words, shown as `n / 12`.
+  /// Number of parsed words, shown against the nearest target (`n / 12` or
+  /// `n / 24`).
   final int wordCount;
 
+  /// BIP-39 prefix candidates for the word being typed.
+  final List<String> suggestions;
+
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSuggestionTap;
+  final VoidCallback onScan;
   final VoidCallback onContinue;
 
   const ImportTab({
@@ -34,7 +42,10 @@ class ImportTab extends StatelessWidget {
     required this.checked,
     required this.valid,
     required this.wordCount,
+    required this.suggestions,
     required this.onChanged,
+    required this.onSuggestionTap,
+    required this.onScan,
     required this.onContinue,
   });
 
@@ -62,6 +73,8 @@ class ImportTab extends StatelessWidget {
                   l10n.importMnemonicHint,
                   style: TextStyle(color: secondary, fontSize: 13),
                 ),
+                const SizedBox(height: 16),
+                QrScanButton(onPressed: onScan),
                 const SizedBox(height: 16),
                 NeoCard(
                   clip: true,
@@ -97,11 +110,18 @@ class ImportTab extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (suggestions.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  MnemonicSuggestions(
+                    suggestions: suggestions,
+                    onTap: onSuggestionTap,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Text(
-                      '$wordCount / 12',
+                      l10n.wordsCount(wordCount, wordCount > 12 ? 24 : 12),
                       style: TextStyle(color: secondary, fontSize: 13),
                     ),
                     const Spacer(),

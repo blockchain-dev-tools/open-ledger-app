@@ -23,9 +23,21 @@
   "verifyMnemonicTitle": "Verify Your Phrase",
   "verifyWordPosition": "Select word #{position}",
   "importMnemonicTitle": "Import Wallet",
-  "importMnemonicHint": "Enter your 12-word recovery phrase, separated by spaces",
+  "importMnemonicHint": "Enter your 12- or 24-word recovery phrase, separated by spaces",
   "pasteFromClipboard": "Paste",
-  "wordsCount": "{count} / 12 words",
+  "scanQrCode": "Scan QR",
+  "qrScanTitle": "Scan recovery phrase",
+  "qrScanHint": "Point the camera at the recovery-phrase QR code",
+  "qrScanPermissionDenied": "Camera access is denied. Enable it in Settings to scan a QR code.",
+  "qrScanCameraError": "Camera unavailable. You can still type or paste your recovery phrase.",
+  "qrScanInvalid": "This QR code does not contain a 12- or 24-word recovery phrase.",
+  "wordsCount": "{count} / {target} words",
+  "@wordsCount": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "target": { "type": "int" }
+    }
+  },
   "validMnemonic": "Valid recovery phrase",
   "invalidMnemonic": "Invalid recovery phrase",
   "import": "Import",

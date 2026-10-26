@@ -85,14 +85,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importMnemonicHint =>
-      'Enter your 12-word recovery phrase, separated by spaces';
+      'Enter your 12- or 24-word recovery phrase, separated by spaces';
 
   @override
   String get pasteFromClipboard => 'Paste';
 
   @override
-  String wordsCount(Object count) {
-    return '$count / 12 words';
+  String get scanQrCode => 'Scan QR';
+
+  @override
+  String get qrScanTitle => 'Scan recovery phrase';
+
+  @override
+  String get qrScanHint => 'Point the camera at the recovery-phrase QR code';
+
+  @override
+  String get qrScanPermissionDenied =>
+      'Camera access is denied. Enable it in Settings to scan a QR code.';
+
+  @override
+  String get qrScanCameraError =>
+      'Camera unavailable. You can still type or paste your recovery phrase.';
+
+  @override
+  String get qrScanInvalid =>
+      'This QR code does not contain a 12- or 24-word recovery phrase.';
+
+  @override
+  String wordsCount(int count, int target) {
+    return '$count / $target words';
   }
 
   @override

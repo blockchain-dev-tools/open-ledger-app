@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/interfaces/mnemonic_service.dart';
 import '../../../core/interfaces/wallet_service.dart';
 import '../../../core/models/vault.dart';
+import '../../../data/bip39_english.dart';
 import '../../../data/bip39_wordlist.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_back_button.dart';
+import '../import_mnemonic/qr_scan_screen.dart';
 import 'views/enigma_tab.dart';
 import 'views/generate_tab.dart';
 import 'views/import_tab.dart';
@@ -77,6 +79,9 @@ enum _View {
 class _StandInScreenState extends State<StandInScreen> {
   static const int _pinLength = 6;
 
+  /// BIP-39 word counts accepted by the import tab (mirrors `/import`).
+  static const Set<int> _validImportWordCounts = <int>{12, 24};
+
   _View _view = _View.loading;
 
   /// Stored stand-in behaviour mode.
@@ -98,6 +103,7 @@ class _StandInScreenState extends State<StandInScreen> {
   final TextEditingController _importController = TextEditingController();
   bool _importValid = false;
   bool _importChecked = false;
+  List<String> _importSuggestions = const <String>[];
 
   // ── Enigma tab state ────────────────────────────────────────────────
 
@@ -399,6 +405,7 @@ class _StandInScreenState extends State<StandInScreen> {
     _importController.clear();
     _importValid = false;
     _importChecked = false;
+    _importSuggestions = const <String>[];
     _riddleController.clear();
     _secretController.clear();
     _obscureSecret = true;
@@ -549,10 +556,46 @@ class _StandInScreenState extends State<StandInScreen> {
     final words = _parseWords(text);
     setState(() {
       _importChecked = words.isNotEmpty;
+      _importSuggestions = bip39InputSuggestions(text);
       _importValid =
-          words.length == 12 &&
+          _validImportWordCounts.contains(words.length) &&
           (widget.mnemonicService?.validateMnemonic(words.join(' ')) ?? false);
     });
+  }
+
+  /// Completes the in-progress word with [word] and appends a trailing space.
+  void _applyImportSuggestion(String word) {
+    final text = _importController.text;
+    final start = RegExp(r'\S+$').firstMatch(text)?.start ?? text.length;
+    final next = '${text.substring(0, start)}$word ';
+    _importController.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _onImportChanged(next);
+  }
+
+  /// Fills the import field from a scanned recovery-phrase QR code.
+  Future<void> _scanImportQr() async {
+    final raw = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const MnemonicQrScanScreen()),
+    );
+    if (!mounted || raw == null) return;
+
+    final words = _parseWords(raw);
+    if (!_validImportWordCounts.contains(words.length)) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.qrScanInvalid)));
+      return;
+    }
+
+    final mnemonic = words.join(' ');
+    _importController.value = TextEditingValue(
+      text: mnemonic,
+      selection: TextSelection.collapsed(offset: mnemonic.length),
+    );
+    _onImportChanged(mnemonic);
   }
 
   void _onImportContinue() {
@@ -782,7 +825,10 @@ class _StandInScreenState extends State<StandInScreen> {
         checked: _importChecked,
         valid: _importValid,
         wordCount: _parseWords(_importController.text).length,
+        suggestions: _importSuggestions,
         onChanged: _onImportChanged,
+        onSuggestionTap: _applyImportSuggestion,
+        onScan: _scanImportQr,
         onContinue: _onImportContinue,
       ),
     };
