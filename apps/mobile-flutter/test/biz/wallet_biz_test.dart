@@ -64,6 +64,10 @@ class _MockPinAuth implements IPinAuthService {
   String? decryptResult;
   String? randomHexResult;
 
+  /// Ciphertexts that must fail to decrypt — models a corrupted tier that
+  /// cannot be opened by its own credential.
+  final Set<String> undecryptableCiphertexts = {};
+
   /// Value reported by [lastMasterKey]; set by [matchCredential] on a match.
   String? lastMasterKeyValue;
 
@@ -155,6 +159,9 @@ class _MockPinAuth implements IPinAuthService {
   @override
   String decryptWithKey(String ciphertextHex, String keyHex) {
     calls.add(_PinAuthCall('decryptWithKey', [ciphertextHex, keyHex]));
+    if (undecryptableCiphertexts.contains(ciphertextHex)) {
+      throw StateError('simulated decryption failure: $ciphertextHex');
+    }
     return decryptResult ?? 'decrypted-content';
   }
 
@@ -1048,6 +1055,36 @@ void main() {
       // Mode resets once there is nothing left to erase.
       expect(await walletBiz.standInMode(), StandInMode.hide);
     });
+
+    test('wipe mode destroys nothing when the target tier is corrupt',
+        () async {
+      await setupPrimary();
+      await configure(mode: StandInMode.wipe);
+      final hiddenVault = (await repo.listVaults(depth: 1)).single;
+      final primaryVault = (await repo.listVaults(depth: 0)).single;
+
+      // The stand-in tier can no longer be opened by its own credential.
+      pinAuth.undecryptableCiphertexts.add(hiddenVault.mnemonicEncrypted);
+      walletBiz.lock();
+
+      await expectLater(
+        walletBiz.unlockWallet(standInPin),
+        throwsA(isA<StateError>()),
+      );
+
+      // A wipe is irreversible, so a corrupt target must abort before any
+      // tier is touched — neither the replaced primary nor the stand-in.
+      expect(await repo.listVaults(depth: 0), hasLength(1));
+      expect((await repo.listVaults(depth: 0)).single.id, primaryVault.id);
+      expect(await repo.getCredential(0), isNotNull);
+      expect(await repo.listVaults(depth: 1), hasLength(1));
+      expect((await repo.listVaults(depth: 1)).single.id, hiddenVault.id);
+      expect(await repo.getCredential(1), isNotNull);
+      expect(walletBiz.isUnlocked, isFalse);
+      expect(walletBiz.lastUnlockWiped, isFalse);
+      // The wipe intent survives for the next unlock attempt.
+      expect(await repo.getStandInMode(1), StandInMode.wipe);
+    });
   });
 
   // ──────────────────────────────────────────────────────────────────
@@ -1402,6 +1439,34 @@ void main() {
       final hidden = await failRepo.listVaults(depth: 1);
       expect(hidden.single.mnemonicEncrypted, 'enc-hidden-original');
       expect((await failRepo.getCredential(1))!.verifier, originalVerifier);
+    });
+
+    test('configureStandIn rolls the new vault back on credential failure',
+        () async {
+      pinAuth.credentialPins[mainPin] = 0;
+      pinAuth.decryptResult = testMnemonic;
+      mnemonicService.seedHexResult = 'seed';
+      await biz.setupWallet(testMnemonic, pin: mainPin);
+
+      pinAuth.encryptResult = 'enc-hidden';
+      storage.failVerifierWrites = true;
+
+      await expectLater(
+        biz.configureStandIn(
+          standInMnemonic,
+          pin: standInPin,
+          mainPin: mainPin,
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      // The freshly written child vault is removed, so no orphan credential and
+      // no wallet without a credential can be left behind.
+      expect(await failRepo.getCredential(1), isNull);
+      expect(await failRepo.listVaults(depth: 1), isEmpty);
+      // The primary tier is untouched.
+      expect(await failRepo.getCredential(0), isNotNull);
+      expect(await failRepo.listVaults(depth: 0), hasLength(1));
     });
   });
 }
