@@ -4,9 +4,8 @@ import '../../theme/color_tokens.dart';
 
 /// A red-tinted warning banner used to display security-sensitive messages.
 ///
-/// Shared by [GenerateMnemonicScreen], [EnigmaMnemonicScreen], and
-/// [BackupSeedScreen] — all three had near-identical implementations
-/// with minor text content differences.
+/// Shared by [GenerateMnemonicScreen] and [EnigmaMnemonicScreen] — both had
+/// near-identical implementations with minor text content differences.
 ///
 /// ```dart
 /// WarningBanner(

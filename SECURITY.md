@@ -16,8 +16,6 @@ A general-purpose phone, its operating system, input method and storage are part
 
 - Wallet storage is backed by the OS keystore (Android Keystore-wrapped encryption, iOS Keychain), so extracted app data is not decryptable off-device. Mnemonic/passphrase fields and history remain individually encrypted as well; indexes, metadata and counters are not separately obscured. An attacker able to execute code on an unlocked device can still ask the keystore for the data. The five-attempt UI lockout does not apply to that case.
 - Background-lock and BLE pause/resume handlers exist but are not connected to the App lifecycle in `main.dart`. Do not rely on the intended five-minute background lock. Foreground inactivity also has no automatic timeout.
-- The legacy `/backup-seed` route remains registered and supports copying the seed phrase to the clipboard. The current QR export flow does not remove that route's exposure.
-- BLE-name edits in Settings do not persist or change the active advertiser name.
 - Android release configuration currently signs with the debug key. An official distribution needs separate release signing and verification.
 - iOS integration and broad host-wallet compatibility are experimental or unverified. Air-gap codecs exist but have no product screen journey.
 - A persisted five-attempt failure budget locks further PIN entry until reset; reset deletes wallet data. Keep recovery material separately. Older single-wallet storage formats are not migrated by the current repository implementation.

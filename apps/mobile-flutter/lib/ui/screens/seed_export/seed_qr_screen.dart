@@ -23,8 +23,8 @@ import 'auto_hide_countdown.dart';
 
 /// Recovery-phrase export as a single static QR.
 ///
-/// The pure-QR counterpart to [BackupSeedScreen]: the English BIP-39 phrase is
-/// encoded verbatim, since 12/24 English words are importable by every wallet.
+/// The English BIP-39 phrase is encoded verbatim, since 12/24 English words
+/// are importable by every wallet.
 /// Entered from Settings → Backup & Export. With an [exportService] the
 /// phrase is revealed behind a [PinGate] — PIN re-verification on the spot,
 /// per contract I6 — and without one the preview phrase is rendered

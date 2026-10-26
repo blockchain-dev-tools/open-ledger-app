@@ -4,9 +4,9 @@ import '../../theme/color_tokens.dart';
 
 /// A 3×4 number pad grid (1–9, empty, 0, backspace) for PIN entry.
 ///
-/// Shared by [SetPinScreen], [UnlockScreen], and [BackupSeedScreen].
-/// All three previously had near-identical implementations; this widget
-/// unifies them with configurable sizing and key prefixes.
+/// Shared by [SetPinScreen] and [UnlockScreen] (both previously had
+/// near-identical implementations); this widget unifies them with
+/// configurable sizing and key prefixes.
 ///
 /// ```dart
 /// PinNumberPad(

@@ -75,11 +75,10 @@ The active Ledger app is separate from BLE connection state. Starting a chain op
 
 ## Known gaps in this snapshot
 
-1. `AppState.onAppBackgrounded`/`onAppForegrounded` are not called from an App lifecycle observer. The only lifecycle observer handles privacy shielding, not wallet locking. The intended five-minute background lock and BLE pause/resume cannot be relied upon. Foreground idle locking and a manual lock entry point are also absent.
-2. The registered legacy `/backup-seed` route still supports clipboard export; it is separate from the current QR export journey.
-3. Wallet keys are keystore-bound, but an attacker who can execute code on the unlocked device can ask the keystore for them; the iOS path is unverified. Metadata is not separately encrypted.
-4. Android release builds still use debug signing. An official APK requires a deliberate release-signing setup and independent validation.
-5. iOS, host-wallet compatibility, air-gap product flow and recovery behavior require separate validation. The corpus includes regression snapshots and declared gaps; passing them is not a blanket protocol certification.
+1. Foreground idle locking and a manual lock entry point are absent; the intended five-minute background lock cannot be relied upon.
+2. Wallet keys are keystore-bound, but an attacker who can execute code on the unlocked device can ask the keystore for them; the iOS path is unverified. Metadata is not separately encrypted.
+3. Android release builds still use debug signing. An official APK requires a deliberate release-signing setup and independent validation.
+4. iOS, host-wallet compatibility, air-gap product flow and recovery behavior require separate validation. The corpus includes regression snapshots and declared gaps; passing them is not a blanket protocol certification.
 
 ## Implementation references
 

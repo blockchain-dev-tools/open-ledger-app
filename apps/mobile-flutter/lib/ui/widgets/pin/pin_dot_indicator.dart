@@ -7,7 +7,7 @@ import '../../theme/color_tokens.dart';
 /// Shows [length] dots; the first [filledCount] are filled with the primary
 /// color, the rest are empty (surface fill with border outline).
 ///
-/// Shared by [SetPinScreen], [UnlockScreen], and [BackupSeedScreen].
+/// Shared by [SetPinScreen] and [UnlockScreen].
 ///
 /// ```dart
 /// PinDotIndicator(length: 6, filledCount: _pin.length)

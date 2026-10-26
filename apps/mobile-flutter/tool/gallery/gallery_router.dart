@@ -27,7 +27,6 @@ import 'shell/gallery_frame.dart';
 // Product screens are imported directly — the gallery renders the exact
 // widgets that ship in the app, with zero reimplementation (ADR-005).
 import 'package:open_ledger_app/ui/screens/account_detail/account_detail_screen.dart';
-import 'package:open_ledger_app/ui/screens/backup_seed/backup_seed_screen.dart';
 import 'package:open_ledger_app/ui/screens/enigma/enigma_screen.dart';
 import 'package:open_ledger_app/ui/screens/enigma_mnemonic/enigma_mnemonic_screen.dart';
 import 'package:open_ledger_app/ui/screens/entropy/entropy_screen.dart';
@@ -394,10 +393,6 @@ GoRouter createGalleryRouter(GalleryBoot boot) {
                         walletService: FakeWalletService(lockedOut: true),
                       )
                     : const UnlockScreen(),
-          ),
-          GoRoute(
-            path: '/screens/backup-seed',
-            builder: (context, state) => const BackupSeedScreen(),
           ),
           // Main screen with its three bottom-nav tabs. Query parameters
           // select the review scenario:

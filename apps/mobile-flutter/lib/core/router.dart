@@ -5,7 +5,6 @@ import '../app/app_state.dart';
 import '../core/models/vault.dart';
 import '../core/models/wallet_accounts.dart';
 import '../ui/screens/account_detail/account_detail_screen.dart';
-import '../ui/screens/backup_seed/backup_seed_screen.dart';
 import '../ui/screens/enigma/enigma_screen.dart';
 import '../ui/screens/enigma_mnemonic/enigma_mnemonic_screen.dart';
 import '../ui/screens/entropy/entropy_screen.dart';
@@ -170,14 +169,6 @@ GoRouter createRouter({required bool initialHasWallet, AppState? appState}) {
         builder: (context, state) => UnlockScreen(
           walletService: appState?.walletService,
           appState: appState,
-        ),
-      ),
-
-      // ── Backup Seed ──────────────────────────────────────────────
-      GoRoute(
-        path: '/backup-seed',
-        builder: (context, state) => BackupSeedScreen(
-          walletService: appState?.walletService,
         ),
       ),
 

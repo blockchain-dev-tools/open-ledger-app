@@ -91,7 +91,6 @@ scenarios=(
   "set-pin|/screens/set-pin"
   "unlock|/screens/unlock"
   "unlock-locked|/screens/unlock?state=locked"
-  "backup-seed|/screens/backup-seed"
   "transaction|/screens/transaction"
   "confirm-address|/screens/confirm-address"
   "signature-result|/screens/signature-result"
@@ -175,7 +174,6 @@ shoot verify-mnemonic /screens/verify-mnemonic light en
 shoot import /screens/import light en
 shoot enigma /screens/enigma light en
 shoot enigma-mnemonic /screens/enigma-mnemonic light en
-shoot backup-seed /screens/backup-seed light en
 shoot transaction /screens/transaction light en
 shoot confirm-address /screens/confirm-address light en
 shoot signature-result /screens/signature-result light en

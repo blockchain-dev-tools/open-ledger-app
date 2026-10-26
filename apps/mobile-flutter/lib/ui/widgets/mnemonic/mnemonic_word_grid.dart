@@ -5,8 +5,8 @@ import '../common/neo_card.dart';
 
 /// Displays a BIP-39 mnemonic word list in a numbered or plain grid.
 ///
-/// Shared by [GenerateMnemonicScreen] (3×4, 12 words), [EnigmaMnemonicScreen]
-/// (4×6, 24 words), and [BackupSeedScreen] (3×4, 12 words — revealed view).
+/// Shared by [GenerateMnemonicScreen] (3×4, 12 words) and
+/// [EnigmaMnemonicScreen] (4×6, 24 words).
 ///
 /// Each cell is a rounded container with the word (optionally prefixed by
 /// its 1-based index).

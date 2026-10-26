@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// The animation uses [TweenAnimationBuilder] with an elastic-out curve,
 /// translating horizontally from 8px back to 0 over 300ms.
 ///
-/// Shared by [SetPinScreen], [UnlockScreen], and [BackupSeedScreen].
+/// Shared by [SetPinScreen] and [UnlockScreen].
 ///
 /// ```dart
 /// PinShakeWrapper(

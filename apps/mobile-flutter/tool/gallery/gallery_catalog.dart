@@ -156,13 +156,6 @@ const List<GalleryItem> _signingItems = [
 
 const List<GalleryItem> _securityItems = [
   GalleryItem(
-    title: 'Backup Seed',
-    subtitle: 'PIN 门控助记词展示',
-    icon: Icons.vpn_key_outlined,
-    path: '/screens/backup-seed',
-    pushRoute: true,
-  ),
-  GalleryItem(
     title: 'Export Seed QR',
     subtitle: '助记词纯二维码导出 · 指纹 chip + 自动隐藏',
     icon: Icons.qr_code_2_outlined,

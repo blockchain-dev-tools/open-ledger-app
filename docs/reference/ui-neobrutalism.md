@@ -49,7 +49,7 @@ Neo chrome covers the Vault home ([accounts](../../apps/mobile-flutter/lib/ui/sc
 [Welcome](../../apps/mobile-flutter/lib/ui/screens/welcome/),
 [Unlock](../../apps/mobile-flutter/lib/ui/screens/unlock/) + Set PIN, the mnemonic flows
 (`generate_mnemonic`, `import_mnemonic`, `verify_mnemonic`, `verify`, `enigma`, `enigma_mnemonic`,
-`entropy`, `backup_seed`, `seed_export`), the [Stand-in](../../apps/mobile-flutter/lib/ui/screens/stand_in/)
+`entropy`, `seed_export`), the [Stand-in](../../apps/mobile-flutter/lib/ui/screens/stand_in/)
 harness, and the [transaction](../../apps/mobile-flutter/lib/ui/screens/transaction/) screens.
 
 Every neo surface sits on the pale-lime page tint with the reference grid behind its body. `MainScreen`
