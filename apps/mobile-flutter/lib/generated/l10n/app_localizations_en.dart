@@ -361,6 +361,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyAddress => 'Copy Address';
 
   @override
+  String get addressRequestTitle => 'Address Request';
+
+  @override
+  String get addressRequestHint =>
+      'A connected app is asking for this address. Approve to share the public address, or reject to decline. Your recovery phrase and private keys are not shared.';
+
+  @override
   String get derivationPath => 'Derivation Path';
 
   @override

@@ -756,6 +756,18 @@ abstract class AppLocalizations {
   /// **'Copy Address'**
   String get copyAddress;
 
+  /// No description provided for @addressRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Address Request'**
+  String get addressRequestTitle;
+
+  /// No description provided for @addressRequestHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A connected app is asking for this address. Approve to share the public address, or reject to decline. Your recovery phrase and private keys are not shared.'**
+  String get addressRequestHint;
+
   /// No description provided for @derivationPath.
   ///
   /// In en, this message translates to:

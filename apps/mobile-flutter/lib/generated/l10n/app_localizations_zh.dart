@@ -346,6 +346,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyAddress => '复制地址';
 
   @override
+  String get addressRequestTitle => '地址请求';
+
+  @override
+  String get addressRequestHint =>
+      '已连接的应用正在请求这个地址。确认后会返回公开地址，拒绝则拒绝本次请求；助记词和私钥不会被发送。';
+
+  @override
   String get derivationPath => '派生路径';
 
   @override

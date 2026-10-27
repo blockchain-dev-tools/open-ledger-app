@@ -350,6 +350,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get copyAddress => '주소 복사';
 
   @override
+  String get addressRequestTitle => '주소 요청';
+
+  @override
+  String get addressRequestHint =>
+      '연결된 앱이 이 주소를 요청하고 있습니다. 승인하면 공개 주소를 반환하고, 거부하면 요청을 거절합니다. 복구 문구와 개인 키는 전송되지 않습니다.';
+
+  @override
   String get derivationPath => '파생 경로';
 
   @override

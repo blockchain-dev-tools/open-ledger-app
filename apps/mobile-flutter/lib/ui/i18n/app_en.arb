@@ -115,6 +115,8 @@
   "details": "Details",
   "address": "Address",
   "copyAddress": "Copy Address",
+  "addressRequestTitle": "Address Request",
+  "addressRequestHint": "A connected app is asking for this address. Approve to share the public address, or reject to decline. Your recovery phrase and private keys are not shared.",
   "derivationPath": "Derivation Path",
   "signTransaction": "Sign Transaction",
   "transaction": "Transaction Signing",

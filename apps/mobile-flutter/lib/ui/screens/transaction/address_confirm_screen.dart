@@ -158,11 +158,24 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  l10n.address,
+                  l10n.addressRequestTitle,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: c.neobrutalism ? FontWeight.w700 : FontWeight.w600,
                     color: c.text,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    l10n.addressRequestHint,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: c.mutedText(160),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -177,6 +190,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                   children: [
                     Expanded(
                       child: AdaptiveActionButton(
+                        key: const ValueKey('address-confirm-reject'),
                         label: l10n.reject,
                         quiet: true,
                         legacyOutlineColor: c.error,
@@ -186,6 +200,7 @@ class _AddressConfirmScreenState extends State<AddressConfirmScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: AdaptiveActionButton(
+                        key: const ValueKey('address-confirm-approve'),
                         label: l10n.approve,
                         onTap: _onApprove,
                       ),

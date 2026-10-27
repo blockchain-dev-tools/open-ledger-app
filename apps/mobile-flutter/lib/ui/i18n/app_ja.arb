@@ -109,6 +109,8 @@
   "details": "詳細",
   "address": "アドレス",
   "copyAddress": "アドレスをコピー",
+  "addressRequestTitle": "アドレス要求",
+  "addressRequestHint": "接続中のアプリがこのアドレスを要求しています。承認すると公開アドレスを返し、拒否すると要求を断ります。リカバリーフレーズと秘密鍵は送信されません。",
   "derivationPath": "導出パス",
   "signTransaction": "取引に署名",
   "transaction": "取引署名",

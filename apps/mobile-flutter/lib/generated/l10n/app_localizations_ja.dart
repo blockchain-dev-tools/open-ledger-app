@@ -349,6 +349,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get copyAddress => 'アドレスをコピー';
 
   @override
+  String get addressRequestTitle => 'アドレス要求';
+
+  @override
+  String get addressRequestHint =>
+      '接続中のアプリがこのアドレスを要求しています。承認すると公開アドレスを返し、拒否すると要求を断ります。リカバリーフレーズと秘密鍵は送信されません。';
+
+  @override
   String get derivationPath => '導出パス';
 
   @override
