@@ -48,6 +48,17 @@ class AppState extends ChangeNotifier {
       crypto: const CryptoServiceAdapter(),
       apduHandler: _apduHandler,
     );
+    // Terminal status words emitted by the state-layer backstop (timeout /
+    // superseded request) go out over BLE directly, so a request whose
+    // confirmation screen never resolved still gets an answer.
+    _signConfirmation.sendTerminalStatus = (statusWord) async {
+      final resp = ApduResponse(
+        data: null,
+        sw1: (statusWord >> 8) & 0xFF,
+        sw2: statusWord & 0xFF,
+      );
+      await _blePeripheral?.sendApduResponse(resp.toBytes());
+    };
     _signConfirmation.onRequestPending = () {
       // Reviewing a request must not be interrupted by the idle timer.
       setIdleLockSuppressed(true);

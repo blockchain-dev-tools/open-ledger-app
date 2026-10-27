@@ -222,6 +222,12 @@ class Sw {
   /// Unknown / generic error.
   static const int unknownError = 0x6F00;
 
+  /// Execution error (ISO 7816-4) — used here as the device-side timeout:
+  /// the request was abandoned without user input. Ledger does not define a
+  /// dedicated timeout status word, so hosts may render this as a generic
+  /// failure; user-initiated declines stay [conditionsNotSatisfied].
+  static const int executionError = 0x6400;
+
   /// Conditions of use not satisfied (e.g. wallet locked).
   static const int conditionsNotSatisfied = 0x6985;
 

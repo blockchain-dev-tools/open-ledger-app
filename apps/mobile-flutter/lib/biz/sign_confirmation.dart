@@ -19,7 +19,7 @@ import 'path_parser.dart';
 /// lifecycle / BLE I/O. Owns the state machine for:
 ///   1. Intercepting signing APDU commands
 ///   2. Holding pending requests for user confirmation
-///   3. 60s timeout enforcement
+///   3. Backstop that answers the host if the UI never resolves a request
 ///   4. Result storage after approve/reject/timeout
 ///
 /// All crypto operations go through [ICryptoService] — never imports
@@ -94,7 +94,24 @@ class SignConfirmation {
   /// kept in memory only.
   IHistoryRepository? _historyRepo;
 
-  Timer? _pendingTimeout;
+  /// Sends a terminal status word over BLE for a request that expired
+  /// without the confirmation UI resolving it. Injected by [AppState],
+  /// which owns the BLE peripheral. When null, the backstop still clears
+  /// local state but writes nothing.
+  Future<void> Function(int statusWord)? sendTerminalStatus;
+
+  /// How long a pending request may stay unresolved before the state layer
+  /// answers the host with [Sw.executionError] (0x6400) itself.
+  ///
+  /// This is a **backstop**, not the primary timeout: the confirmation
+  /// screens run their own 60s countdown and resolve first in normal
+  /// operation. It exists so a request whose screen never mounted (failed
+  /// navigation, replaced route) still gets a terminal response instead of
+  /// leaving the host waiting and the idle-lock suppression latched.
+  final Duration confirmationBackstop;
+
+  Timer? _signBackstop;
+  Timer? _addressBackstop;
 
   /// Guard flag to prevent duplicate approve/reject/timeout actions.
   /// Set to `true` while a resolution is in progress (awaiting BLE
@@ -105,6 +122,7 @@ class SignConfirmation {
   SignConfirmation({
     required this._crypto,
     required this._apduHandler,
+    this.confirmationBackstop = const Duration(seconds: 65),
     this.onRequestPending,
     this.onRequestResolved,
   });
@@ -210,7 +228,7 @@ class SignConfirmation {
   /// Extracts the derivation path via [PathParser], derives the signing
   /// address via [ICryptoService], parses the transaction payload, and
   /// creates a [PendingSignRequest]. Triggers [onRequestPending] so the
-  /// caller can navigate to the confirmation screen. Starts a 60s timeout.
+  /// caller can navigate to the confirmation screen. Starts the backstop.
   ///
   /// Returns `true` if the request was successfully intercepted and stored
   /// as pending. Returns `false` if the command data was invalid (caller
@@ -256,6 +274,8 @@ class SignConfirmation {
       } catch (_) {}
     }
 
+    await _supersedePending();
+
     _pendingRequest = PendingSignRequest(
       command: command,
       chain: chain,
@@ -266,12 +286,8 @@ class SignConfirmation {
       seedHex: seedHex,
     );
 
-    // Start 60s timeout.
-    _pendingTimeout?.cancel();
-    _pendingTimeout = Timer(
-      const Duration(seconds: 60),
-      onTimeout,
-    );
+    // Start the backstop; the confirmation screen resolves first normally.
+    _startSignBackstop();
 
     // Trigger UI navigation.
     onRequestPending?.call();
@@ -284,7 +300,7 @@ class SignConfirmation {
   /// Called by [BleSession] when the [EthTxAssembler] has accumulated
   /// a complete RLP payload. Derives the signing address, parses the
   /// payload, creates a [SigningIntent] and [PendingSignRequest],
-  /// and triggers [onRequestPending]. Starts a 60s timeout.
+  /// and triggers [onRequestPending]. Starts the backstop.
   ///
   /// Unlike [interceptSignCommand], this does NOT hold a raw
   /// [ApduCommand] — the [PendingSignRequest.command] is `null` and
@@ -321,6 +337,8 @@ class SignConfirmation {
       parsedData: parsedData,
     );
 
+    await _supersedePending();
+
     _pendingRequest = PendingSignRequest(
       command: null,
       intent: intent,
@@ -332,12 +350,8 @@ class SignConfirmation {
       seedHex: seedHex,
     );
 
-    // Start 60s timeout.
-    _pendingTimeout?.cancel();
-    _pendingTimeout = Timer(
-      const Duration(seconds: 60),
-      onTimeout,
-    );
+    // Start the backstop; the confirmation screen resolves first normally.
+    _startSignBackstop();
 
     // Trigger UI navigation.
     onRequestPending?.call();
@@ -351,12 +365,14 @@ class SignConfirmation {
   /// for the user to confirm". Stores a [PendingAddressRequest] holding the
   /// derived [address] and the original [command], triggers
   /// [onAddressRequestPending] so the caller can navigate to the address
-  /// confirmation screen, and starts the 60s timeout.
+  /// confirmation screen, and starts the backstop.
   ///
   /// Returns `true` on success. Returns `false` if [address] is empty.
   Future<bool> interceptAddressCommand(
       ApduCommand command, String address, String derivationPath) async {
     if (address.isEmpty) return false;
+
+    await _supersedePending();
 
     _pendingAddress = PendingAddressRequest(
       command: command,
@@ -364,12 +380,8 @@ class SignConfirmation {
       address: address,
     );
 
-    // Start 60s timeout.
-    _pendingTimeout?.cancel();
-    _pendingTimeout = Timer(
-      const Duration(seconds: 60),
-      onTimeout,
-    );
+    // Start the backstop; the confirmation screen resolves first normally.
+    _startAddressBackstop();
 
     onAddressRequestPending?.call();
     return true;
@@ -384,8 +396,7 @@ class SignConfirmation {
   Future<void> approveAddress(Future<Uint8List> Function() respond) async {
     if (_pendingAddress == null || _isResolving) return;
     _isResolving = true;
-    _pendingTimeout?.cancel();
-    _pendingTimeout = null;
+    _cancelBackstops();
 
     try {
       await respond();
@@ -403,8 +414,7 @@ class SignConfirmation {
   Future<void> rejectAddress(Future<Uint8List> Function() sendError) async {
     if (_pendingAddress == null || _isResolving) return;
     _isResolving = true;
-    _pendingTimeout?.cancel();
-    _pendingTimeout = null;
+    _cancelBackstops();
 
     try {
       await sendError();
@@ -444,8 +454,7 @@ class SignConfirmation {
     final req = _pendingRequest;
     if (req == null || _isResolving) return;
     _isResolving = true;
-    _pendingTimeout?.cancel();
-    _pendingTimeout = null;
+    _cancelBackstops();
 
     try {
       final responseBytes = await sign();
@@ -519,8 +528,7 @@ class SignConfirmation {
   Future<void> reject(Future<Uint8List> Function() sendError) async {
     if (_pendingRequest == null || _isResolving) return;
     _isResolving = true;
-    _pendingTimeout?.cancel();
-    _pendingTimeout = null;
+    _cancelBackstops();
 
     // Record rejection to history before clearing request.
     final req = _pendingRequest;
@@ -551,54 +559,109 @@ class SignConfirmation {
     onRequestResolved?.call();
   }
 
-  /// Timeout while waiting for user confirmation (60s).
+  /// Backstop for a signing request the confirmation UI never resolved.
   ///
-  /// Clears the pending request and triggers [onRequestResolved].
-  /// The caller should detect the timeout by checking that
-  /// [pendingRequest] is null with no [lastSignResult].
-  ///
-  /// If a resolution (approve/reject) is already in progress
-  /// ([_isResolving] is `true`), the timeout is a no-op — the
-  /// in-flight resolution takes priority.
-  void onTimeout() {
-    if (_isResolving) return;
-
-    // Address-display request: drop it and notify. The confirmation screen
-    // dismisses itself on its own countdown.
-    if (_pendingAddress != null) {
-      _pendingTimeout = null;
-      _pendingAddress = null;
-      onAddressRequestResolved?.call();
-      return;
-    }
-
-    if (_pendingRequest == null) return;
-    _pendingTimeout = null;
-
+  /// Answers the host with [Sw.executionError] (device-side timeout),
+  /// records the timeout in history, and triggers [onRequestResolved].
+  /// A resolution already in flight ([_isResolving]) wins, and a missing
+  /// pending request makes this a no-op, so the screen's 60s countdown and
+  /// this backstop can never both answer the same request.
+  Future<void> onSignBackstopTimeout() async {
     final req = _pendingRequest;
-    if (req != null) {
-      _addRecord(SignatureRecord(
-        timestamp: DateTime.now(),
-        chain: req.chain,
-        derivationPath: req.derivationPath,
-        signingAddress: req.signingAddress,
-        payloadHex: req.payloadHex,
-        parsedData: req.parsedData,
-        isApproved: false,
-        signatureHex: null,
-        statusWord: 0x6400, // SW_TIMEOUT
-      ), req.seedHex);
-    }
+    if (req == null || _isResolving) return;
+    _isResolving = true;
+    _cancelBackstops();
+
+    await _sendTerminalStatus(Sw.executionError);
+
+    _addRecord(SignatureRecord(
+      timestamp: DateTime.now(),
+      chain: req.chain,
+      derivationPath: req.derivationPath,
+      signingAddress: req.signingAddress,
+      payloadHex: req.payloadHex,
+      parsedData: req.parsedData,
+      isApproved: false,
+      signatureHex: null,
+      statusWord: Sw.executionError,
+    ), req.seedHex);
 
     _pendingRequest = null;
+    _isResolving = false;
     onRequestResolved?.call();
+  }
+
+  /// Backstop for an address-display request the confirmation UI never
+  /// resolved. Answers [Sw.executionError] and triggers
+  /// [onAddressRequestResolved]; address requests carry no history entry.
+  Future<void> onAddressBackstopTimeout() async {
+    if (_pendingAddress == null || _isResolving) return;
+    _isResolving = true;
+    _cancelBackstops();
+
+    await _sendTerminalStatus(Sw.executionError);
+
+    _pendingAddress = null;
+    _isResolving = false;
+    onAddressRequestResolved?.call();
+  }
+
+  /// Resolve whatever is pending before a new request replaces it.
+  ///
+  /// Without this the earlier host would never receive a terminal status
+  /// word: its pending request is overwritten and its backstop cancelled.
+  /// The superseded request is answered with
+  /// [Sw.conditionsNotSatisfied] — it can no longer be served.
+  Future<void> _supersedePending() async {
+    if (_isResolving) return;
+
+    final hadSign = _pendingRequest != null;
+    final hadAddress = _pendingAddress != null;
+    if (!hadSign && !hadAddress) return;
+
+    _isResolving = true;
+    _cancelBackstops();
+    await _sendTerminalStatus(Sw.conditionsNotSatisfied);
+    _pendingRequest = null;
+    _pendingAddress = null;
+    _isResolving = false;
+
+    if (hadSign) onRequestResolved?.call();
+    if (hadAddress) onAddressRequestResolved?.call();
+  }
+
+  void _startSignBackstop() {
+    _signBackstop?.cancel();
+    _signBackstop = Timer(confirmationBackstop, onSignBackstopTimeout);
+  }
+
+  void _startAddressBackstop() {
+    _addressBackstop?.cancel();
+    _addressBackstop = Timer(confirmationBackstop, onAddressBackstopTimeout);
+  }
+
+  void _cancelBackstops() {
+    _signBackstop?.cancel();
+    _signBackstop = null;
+    _addressBackstop?.cancel();
+    _addressBackstop = null;
+  }
+
+  Future<void> _sendTerminalStatus(int statusWord) async {
+    final send = sendTerminalStatus;
+    if (send == null) return;
+    try {
+      await send(statusWord);
+    } catch (_) {
+      // Best effort: losing the response must not wedge local state.
+    }
   }
 
   /// Drop any pending request without recording a history entry.
   ///
   /// Used when the wallet locks underneath a pending confirmation: the
   /// request can no longer be approved (there is no seed to sign with), and
-  /// the confirmation UI must be dismissed. The 60s timeout is cancelled and
+  /// the confirmation UI must be dismissed. The backstops are cancelled and
   /// the matching `on…Resolved` callback fires.
   ///
   /// No APDU response is sent here — delivery stays with the caller, like
@@ -613,8 +676,7 @@ class SignConfirmation {
     final hadAddress = _pendingAddress != null;
     if (!hadSign && !hadAddress) return false;
 
-    _pendingTimeout?.cancel();
-    _pendingTimeout = null;
+    _cancelBackstops();
     _pendingRequest = null;
     _pendingAddress = null;
 
@@ -745,8 +807,7 @@ class SignConfirmation {
   /// Cancel the pending timeout and clear in-memory state on disposal.
   /// Persisted history is retained (only the loaded copy is dropped).
   void dispose() {
-    _pendingTimeout?.cancel();
-    _pendingTimeout = null;
+    _cancelBackstops();
     _pendingRequest = null;
     _pendingAddress = null;
     _lastSignResult = null;

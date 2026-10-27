@@ -1,4 +1,3 @@
-// ignore_for_file: depend_on_referenced_packages
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +12,7 @@ void main() {
       expect(apduCommandName(_b([0xB0, 0x01])), 'GET_APP_AND_VERSION');
       expect(apduCommandName(_b([0xE0, 0x02])), 'GET_PUBKEY');
       expect(apduCommandName(_b([0xE0, 0x04])), 'ETH_SIGN_TX');
-      expect(apduCommandName(_b([0xE0, 0x0C])), 'ETH_SIGN_EIP712_DOMAIN');
+      expect(apduCommandName(_b([0xE0, 0x0C])), 'ETH_SIGN_EIP712');
       expect(apduCommandName(_b([0xE0, 0xD8])), 'OPEN_APP');
       expect(apduCommandName(_b([0xE0, 0x05])), 'SOL_GET_ADDR');
     });
@@ -26,11 +25,19 @@ void main() {
     });
 
     // ── EIP-712 command-name regression tests ──────────────────────────
-    // These would have caught the observed behavior: an EIP-712 signing
-    // operation displayed as `ETH_SIGN_TX (legacy)` in the BLE log viewer.
+    // The product implements EIP-712 V0 as a single INS 0x0C APDU carrying
+    // path + domain hash + struct hash. The two-step 0x0C/0x0D flow is not
+    // implemented, so 0x0D must never be mislabeled as a legacy ETH_SIGN_TX.
 
-    test('raw INS 0x0D → ETH_SIGN_EIP712_STRUCT (not legacy)', () {
-      expect(apduCommandName(_b([0xE0, 0x0D])), 'ETH_SIGN_EIP712_STRUCT');
+    test('raw INS 0x0C → ETH_SIGN_EIP712', () {
+      expect(apduCommandName(_b([0xE0, 0x0C])), 'ETH_SIGN_EIP712');
+    });
+
+    test('unimplemented two-step struct INS 0x0D is UNKNOWN, not ETH_SIGN_TX',
+        () {
+      final name = apduCommandName(_b([0xE0, 0x0D]));
+      expect(name, contains('UNKNOWN'));
+      expect(name, isNot(contains('ETH_SIGN_TX')));
     });
 
     test('raw INS 0x06 → GET_APP_CONFIGURATION', () {
@@ -39,6 +46,11 @@ void main() {
 
     test('inline EIP-712 INS 0x04 P1=0x02 → ETH_SIGN_EIP712', () {
       expect(apduCommandName(_b([0xE0, 0x04, 0x02, 0x00, 0x00])),
+          'ETH_SIGN_EIP712');
+    });
+
+    test('inline EIP-712 INS 0x04 P1=0x42 → ETH_SIGN_EIP712', () {
+      expect(apduCommandName(_b([0xE0, 0x04, 0x42, 0x00, 0x00])),
           'ETH_SIGN_EIP712');
     });
 
@@ -54,6 +66,7 @@ void main() {
     test('maps known status words', () {
       expect(swName(0x9000), 'SUCCESS');
       expect(swName(0x6985), 'REJECTED');
+      expect(swName(0x6400), 'TIMEOUT');
       expect(swName(0x6D00), 'INS_NOT_SUPPORTED');
     });
 
@@ -176,49 +189,28 @@ void main() {
         '05 80 00 00 2C 80 00 00 3C 80 00 00 00 00 00 00 00 00 00 00 00';
 
     /// 32-byte hash as space-delimited uppercase hex.
-    String hashHex(String byteHex) =>
-        List.filled(32, byteHex).join(' ');
+    String hashHex(String byteHex) => List.filled(32, byteHex).join(' ');
 
-    test('two-step: domain (0x0C) then struct (0x0D) shows correct labels', () {
+    test('single-step INS 0x0C shows EIP-712 label with both hashes', () {
       final d = ApduLogDecoder();
 
-      // Step 1 — domain command: E0 0C 00 00 LC(0x35) path(21B) + domainHash(32B)
-      final domainLine = 'APDU command received: E0 0C 00 00 35 $pathHex '
-          '${hashHex('AA')}';
-      final domainEntry = d.decode(domainLine)!;
-      expect(domainEntry.summary, contains('ETH_SIGN_EIP712_DOMAIN'));
-      expect(domainEntry.summary, isNot(contains('legacy')));
-      expect(domainEntry.summary, contains("path=44'/60'/0'/0/0"));
-      expect(domainEntry.summary, contains('hash=32 bytes'));
-
-      // Domain response (9000, no data).
-      final domainResp = d.decode('APDU response: 90 00')!;
-      expect(domainResp.summary, contains('ETH_SIGN_EIP712_DOMAIN'));
-      expect(domainResp.summary, endsWith('SUCCESS'));
-
-      // Step 2 — struct command: E0 0D 00 00 LC(0x35) path(21B) + structHash(32B)
-      final structLine = 'APDU command received: E0 0D 00 00 35 $pathHex '
-          '${hashHex('BB')}';
-      final structEntry = d.decode(structLine)!;
-      // The struct command must NOT be shown as legacy — this is the
-      // precise assertion that would have caught the reported behavior.
-      expect(structEntry.summary, contains('ETH_SIGN_EIP712_STRUCT'));
-      expect(structEntry.summary, isNot(contains('legacy')));
-      expect(structEntry.summary, isNot(contains('ETH_SIGN_TX')));
-      expect(structEntry.summary, contains("path=44'/60'/0'/0/0"));
-      expect(structEntry.summary, contains('hash=32 bytes'));
+      // E0 0C 00 00 LC(0x55) path(21B) + domainHash(32B) + structHash(32B)
+      final line = 'APDU command received: E0 0C 00 00 55 $pathHex '
+          '${hashHex('AA')} ${hashHex('BB')}';
+      final entry = d.decode(line)!;
+      expect(entry.summary, contains('ETH_SIGN_EIP712'));
+      expect(entry.summary, isNot(contains('ETH_SIGN_TX')));
+      expect(entry.summary, contains("path=44'/60'/0'/0/0"));
+      expect(entry.summary, contains('hash=64 bytes'));
+      expect(entry.status, BleLogStatus.pending);
     });
 
-    test('two-step struct response decodes v/r/s (stateful context)', () {
+    test('single-step 0x0C response decodes v/r/s', () {
       final d = ApduLogDecoder();
-      // Prime: domain command + response, then struct command.
-      d.decode('APDU command received: E0 0C 00 00 35 $pathHex '
-          '${hashHex('AA')}');
-      d.decode('APDU response: 90 00');
-      d.decode('APDU command received: E0 0D 00 00 35 $pathHex '
-          '${hashHex('BB')}');
+      d.decode('APDU command received: E0 0C 00 00 55 $pathHex '
+          '${hashHex('AA')} ${hashHex('BB')}');
 
-      // Struct response: 65-byte signature + 90 00.
+      // Signature: 65-byte v||r||s + 90 00.
       final sigBytes = List.filled(65, 'CC').join(' ');
       final entry = d.decode('APDU response: $sigBytes 90 00')!;
       expect(entry.summary, contains('v='));

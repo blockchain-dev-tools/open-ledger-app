@@ -1,7 +1,7 @@
 /// Unit tests for [SignConfirmation].
 ///
 /// Covers isSignCommand, chainFromCommand, interceptSignCommand,
-/// approve, reject, onTimeout, clearLastSignResult, and dispose.
+/// approve, reject, the timeout backstops, supersede, and dispose.
 library;
 
 import 'dart:typed_data';
@@ -542,21 +542,41 @@ void main() {
     });
   });
 
-  group('onTimeout', () {
-    test('clears pending request and triggers onRequestResolved', () async {
+  group('sign backstop', () {
+    test('answers SW_TIMEOUT, clears pending and triggers onRequestResolved',
+        () async {
       // Create pending request
       final pathData = _buildPathData(1, [0x80000000]);
       final cmd = _makeSignCommand(ins: Ins.ethSign, data: pathData);
       await sc.interceptSignCommand(cmd, 'seed-hex');
       expect(sc.pendingRequest, isNotNull);
 
+      int? sentSw;
       bool resolvedCalled = false;
+      sc.sendTerminalStatus = (sw) async => sentSw = sw;
       sc.onRequestResolved = () => resolvedCalled = true;
 
-      sc.onTimeout();
+      await sc.onSignBackstopTimeout();
 
+      expect(sentSw, Sw.executionError);
       expect(sc.pendingRequest, isNull);
       expect(resolvedCalled, isTrue);
+      expect(sc.history.single.statusWord, Sw.executionError);
+    });
+
+    test('is a no-op once the user already rejected', () async {
+      // Create pending request
+      final pathData = _buildPathData(1, [0x80000000]);
+      final cmd = _makeSignCommand(ins: Ins.ethSign, data: pathData);
+      await sc.interceptSignCommand(cmd, 'seed-hex');
+      await sc.reject(() async => Uint8List(0));
+
+      int? sentSw;
+      sc.sendTerminalStatus = (sw) async => sentSw = sw;
+
+      await sc.onSignBackstopTimeout();
+
+      expect(sentSw, isNull);
     });
   });
 
@@ -817,17 +837,113 @@ void main() {
       expect(resolvedCalled, isFalse);
     });
 
-    test('onTimeout drops a pending address request', () async {
+    test('address backstop answers SW_TIMEOUT and clears the request', () async {
       await sc.interceptAddressCommand(
           addressCommand(), '0xabc123', "m/44'/60'/0'/0/0");
 
+      int? sentSw;
       bool resolvedCalled = false;
+      sc.sendTerminalStatus = (sw) async => sentSw = sw;
       sc.onAddressRequestResolved = () => resolvedCalled = true;
 
-      sc.onTimeout();
+      await sc.onAddressBackstopTimeout();
 
+      expect(sentSw, Sw.executionError);
       expect(sc.pendingAddressRequest, isNull);
       expect(resolvedCalled, isTrue);
+    });
+
+    test('address backstop is a no-op after the user rejected', () async {
+      await sc.interceptAddressCommand(
+          addressCommand(), '0xabc123', "m/44'/60'/0'/0/0");
+      await sc.rejectAddress(() async => Uint8List.fromList([0x69, 0x85]));
+
+      int? sentSw;
+      sc.sendTerminalStatus = (sw) async => sentSw = sw;
+
+      await sc.onAddressBackstopTimeout();
+
+      expect(sentSw, isNull);
+    });
+
+    testWidgets('backstop fires after the configured duration', (tester) async {
+      final backstopped = SignConfirmation(
+        crypto: crypto,
+        apduHandler: apduHandler,
+        confirmationBackstop: const Duration(seconds: 5),
+      );
+      addTearDown(backstopped.dispose);
+
+      await backstopped.interceptAddressCommand(
+          addressCommand(), '0xabc123', "m/44'/60'/0'/0/0");
+
+      int? sentSw;
+      backstopped.sendTerminalStatus = (sw) async => sentSw = sw;
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump();
+
+      expect(sentSw, Sw.executionError);
+      expect(backstopped.pendingAddressRequest, isNull);
+    });
+
+    testWidgets('resolving first cancels the backstop', (tester) async {
+      final backstopped = SignConfirmation(
+        crypto: crypto,
+        apduHandler: apduHandler,
+        confirmationBackstop: const Duration(seconds: 5),
+      );
+      addTearDown(backstopped.dispose);
+
+      await backstopped.interceptAddressCommand(
+          addressCommand(), '0xabc123', "m/44'/60'/0'/0/0");
+
+      int? sentSw;
+      backstopped.sendTerminalStatus = (sw) async => sentSw = sw;
+
+      await tester.pump(const Duration(seconds: 2));
+      await backstopped
+          .rejectAddress(() async => Uint8List.fromList([0x69, 0x85]));
+      await tester.pump(const Duration(seconds: 10));
+
+      expect(sentSw, isNull);
+      expect(backstopped.pendingAddressRequest, isNull);
+    });
+
+    test('a new request answers the superseded one', () async {
+      await sc.interceptAddressCommand(
+          addressCommand(), '0xold', "m/44'/60'/0'/0/0");
+
+      final sent = <int>[];
+      bool resolvedCalled = false;
+      sc.sendTerminalStatus = (sw) async => sent.add(sw);
+      sc.onAddressRequestResolved = () => resolvedCalled = true;
+
+      await sc.interceptAddressCommand(
+          addressCommand(), '0xnew', "m/44'/60'/0'/0/0");
+
+      expect(sent, [Sw.conditionsNotSatisfied]);
+      expect(resolvedCalled, isTrue);
+      expect(sc.pendingAddressRequest!.address, '0xnew');
+    });
+
+    test('a sign request supersedes a pending address request', () async {
+      await sc.interceptAddressCommand(
+          addressCommand(), '0xabc123', "m/44'/60'/0'/0/0");
+
+      int? sentSw;
+      bool addressResolved = false;
+      sc.sendTerminalStatus = (sw) async => sentSw = sw;
+      sc.onAddressRequestResolved = () => addressResolved = true;
+
+      final pathData = _buildPathData(1, [0x80000000]);
+      await sc.interceptSignCommand(
+          _makeSignCommand(ins: Ins.ethSign, data: pathData), 'seed-hex');
+
+      expect(sentSw, Sw.conditionsNotSatisfied);
+      expect(addressResolved, isTrue);
+      expect(sc.pendingAddressRequest, isNull);
+      expect(sc.pendingRequest, isNotNull);
     });
 
     test('dispose clears the pending address request', () async {

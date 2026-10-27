@@ -41,6 +41,11 @@ String apduCommandName(Uint8List apdu) {
       case Ins.getPublicKey:
         return 'GET_PUBKEY';
       case Ins.ethSign:
+        // P1=0x02/0x42 carry an inline EIP-712 payload (path + domain hash +
+        // struct hash); everything else is a legacy/typed RLP transaction.
+        if (apdu.length >= 3 && (apdu[2] == 0x02 || apdu[2] == 0x42)) {
+          return 'ETH_SIGN_EIP712'; // (Solana app: GET_VERSION)
+        }
         return 'ETH_SIGN_TX'; // (Solana app: GET_VERSION)
       case Ins.getAppConfiguration:
         return 'GET_APP_CONFIGURATION'; // (Solana app: SIGN)
@@ -101,6 +106,8 @@ String swName(int sw) {
       return 'SUCCESS';
     case Sw.conditionsNotSatisfied:
       return 'REJECTED';
+    case Sw.executionError:
+      return 'TIMEOUT';
     case Sw.securityStatusNotSatisfied:
       return 'PIN_NOT_VERIFIED';
     case Sw.wrongData:
