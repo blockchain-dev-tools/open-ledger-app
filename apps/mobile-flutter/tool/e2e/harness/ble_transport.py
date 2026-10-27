@@ -133,12 +133,20 @@ class RustGatt:
             return DEFAULT_MTU
         return (payload[0] << 8) | payload[1]
 
-    def exchange(self, apdu: bytes, timeout: float = 15.0) -> bytes:
+    def send(self, apdu: bytes) -> None:
+        """发一条 APDU 但不等待响应（需先驱动 UI 再收响应的用例）。"""
         self._call({"cmd": "drain"}, 10)
         self._reasm = Reassembler()
         for chunk in fragment(apdu, DEFAULT_MTU):
             self._write(chunk)
+
+    def recv(self, timeout: float = 15.0) -> bytes:
+        """等待并消费一个完整响应。"""
         return self._recv_frame(timeout)
+
+    def exchange(self, apdu: bytes, timeout: float = 15.0) -> bytes:
+        self.send(apdu)
+        return self.recv(timeout)
 
     def close(self) -> None:
         if self._proc is None:

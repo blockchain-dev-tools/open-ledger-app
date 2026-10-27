@@ -14,9 +14,25 @@ cd "$HERE"
 export PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}"
 
 FILTER="${1:-}"
-mapfile -t FILES < <(ls tests/*.py 2>/dev/null | grep -vE '/_' || true)
-if [[ -n "$FILTER" ]]; then
-  mapfile -t FILES < <(printf '%s\n' "${FILES[@]}" | grep -- "$FILTER" || true)
+# 不用 `mapfile`：macOS 自带的 bash 3.2 没有这个内建命令。
+FILES=()
+while IFS= read -r line; do
+  if [[ -n "$line" ]]; then
+    FILES+=("$line")
+  fi
+done < <(ls tests/*.py 2>/dev/null | grep -vE '/_' || true)
+if [[ -n "$FILTER" && ${#FILES[@]} -gt 0 ]]; then
+  MATCHED=()
+  for file in "${FILES[@]}"; do
+    if [[ "$file" == *"$FILTER"* ]]; then
+      MATCHED+=("$file")
+    fi
+  done
+  if [[ ${#MATCHED[@]} -gt 0 ]]; then
+    FILES=("${MATCHED[@]}")
+  else
+    FILES=()
+  fi
 fi
 if [[ ${#FILES[@]} -eq 0 ]]; then
   echo "没有匹配的用例（filter='${FILTER}'）。" >&2
