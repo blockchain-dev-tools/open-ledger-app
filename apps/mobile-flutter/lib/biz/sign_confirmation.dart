@@ -1,60 +1,47 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
 import '../core/interfaces/crypto_service.dart';
 import '../core/interfaces/history_repository.dart';
 import '../core/models/apdu_message.dart';
-import '../core/models/chain.dart';
 import '../core/models/signature_record.dart';
-import '../core/models/signing_intent.dart';
 import '../protocols/apdu/apdu_constants.dart';
-import 'apdu_handler.dart';
-import 'path_parser.dart';
 
-/// Manages the BLE sign-request interception lifecycle.
+/// Owns the confirmation lifecycle for reviews parked by the Rust chain host.
 ///
 /// Extracted from [AppState] to separate business logic from app
 /// lifecycle / BLE I/O. Owns the state machine for:
-///   1. Intercepting signing APDU commands
-///   2. Holding pending requests for user confirmation
-///   3. Backstop that answers the host if the UI never resolves a request
-///   4. Result storage after approve/reject/timeout
+///   1. Holding a parked review for user confirmation
+///   2. Backstop that answers the host if the UI never resolves a request
+///   3. Result storage after approve/reject/timeout
 ///
-/// All crypto operations go through [ICryptoService] — never imports
-/// [CryptoBridge] directly. Derivation path extraction delegates to
-/// [PathParser.parsePathWithRemainder].
+/// The Rust modules parse the payload and produce the digest; Dart only
+/// renders the parsed view and parks the request. Approval asks the host for
+/// the signature bytes, so no seed is needed on this path.
 ///
 /// Callbacks:
-///   [onRequestPending] — triggered when a new sign request is intercepted
+///   [onRequestPending] — triggered when a new review is parked
 ///                        (caller should navigate to TransactionScreen).
 ///   [onRequestResolved] — triggered after approve, reject, or timeout
 ///                         (caller should navigate away from confirmation).
 ///
 /// Usage:
 /// ```dart
-/// final sc = SignConfirmation(crypto: crypto, apduHandler: apduHandler);
+/// final sc = SignConfirmation(crypto: crypto);
 /// sc.onRequestPending = () => router.go('/transaction');
 /// sc.onRequestResolved = () => router.go('/');
 ///
-/// // In BLE APDU dispatcher:
-/// if (SignConfirmation.isSignCommand(cmd)) {
-///   await sc.interceptSignCommand(cmd, seedHex);
-///   return;
-/// }
-///
 /// // On user approve:
-/// await sc.approve(() {
-///   final resp = apduHandler.handle(req.command);
-///   final bytes = resp.toBytes();
+/// await sc.approve(() async {
+///   final bytes = host.resolve(reviewId, approved: true);
 ///   ble.sendApduResponse(bytes);
 ///   return bytes;
 /// });
 /// ```
 class SignConfirmation {
+  /// Used to hex-encode the signature for display / history.
   final ICryptoService _crypto;
-  final ApduHandler _apduHandler;
 
   /// Called when a new sign request needs user confirmation.
   /// The caller should navigate to the TransactionScreen.
@@ -64,8 +51,8 @@ class SignConfirmation {
   /// The caller should navigate away from the confirmation screen.
   void Function()? onRequestResolved;
 
-  /// Called when a GET_PUBLIC_KEY P1=0x01 request needs the user to confirm
-  /// the displayed address. The caller should navigate to the address
+  /// Called when an address-display review needs the user to confirm the
+  /// displayed address. The caller should navigate to the address
   /// confirmation screen.
   void Function()? onAddressRequestPending;
 
@@ -121,263 +108,72 @@ class SignConfirmation {
 
   SignConfirmation({
     required this._crypto,
-    required this._apduHandler,
     this.confirmationBackstop = const Duration(seconds: 65),
     this.onRequestPending,
     this.onRequestResolved,
   });
 
   // ═══════════════════════════════════════════════════════════════════
-  //  Static helpers — command detection
-  // ═══════════════════════════════════════════════════════════════════
-
-  /// Whether this APDU command is a sign operation needing confirmation.
-  ///
-  /// [currentApp] is the Ledger app opened via OPEN_APP (see
-  /// [ApduHandler.currentApp]): CLA 0xE0's INS table is shared between the
-  /// Ethereum and Solana apps with OVERLAPPING codes, so it cannot be
-  /// decoded from the raw INS byte alone.
-  static bool isSignCommand(ApduCommand cmd,
-      {LedgerApp? currentApp}) {
-    if (cmd.cla == Cla.os || cmd.cla == Cla.global) {
-      // Dashboard: no app is open, so no CLA-0xE0 INS table is loaded and
-      // nothing can be a sign command.
-      if (currentApp == null) return false;
-      // Tron app table: Tron signing is not supported yet (no sha256-based
-      // secp256k1 signer in the Rust FFI), so never intercept. Without this
-      // guard, INS 0x04 would fall through to the Ethereum table and be
-      // mistaken for ETH_SIGN.
-      if (currentApp == LedgerApp.tron) return false;
-      // Solana app table: 0x06 SIGN, 0x07 SIGN_OFFCHAIN.
-      if (currentApp == LedgerApp.solana) {
-        return cmd.ins == Ins.solSignMessage ||
-            cmd.ins == Ins.solSignOffchainMessage;
-      }
-      // Ethereum app table.
-      // ETH RLP transaction (INS 0x04).
-      if (cmd.ins == Ins.ethSign) return true;
-      if (cmd.ins == Ins.signEthPersonalMessage) return true;
-      // EIP-712 V0 (INS 0x0C): the 64-byte domain+struct hash payload is
-      // signed as a single APDU. A shorter payload is not a sign request.
-      if (cmd.ins == Ins.ethSignEip712 && _remainderLength(cmd) >= 64) {
-        return true;
-      }
-      // NOTE: INS 0x0A is PROVIDE_ERC20_TOKEN_INFO — not a sign command.
-      // The handler ACKs it with 9000; it must never pop a confirmation
-      // (it previously collided with a fictional Solana-sign code).
-      return false;
-    }
-    // Bitcoin
-    if (cmd.cla == Cla.bitcoin || cmd.cla == Cla.bitcoinExt) {
-      return cmd.ins == Ins.btcSignTx;
-    }
-    // Tron
-    if (cmd.cla == Cla.tron) {
-      return cmd.ins == Ins.tronSignTx;
-    }
-    // Sui
-    if (cmd.cla == Cla.sui) {
-      return cmd.ins == Ins.suiSignTx;
-    }
-    return false;
-  }
-
-  /// Map an APDU command to a chain name for parsing / display.
-  ///
-  /// [currentApp] disambiguates the shared CLA 0xE0 INS table
-  /// (Ethereum vs Solana) — see [isSignCommand].
-  static String chainFromCommand(ApduCommand cmd,
-      {LedgerApp? currentApp}) {
-    if (cmd.cla == Cla.os || cmd.cla == Cla.global) {
-      if (currentApp == LedgerApp.tron) return 'tron';
-      if (currentApp == LedgerApp.solana) return 'solana';
-      if (cmd.ins == Ins.signEthPersonalMessage) return 'personal_msg';
-      // EIP-712 V0 (INS 0x0C) with a full 64-byte domain+struct payload.
-      if (cmd.ins == Ins.ethSignEip712 && _remainderLength(cmd) >= 64) {
-        return 'eip712';
-      }
-      return 'ethereum'; // ETH_SIGN
-    }
-    if (cmd.cla == Cla.bitcoin || cmd.cla == Cla.bitcoinExt) return 'bitcoin';
-    if (cmd.cla == Cla.tron) return 'tron';
-    if (cmd.cla == Cla.sui) return 'sui';
-    return 'unknown';
-  }
-
-  /// Compute the payload remainder length after the BIP-32 path in [cmd].
-  ///
-  /// APDU data format: `[depth(1B)] [4B × depth] [remainder...]`.
-  /// Returns 0 if data is null/empty or the path is malformed (depth > 10
-  /// or data shorter than path bytes).
-  static int _remainderLength(ApduCommand cmd) {
-    final data = cmd.data;
-    if (data == null || data.isEmpty) return 0;
-    final depth = data[0];
-    if (depth > 10) return 0; // matches PathParser sanity check
-    final pathBytes = 1 + depth * 4;
-    if (data.length < pathBytes) return 0;
-    return data.length - pathBytes;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
   //  Interception
   // ═══════════════════════════════════════════════════════════════════
 
-  /// Intercept a signing APDU command.
+  /// Intercept a signing review produced by the Rust chain-app host.
   ///
-  /// Extracts the derivation path via [PathParser], derives the signing
-  /// address via [ICryptoService], parses the transaction payload, and
-  /// creates a [PendingSignRequest]. Triggers [onRequestPending] so the
-  /// caller can navigate to the confirmation screen. Starts the backstop.
+  /// The module already parsed the payload and produced the digest; Dart only
+  /// renders the parsed view and parks the request. Approval asks the host for
+  /// the signature bytes instead of signing locally.
   ///
-  /// Returns `true` if the request was successfully intercepted and stored
-  /// as pending. Returns `false` if the command data was invalid (caller
-  /// should send an error APDU response over BLE).
-  Future<bool> interceptSignCommand(
-      ApduCommand command, String seedHex) async {
-    var data = command.data;
-    if (data == null || data.isEmpty) return false;
-
-    final chain =
-        chainFromCommand(command, currentApp: _apduHandler.currentApp);
-
-    // OKX prefixes Solana signing frames with a `num_signers` byte that
-    // standard Ledger clients omit. Strip it before parsing the path.
-    if (chain == 'solana') {
-      data = PathParser.stripNumSignersPrefix(data);
-    }
-
-    // Extract derivation path + remainder payload.
-    final pathResult = PathParser.parsePathWithRemainder(data);
-    if (pathResult == null) return false;
-    final address = _deriveAddress(seedHex, pathResult.path, chain);
-
-    // EIP-712 V0 (INS 0x0C) carries the domain+struct hashes inline; the
-    // personal_msg first block carries a 4-byte BE length prefix that must
-    // be dropped so the confirmation screen shows the real message.
-    String payloadHex;
-    if (chain == 'personal_msg' && pathResult.remainder.length >= 4) {
-      // Official personal_sign layout is [path][4B BE length][message]; drop
-      // the length prefix so the confirmation screen shows the real message.
-      payloadHex =
-          _crypto.hexEncode(Uint8List.sublistView(pathResult.remainder, 4));
-    } else {
-      payloadHex = _crypto.hexEncode(pathResult.remainder);
-    }
-
-    // Parse via Rust SDK.
-    final jsonStr = _crypto.parseSignData(chain, payloadHex);
-    Map<String, dynamic>? parsedData;
-    if (jsonStr != null) {
-      try {
-        parsedData = jsonDecode(jsonStr) as Map<String, dynamic>;
-      } catch (_) {}
-    }
-
-    await _supersedePending();
-
-    _pendingRequest = PendingSignRequest(
-      command: command,
-      chain: chain,
-      derivationPath: pathResult.path,
-      signingAddress: address ?? 'unknown',
-      payloadHex: payloadHex,
-      parsedData: parsedData,
-      seedHex: seedHex,
-    );
-
-    // Start the backstop; the confirmation screen resolves first normally.
-    _startSignBackstop();
-
-    // Trigger UI navigation.
-    onRequestPending?.call();
-
-    return true;
-  }
-
-  /// Intercept a pre-assembled signing intent (chunked ETH tx path).
+  /// [seedHex] is **not** used for signing — the host already holds the key.
+  /// It only keys the encrypted signature-history record.
   ///
-  /// Called by [BleSession] when the [EthTxAssembler] has accumulated
-  /// a complete RLP payload. Derives the signing address, parses the
-  /// payload, creates a [SigningIntent] and [PendingSignRequest],
-  /// and triggers [onRequestPending]. Starts the backstop.
-  ///
-  /// Unlike [interceptSignCommand], this does NOT hold a raw
-  /// [ApduCommand] — the [PendingSignRequest.command] is `null` and
-  /// [PendingSignRequest.intent] is set. On approval, the semantic
-  /// signer ([signIntent]) signs the payload directly without
-  /// re-dispatching a wire APDU.
-  ///
-  /// Returns `true` on success. Returns `false` if address derivation
-  /// fails (caller should send an error APDU response).
-  Future<bool> interceptIntent({
+  /// Returns `true` once the request is parked and the UI has been asked to
+  /// open the confirmation screen.
+  Future<bool> interceptChainReview({
+    required int reviewId,
     required String chain,
     required String derivationPath,
-    required String seedHex,
-    required Uint8List payload,
+    required String signingAddress,
+    required String payloadHex,
+    Map<String, dynamic>? parsedData,
+    String? seedHex,
   }) async {
-    final address = _deriveAddress(seedHex, derivationPath, chain);
-    final payloadHex = _crypto.hexEncode(payload);
-
-    // Parse via Rust SDK.
-    final jsonStr = _crypto.parseSignData(chain, payloadHex);
-    Map<String, dynamic>? parsedData;
-    if (jsonStr != null) {
-      try {
-        parsedData = jsonDecode(jsonStr) as Map<String, dynamic>;
-      } catch (_) {}
-    }
-
-    final intent = SigningIntent(
-      chain: chain,
-      derivationPath: derivationPath,
-      seedHex: seedHex,
-      payload: payload,
-      signingAddress: address ?? 'unknown',
-      parsedData: parsedData,
-    );
-
     await _supersedePending();
 
     _pendingRequest = PendingSignRequest(
-      command: null,
-      intent: intent,
       chain: chain,
       derivationPath: derivationPath,
-      signingAddress: address ?? 'unknown',
+      signingAddress: signingAddress,
       payloadHex: payloadHex,
       parsedData: parsedData,
       seedHex: seedHex,
+      chainReviewId: reviewId,
     );
 
     // Start the backstop; the confirmation screen resolves first normally.
     _startSignBackstop();
 
-    // Trigger UI navigation.
     onRequestPending?.call();
-
     return true;
   }
 
-  /// Intercept an ETH GET_PUBLIC_KEY P1=0x01 request (display + confirm).
+  /// Intercept an address-display review.
   ///
-  /// On a real Ledger P1=0x01 means "show the address on screen and wait
-  /// for the user to confirm". Stores a [PendingAddressRequest] holding the
-  /// derived [address] and the original [command], triggers
-  /// [onAddressRequestPending] so the caller can navigate to the address
-  /// confirmation screen, and starts the backstop.
+  /// The host has already derived and normalised [address]. Stores a
+  /// [PendingAddressRequest], triggers [onAddressRequestPending] so the caller
+  /// can navigate to the address confirmation screen, and starts the backstop.
   ///
   /// Returns `true` on success. Returns `false` if [address] is empty.
   Future<bool> interceptAddressCommand(
-      ApduCommand command, String address, String derivationPath) async {
+      String address, String derivationPath,
+      {required int chainReviewId}) async {
     if (address.isEmpty) return false;
 
     await _supersedePending();
 
     _pendingAddress = PendingAddressRequest(
-      command: command,
       derivationPath: derivationPath,
       address: address,
+      chainReviewId: chainReviewId,
     );
 
     // Start the backstop; the confirmation screen resolves first normally.
@@ -389,10 +185,9 @@ class SignConfirmation {
 
   /// The user approved the pending address-display request.
   ///
-  /// [respond] performs the BLE response delivery — typically
-  /// re-dispatching the original GET_PUBLIC_KEY command through
-  /// [ApduHandler] and sending the returned address response. Awaited so
-  /// delivery completes before the pending request is cleared.
+  /// [respond] performs the BLE response delivery — asking the host for the
+  /// final bytes and sending them. Awaited so delivery completes before the
+  /// pending request is cleared.
   Future<void> approveAddress(Future<Uint8List> Function() respond) async {
     if (_pendingAddress == null || _isResolving) return;
     _isResolving = true;
@@ -433,17 +228,10 @@ class SignConfirmation {
 
   /// The user approved the pending sign request.
   ///
-  /// [sign] is an async callback that performs the actual signing and
-  /// BLE response delivery. It should:
-  /// 1. Sign the payload (either semantically via [signIntent] for
-  ///    intent-based requests, or via [ApduHandler.handle] for
-  ///    command-based requests).
-  /// 2. Send the response bytes over BLE.
-  /// 3. Return the raw APDU response bytes.
-  ///
-  /// The callback is **awaited** — BLE response delivery is guaranteed
-  /// to complete before the pending request is cleared. This prevents
-  /// response races.
+  /// [sign] is an async callback that asks the chain host for the final
+  /// response and sends it over BLE. It is **awaited** — BLE response
+  /// delivery is guaranteed to complete before the pending request is
+  /// cleared. This prevents response races.
   ///
   /// Duplicate calls are silently ignored (via [_isResolving] guard) —
   /// if the user double-taps approve, the second call is a no-op.
@@ -685,71 +473,6 @@ class SignConfirmation {
     return true;
   }
 
-  /// Sign a [SigningIntent] semantically — no raw APDU re-dispatch.
-  ///
-  /// Derives the private key from [intent]'s seed + path, then calls
-  /// the appropriate signing function based on [intent.chain].
-  /// Returns the raw signature bytes (NOT wrapped in an APDU response).
-  ///
-  /// The caller (typically the `approve` callback in [AppState]) wraps
-  /// the returned bytes in an [ApduResponse] and sends them over BLE.
-  ///
-  /// Throws if key derivation or signing fails.
-  Uint8List signIntent(SigningIntent intent) {
-    final privKey = _crypto.deriveSecp256k1PrivateKey(
-        intent.seedHex, intent.derivationPath);
-    if (privKey == null) {
-      throw StateError('Key derivation failed for path ${intent.derivationPath}');
-    }
-    final privKeyHex = _crypto.hexEncode(privKey);
-    final payloadHex = _crypto.hexEncode(intent.payload);
-
-    Uint8List? sig;
-    switch (intent.chain) {
-      case 'ethereum':
-      case 'bitcoin':
-      case 'tron':
-        // secp256k1 transaction signing (ETH/BTC/Tron all use the
-        // same signEthTransaction FFI — it signs a raw hash with
-        // secp256k1 + EIP-2 low-s).
-        sig = _crypto.signEthTransaction(privKeyHex, payloadHex);
-        break;
-      case 'personal_msg':
-        sig = _crypto.signEthPersonalMessage(privKeyHex, payloadHex);
-        break;
-      case 'eip712':
-        // Payload is 64 bytes: domainHash(32) + structHash(32).
-        if (intent.payload.length < 64) {
-          throw StateError(
-              'EIP-712 intent payload too short: ${intent.payload.length}');
-        }
-        final domainHex = _crypto.hexEncode(
-            Uint8List.sublistView(intent.payload, 0, 32));
-        final structHex = _crypto.hexEncode(
-            Uint8List.sublistView(intent.payload, 32, 64));
-        sig = _crypto.signEthEIP712(privKeyHex, domainHex, structHex);
-        break;
-      case 'solana':
-      case 'sui':
-        // Ed25519 message signing.
-        final edKey = _crypto.deriveEd25519PrivateKey(
-            intent.seedHex, intent.derivationPath);
-        if (edKey == null) {
-          throw StateError(
-              'Ed25519 key derivation failed for path ${intent.derivationPath}');
-        }
-        sig = _crypto.signSolanaMessage(_crypto.hexEncode(edKey), payloadHex);
-        break;
-      default:
-        throw StateError('Unsupported chain for semantic signing: ${intent.chain}');
-    }
-
-    if (sig == null) {
-      throw StateError('Signing failed for chain ${intent.chain}');
-    }
-    return sig;
-  }
-
   /// Clear the last sign result (after the result screen is dismissed).
   void clearLastSignResult() {
     _lastSignResult = null;
@@ -812,29 +535,5 @@ class SignConfirmation {
     _pendingAddress = null;
     _lastSignResult = null;
     _history.clear();
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  Helpers — address derivation
-  // ═══════════════════════════════════════════════════════════════════
-
-  /// Derive the signing address for a chain from seed+path.
-  String? _deriveAddress(String seedHex, String path, String chain) {
-    switch (chain) {
-      case 'ethereum':
-      case 'personal_msg':
-      case 'eip712':
-        return _crypto.deriveEthAddress(seedHex, path);
-      case 'solana':
-        return _crypto.deriveSolAddress(seedHex, path);
-      case 'bitcoin':
-        return _crypto.deriveBtcAddress(seedHex, path);
-      case 'tron':
-        return _crypto.deriveTronAddress(seedHex, path);
-      case 'sui':
-        return _crypto.deriveSuiAddress(seedHex, path);
-      default:
-        return null;
-    }
   }
 }

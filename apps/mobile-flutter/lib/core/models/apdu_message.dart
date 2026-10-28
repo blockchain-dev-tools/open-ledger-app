@@ -4,15 +4,13 @@
 library;
 
 /// CLA byte mapping:
-///   0xe0 — OS commands / Solana / Ethereum
+///   0xe0 — OS commands / Solana / Ethereum / Tron
 ///   0xe1 — Bitcoin (legacy)
 ///   0xf8 — Bitcoin (extended)
-///   0x14 — Tron
 ///   0x07 — Sui
 
 import 'dart:typed_data';
 
-import 'signing_intent.dart';
 
 /// An APDU command sent from the client (BLE central) to the wallet.
 class ApduCommand {
@@ -179,30 +177,13 @@ class ApduResponse {
       'isSuccess=$isSuccess, dataLen=${data?.length ?? 0})';
 }
 
-/// A sign request intercepted from BLE, pending user confirmation.
+/// A sign request parked by the Rust chain-app host, pending user
+/// confirmation.
 ///
-/// Created by [SignConfirmation] when a signing APDU command (or a
-/// fully assembled chunked ETH transaction) arrives. The user must
-/// approve or reject on the TransactionScreen.
-///
-/// For chunked ETH transactions, [intent] is set and [command] is
-/// `null` — approval signs the [SigningIntent] payload semantically,
-/// not by re-dispatching a raw wire APDU.
-///
-/// For single-APDU sign commands (EIP-712, personal message, etc.),
-/// [command] is set and [intent] is `null` — approval re-dispatches
-/// the command through [ApduHandler] (legacy path).
+/// Created by [SignConfirmation] when a chain module returns a review. The
+/// user must approve or reject on the TransactionScreen; approval asks the
+/// host for the signature bytes.
 class PendingSignRequest {
-  /// The original APDU command (used for signing on approval via the
-  /// legacy re-dispatch path). `null` for chunked ETH transactions
-  /// that use [intent] instead.
-  final ApduCommand? command;
-
-  /// Immutable semantic signing intent. Set for chunked ETH
-  /// transactions. When set, approval signs this payload directly
-  /// via [SignConfirmation._signIntent] — no raw APDU re-dispatch.
-  final SigningIntent? intent;
-
   /// Chain identifier: 'ethereum', 'solana', 'bitcoin', 'tron', 'sui',
   /// 'personal_msg', 'eip712'.
   final String chain;
@@ -231,9 +212,12 @@ class PendingSignRequest {
   /// history record. Null when unavailable (record stays in memory only).
   final String? seedHex;
 
+  /// Review id assigned by the Rust chain-app host; approval hands it back
+  /// to the host to obtain the signature bytes.
+  final int chainReviewId;
+
   PendingSignRequest({
-    this.command,
-    this.intent,
+    required this.chainReviewId,
     required this.chain,
     required this.derivationPath,
     required this.signingAddress,
@@ -244,19 +228,17 @@ class PendingSignRequest {
   }) : createdAt = createdAt ?? DateTime.now();
 }
 
-/// An address-display request intercepted from BLE, pending user approval.
+/// An address-display review parked by the Rust chain-app host, pending user
+/// approval.
 ///
-/// Created when the host sends ETH GET_PUBLIC_KEY (INS 0x02) with P1=0x01.
-/// On a real Ledger that P1 means "show the address on screen and wait for
-/// the user to confirm" — the device returns the address only after the
-/// user approves, and SW 0x6985 (user rejected) otherwise.
+/// Created when a module answers GET_PUBLIC_KEY with P1=0x01 (display and
+/// confirm). On a real Ledger that P1 means "show the address on screen and
+/// wait for the user to confirm" — the device returns the address only after
+/// the user approves, and SW 0x6985 (user rejected) otherwise.
 ///
-/// Unlike [PendingSignRequest] this produces no signature: approval
-/// re-dispatches [command] to return the address response.
+/// Unlike [PendingSignRequest] this produces no signature: approval asks the
+/// host for the address response it already prepared.
 class PendingAddressRequest {
-  /// The original GET_PUBLIC_KEY APDU, re-dispatched on approval.
-  final ApduCommand command;
-
   /// Chain identifier — always 'ethereum' today.
   final String chain;
 
@@ -269,11 +251,15 @@ class PendingAddressRequest {
   /// When this request was created (for timeout calculation).
   final DateTime createdAt;
 
+  /// Review id assigned by the Rust chain-app host; approval hands it back
+  /// to the host to obtain the address response bytes.
+  final int chainReviewId;
+
   PendingAddressRequest({
-    required this.command,
     this.chain = 'ethereum',
     required this.derivationPath,
     required this.address,
+    required this.chainReviewId,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 }

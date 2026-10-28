@@ -1,7 +1,8 @@
 /// Unit tests for [BleSession].
 ///
-/// Covers auto-lock timer, BLE advertising lifecycle, APDU context
-/// management, and dispose. Uses hand-written mocks.
+/// Covers auto-lock timers, BLE advertising lifecycle, seed hand-off, and the
+/// APDU dispatch contract: chain commands go to the Rust chain-app host (or
+/// are refused), OS/app frames go to [ApduHandler]. Uses hand-written mocks.
 library;
 
 import 'dart:async';
@@ -9,22 +10,22 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:open_ledger_app/biz/apdu_handler.dart';
 import 'package:open_ledger_app/biz/ble_session.dart';
 import 'package:open_ledger_app/biz/sign_confirmation.dart';
 import 'package:open_ledger_app/core/interfaces/ble_peripheral.dart';
-import 'package:open_ledger_app/core/models/chain.dart';
+import 'package:open_ledger_app/core/interfaces/chain_host_service.dart';
 import 'package:open_ledger_app/core/interfaces/crypto_service.dart';
-import '../support/inert_export.dart';
-import '../support/inert_key_hierarchy.dart';
 import 'package:open_ledger_app/core/interfaces/wallet_service.dart';
 import 'package:open_ledger_app/core/models/apdu_message.dart';
 import 'package:open_ledger_app/core/models/ble_types.dart';
+import 'package:open_ledger_app/core/models/chain.dart';
+import 'package:open_ledger_app/core/models/chain_host_reply.dart';
 import 'package:open_ledger_app/core/models/vault.dart';
 import 'package:open_ledger_app/core/models/wallet_accounts.dart';
 import 'package:open_ledger_app/protocols/apdu/apdu_constants.dart';
-import 'package:open_ledger_app/biz/apdu_handler.dart';
-
-import '../support/fake_crypto_service.dart';
+import '../support/inert_export.dart';
+import '../support/inert_key_hierarchy.dart';
 
 // ═══════════════════════════════════════════════════════════════════════
 // Hand-written Mocks
@@ -89,38 +90,54 @@ class _MockWalletService implements IWalletService {
   @override Future<void> removeVault(String id, {required String pin}) async { calls.add('removeVault'); }
 }
 
-/// Minimal mock of [ApduHandler].
-class _MockApduHandler extends ApduHandler {
-  _MockApduHandler() : super(crypto: const FakeCryptoService()) {
-    setCurrentApp(LedgerApp.ethereum);
-  }
+/// Hand-written [IChainHostService] capturing every call.
+class _FakeChainHost implements IChainHostService {
+  bool available = true;
 
-  bool contextCleared = false;
-  String? seedSet;
-  final List<ApduCommand> handledCommands = [];
-  ApduResponse? nextResponse;
+  /// Reply returned by [submit]; `null` models a host that cannot answer.
+  ChainHostReply? reply;
 
-  /// Address returned by [deriveEthAddressForPath] for the P1=0x01 flow.
-  String? derivedAddress;
+  /// Bytes returned by [resolve].
+  Uint8List? resolveBytes;
 
-  @override
-  String? deriveEthAddressForPath(String path) => derivedAddress;
+  final List<String> openedApps = [];
+  final List<Uint8List> submitted = [];
+  final List<int> resolvedIds = [];
 
-  @override
-  void clearContext() {
-    contextCleared = true;
-  }
+  String? seed;
+  bool locked = false;
 
   @override
-  void setContext({required String seedHex}) {
-    seedSet = seedHex;
+  bool get isAvailable => available;
+
+  @override
+  void setSeed(String? seedHex) => seed = seedHex;
+
+  @override
+  void openApp(String moduleId) => openedApps.add(moduleId);
+
+  @override
+  ChainHostReply? submit(Uint8List apdu) {
+    submitted.add(apdu);
+    return reply;
   }
 
   @override
-  ApduResponse handle(ApduCommand command) {
-    handledCommands.add(command);
-    return nextResponse ?? ApduResponse(sw1: 0x90, sw2: 0x00);
+  Uint8List? resolve(int reviewId, {required bool approved}) {
+    resolvedIds.add(reviewId);
+    return resolveBytes;
   }
+
+  @override
+  ChainAccountMaterial? deriveAccount(
+    String moduleId, {
+    int accountProfileIndex = 0,
+    required int addressIndex,
+  }) =>
+      null;
+
+  @override
+  void lock() => locked = true;
 }
 
 /// Minimal mock of [IBlePeripheral].
@@ -184,9 +201,6 @@ class _MockBlePeripheral implements IBlePeripheral {
     calls.add('setDeviceName');
   }
 
-  /// Update [_state] and emit on [stateStream], mirroring real
-  /// [_transition] behavior. Existing tests that only read [state]
-  /// are unaffected — emissions go to a fresh broadcast stream.
   void setState(BleState s) {
     _state = s;
     if (!_stateController.isClosed) {
@@ -244,23 +258,22 @@ class _MockCryptoService with InertKeyHierarchy, InertExport implements ICryptoS
 
 void main() {
   late _MockWalletService walletService;
-  late _MockApduHandler apduHandler;
+  late ApduHandler apduHandler;
+  late _FakeChainHost chainHost;
   late SignConfirmation signConfirmation;
   late BleSession session;
   late _MockBlePeripheral blePeripheral;
 
   setUp(() {
     walletService = _MockWalletService();
-    apduHandler = _MockApduHandler();
-    // Create a real SignConfirmation with mock deps
-    signConfirmation = SignConfirmation(
-      crypto: _MockCryptoService(),
-      apduHandler: apduHandler,
-    );
+    apduHandler = ApduHandler()..setCurrentApp(LedgerApp.ethereum);
+    chainHost = _FakeChainHost();
+    signConfirmation = SignConfirmation(crypto: _MockCryptoService());
     session = BleSession(
       walletService: walletService,
       apduHandler: apduHandler,
       signConfirmation: signConfirmation,
+      chainHost: chainHost,
     );
     blePeripheral = _MockBlePeripheral();
   });
@@ -270,22 +283,23 @@ void main() {
   // ──────────────────────────────────────────────────────────────────
 
   group('blePeripheral setter', () {
-    test('setting peripheral subscribes to APDU stream', () {
+    test('setting peripheral hands the seed to the chain host', () {
+      walletService.isUnlocked = true;
+      walletService.seedHex = 'test-seed';
+
       session.blePeripheral = blePeripheral;
-      // When wallet is unlocked with seed, it should set context
-      walletService._isUnlocked = true;
-      walletService._seedHex = 'test-seed';
-      session.trySetApduContext();
-      expect(apduHandler.seedSet, 'test-seed');
+
+      expect(chainHost.seed, 'test-seed');
     });
 
-    test('setting to null unsubscribes and clears context', () {
+    test('setting to null clears the host seed', () {
+      walletService.isUnlocked = true;
+      walletService.seedHex = 'test-seed';
       session.blePeripheral = blePeripheral;
-      apduHandler.contextCleared = false;
 
       session.blePeripheral = null;
 
-      expect(apduHandler.contextCleared, isTrue);
+      expect(chainHost.seed, isNull);
     });
   });
 
@@ -295,32 +309,30 @@ void main() {
 
   group('trySetApduContext', () {
     test('sets seed when unlocked', () {
-      walletService._isUnlocked = true;
-      walletService._seedHex = 'my-seed-abc';
+      walletService.isUnlocked = true;
+      walletService.seedHex = 'my-seed-abc';
 
       session.trySetApduContext();
 
-      expect(apduHandler.seedSet, 'my-seed-abc');
+      expect(chainHost.seed, 'my-seed-abc');
     });
 
     test('no-op when locked', () {
-      walletService._isUnlocked = false;
-      walletService._seedHex = 'my-seed';
-      apduHandler.seedSet = null;
+      walletService.isUnlocked = false;
+      walletService.seedHex = 'my-seed';
 
       session.trySetApduContext();
 
-      expect(apduHandler.seedSet, isNull);
+      expect(chainHost.seed, isNull);
     });
 
     test('no-op when seed is null', () {
-      walletService._isUnlocked = true;
-      walletService._seedHex = null;
-      apduHandler.seedSet = null;
+      walletService.isUnlocked = true;
+      walletService.seedHex = null;
 
       session.trySetApduContext();
 
-      expect(apduHandler.seedSet, isNull);
+      expect(chainHost.seed, isNull);
     });
   });
 
@@ -399,6 +411,7 @@ void main() {
         walletService: walletService,
         apduHandler: apduHandler,
         signConfirmation: signConfirmation,
+        chainHost: chainHost,
         autoLockDuration: const Duration(minutes: 1),
         idleLockDuration: const Duration(seconds: 5),
       );
@@ -485,6 +498,13 @@ void main() {
       expect(walletService.calls.contains('lock'), isTrue);
       expect(blePeripheral.calls.contains('stopAdvertising'), isFalse);
     });
+
+    testWidgets('idle lock drops the host seed', (tester) async {
+      idleSession.onSessionStarted();
+      await tester.pump(const Duration(seconds: 6));
+
+      expect(chainHost.locked, isTrue);
+    });
   });
 
   // ──────────────────────────────────────────────────────────────────
@@ -492,22 +512,24 @@ void main() {
   // ──────────────────────────────────────────────────────────────────
 
   group('dispose', () {
-    test('cancels timer and clears context', () {
+    test('unsubscribes from the APDU stream', () async {
       session.blePeripheral = blePeripheral;
-      session.onAppBackgrounded();
-      apduHandler.contextCleared = false;
-
       session.dispose();
 
-      expect(apduHandler.contextCleared, isTrue);
+      blePeripheral.addApduData(
+          ApduCommand(cla: Cla.global, ins: Ins.getVersion, p1: 0, p2: 0)
+              .toBytes());
+      await Future<void>.delayed(Duration.zero);
+
+      expect(blePeripheral.sentResponses, isEmpty);
     });
   });
 
   // ──────────────────────────────────────────────────────────────────
-  // APDU gating — ETH app special-cases (flow control + address confirm)
+  // APDU dispatch — chain commands
   // ──────────────────────────────────────────────────────────────────
 
-  group('ETH_SIGN flow control (P1/P2)', () {
+  group('chain dispatch', () {
     setUp(() {
       session.blePeripheral = blePeripheral;
     });
@@ -515,152 +537,196 @@ void main() {
     int lastSw() =>
         ApduResponse.fromBytes(blePeripheral.sentResponses.single).statusWord;
 
-    ApduCommand signCommand({required int p1, required int p2, Uint8List? data}) =>
-        ApduCommand(cla: Cla.os, ins: Ins.ethSign, p1: p1, p2: p2, data: data);
+    ApduCommand ethSign() => ApduCommand(
+        cla: Cla.os, ins: Ins.ethSign, p1: 0x00, p2: 0x00, data: Uint8List(1));
 
-    test('rejects P1 outside {0x00, 0x80} with 0x6A86', () async {
-      await session.onApduCommand(
-          signCommand(p1: 0x01, p2: 0x00).toBytes(), 'seed-hex');
+    test('locked wallet refuses a chain command with 6985', () async {
+      await session.onApduCommand(ethSign().toBytes(), null);
 
-      expect(lastSw(), Sw.incorrectP1P2);
+      expect(lastSw(), Sw.securityStatusNotSatisfied);
+      expect(chainHost.submitted, isEmpty);
+      expect(chainHost.openedApps, isEmpty);
     });
 
-    test('rejects P2 outside {0x00, 0x01, 0x02} with 0x6A86', () async {
-      await session.onApduCommand(
-          signCommand(p1: 0x00, p2: 0x03).toBytes(), 'seed-hex');
+    test('unavailable host refuses a chain command with 6D00', () async {
+      chainHost.available = false;
 
-      expect(lastSw(), Sw.incorrectP1P2);
+      await session.onApduCommand(ethSign().toBytes(), 'seed-hex');
+
+      expect(lastSw(), Sw.insNotSupported);
+      expect(chainHost.submitted, isEmpty);
     });
 
-    test('P2=0x02 (start flow) is acked with 9000 and no confirmation',
-        () async {
-      await session.onApduCommand(
-          signCommand(p1: 0x00, p2: 0x02).toBytes(), 'seed-hex');
+    test('a non-terminal host reply refuses with 6D00', () async {
+      chainHost.reply = const ChainHostStatus('finished');
 
-      expect(lastSw(), Sw.success);
-      expect(signConfirmation.pendingRequest, isNull);
+      await session.onApduCommand(ethSign().toBytes(), 'seed-hex');
+
+      expect(lastSw(), Sw.insNotSupported);
     });
 
-    test('P2=0x01 (store only) acks a complete tx without confirmation',
-        () async {
+    test('host emit is written to the wallet verbatim', () async {
+      final payload = Uint8List.fromList([0x01, 0x02, 0x90, 0x00]);
+      chainHost.reply = ChainHostEmit(payload);
+
+      await session.onApduCommand(ethSign().toBytes(), 'seed-hex');
+
+      expect(blePeripheral.sentResponses.single, payload);
+      expect(chainHost.openedApps, ['openledger.ethereum']);
+    });
+
+    test('BTC and Sui commands open their own module', () async {
+      chainHost.reply = ChainHostEmit(Uint8List.fromList([0x90, 0x00]));
+
       await session.onApduCommand(
-          signCommand(
-            p1: 0x00,
-            p2: 0x01,
-            data: _blePathData(const [0x80000000],
-                remainder: const [0xc1, 0x01]),
-          ).toBytes(),
+          ApduCommand(
+                  cla: Cla.bitcoin, ins: Ins.btcGetWalletPublicKey, p1: 0, p2: 0)
+              .toBytes(),
+          'seed-hex');
+      await session.onApduCommand(
+          ApduCommand(cla: Cla.sui, ins: Ins.suiGetPublicKey, p1: 0, p2: 0)
+              .toBytes(),
           'seed-hex');
 
-      expect(lastSw(), Sw.success);
-      expect(signConfirmation.pendingRequest, isNull);
+      expect(chainHost.openedApps, ['openledger.bitcoin', 'openledger.sui']);
+      expect(chainHost.submitted.length, 2);
     });
 
-    test('P2=0x00 acks an incomplete chunk with 9000', () async {
+    test('Solana and Tron modules follow the opened app', () async {
+      chainHost.reply = ChainHostEmit(Uint8List.fromList([0x90, 0x00]));
+      apduHandler.setCurrentApp(LedgerApp.solana);
       await session.onApduCommand(
-          signCommand(
-            p1: 0x00,
-            p2: 0x00,
-            data: _blePathData(const [0x80000000],
-                remainder: const [0xc5, 0x01]),
-          ).toBytes(),
+          ApduCommand(cla: Cla.os, ins: Ins.solGetAddress, p1: 0, p2: 0)
+              .toBytes(),
           'seed-hex');
 
-      expect(lastSw(), Sw.success);
-      expect(signConfirmation.pendingRequest, isNull);
+      apduHandler.setCurrentApp(LedgerApp.tron);
+      await session.onApduCommand(
+          ApduCommand(cla: Cla.os, ins: Ins.tronSignTx, p1: 0, p2: 0).toBytes(),
+          'seed-hex');
+
+      expect(chainHost.openedApps, ['openledger.solana', 'openledger.tron']);
     });
 
-    test('P2=0x00 intercepts a complete tx for user confirmation', () async {
-      bool pendingCalled = false;
+    test('a sign review parks a pending request and sends nothing', () async {
+      chainHost.reply = ChainHostReview(
+        reviewId: 7,
+        address: '0xabc',
+        path: "m/44'/60'/0'/0/0",
+        network: 'ethereum',
+        actionType: 'sign',
+        payloadHex: 'f86c',
+        document: const {
+          'sections': [
+            {
+              'title_key': 'review.section.transaction',
+              'fields': [
+                {
+                  'label_key': 'review.field.to',
+                  'value': {'type': 'address', 'value': '0xdef'},
+                },
+              ],
+            },
+          ],
+        },
+      );
+
+      var pendingCalled = false;
       signConfirmation.onRequestPending = () => pendingCalled = true;
 
+      await session.onApduCommand(ethSign().toBytes(), 'seed-hex');
+
+      expect(pendingCalled, isTrue);
+      expect(blePeripheral.sentResponses, isEmpty);
+      final req = signConfirmation.pendingRequest!;
+      expect(req.chainReviewId, 7);
+      expect(req.chain, 'eth_tx');
+      expect(req.signingAddress, '0xabc');
+      expect(req.parsedData!['to'], '0xdef');
+    });
+
+    test('an address review parks a pending address request', () async {
+      chainHost.reply = const ChainHostReview(
+        reviewId: 11,
+        address: '0xabc',
+        path: "m/44'/60'/0'/0/0",
+        network: 'ethereum',
+        actionType: 'display_address',
+        payloadHex: '',
+        document: {},
+      );
+
+      var pendingCalled = false;
+      signConfirmation.onAddressRequestPending = () => pendingCalled = true;
+
       await session.onApduCommand(
-          signCommand(
-            p1: 0x00,
-            p2: 0x00,
-            data: _blePathData(const [0x80000000],
-                remainder: const [0xc1, 0x01]),
-          ).toBytes(),
+          ApduCommand(cla: Cla.os, ins: Ins.getPublicKey, p1: 0x01, p2: 0)
+              .toBytes(),
           'seed-hex');
 
       expect(pendingCalled, isTrue);
-      expect(signConfirmation.pendingRequest, isNotNull);
-      expect(signConfirmation.pendingRequest!.chain, 'ethereum');
-      // Response is deferred until approve()/reject().
+      expect(signConfirmation.pendingAddressRequest, isNotNull);
+      expect(signConfirmation.pendingAddressRequest!.address, '0xabc');
+      expect(signConfirmation.pendingAddressRequest!.chainReviewId, 11);
       expect(blePeripheral.sentResponses, isEmpty);
+    });
+
+    test('resolveChainReview hands the id back to the host', () {
+      chainHost.resolveBytes = Uint8List.fromList([0x90, 0x00]);
+
+      final bytes = session.resolveChainReview(7, approved: true);
+
+      expect(bytes, Uint8List.fromList([0x90, 0x00]));
+      expect(chainHost.resolvedIds, [7]);
     });
   });
 
-  group('ETH GET_PUBLIC_KEY P1=0x01 (address display + confirm)', () {
+  // ──────────────────────────────────────────────────────────────────
+  // APDU dispatch — OS / app frames
+  // ──────────────────────────────────────────────────────────────────
+
+  group('OS / app dispatch', () {
     setUp(() {
       session.blePeripheral = blePeripheral;
     });
 
-    ApduCommand addressCommand({int p2 = P2.ethNoChainCode}) =>
-        ApduCommand(
-            cla: Cla.os, ins: Ins.getPublicKey, p1: P1.ethConfirm, p2: p2);
-
-    test('intercepts and holds the address for confirmation', () async {
-      apduHandler.derivedAddress = '0xdeadbeef';
-      bool pendingCalled = false;
-      signConfirmation.onAddressRequestPending = () => pendingCalled = true;
-
-      await session.onApduCommand(addressCommand().toBytes(), 'seed-hex');
-
-      expect(pendingCalled, isTrue);
-      expect(signConfirmation.pendingAddressRequest, isNotNull);
-      expect(signConfirmation.pendingAddressRequest!.address, '0xdeadbeef');
-      expect(signConfirmation.pendingAddressRequest!.derivationPath,
-          "m/44'/60'/0'/0/0");
-      // Response is deferred until the user confirms.
-      expect(blePeripheral.sentResponses, isEmpty);
-    });
-
-    test('rejects an out-of-range P2 with 0x6A86', () async {
-      apduHandler.derivedAddress = '0xdeadbeef';
-
+    test('GET_APP_AND_VERSION is answered by the local table', () async {
       await session.onApduCommand(
-          addressCommand(p2: 0x02).toBytes(), 'seed-hex');
+          ApduCommand(cla: Cla.global, ins: Ins.getVersion, p1: 0, p2: 0)
+              .toBytes(),
+          'seed-hex');
 
-      expect(
-          ApduResponse.fromBytes(blePeripheral.sentResponses.single).statusWord,
-          Sw.incorrectP1P2);
-      expect(signConfirmation.pendingAddressRequest, isNull);
+      expect(blePeripheral.sentResponses.single, isNotEmpty);
+      expect(chainHost.submitted, isEmpty);
     });
 
-    test('P1=0x00 (no display) returns the address immediately', () async {
-      apduHandler.nextResponse = ApduResponse(
-          data: Uint8List.fromList([0x41]), sw1: 0x90, sw2: 0x00);
-
+    test('OPEN_APP switches the table without reaching the host', () async {
       await session.onApduCommand(
           ApduCommand(
             cla: Cla.os,
-            ins: Ins.getPublicKey,
-            p1: P1.ethNonConfirm,
-            p2: P2.ethNoChainCode,
+            ins: Ins.openApp,
+            p1: 0,
+            p2: 0,
+            data: Uint8List.fromList('Solana'.codeUnits),
           ).toBytes(),
           'seed-hex');
 
-      expect(blePeripheral.sentResponses, isNotEmpty);
-      expect(signConfirmation.pendingAddressRequest, isNull);
-      expect(apduHandler.handledCommands.single.ins, Ins.getPublicKey);
+      expect(apduHandler.currentApp, LedgerApp.solana);
+      expect(chainHost.submitted, isEmpty);
+    });
+
+    test('an INS the opened app table does not own is refused with 6D00',
+        () async {
+      apduHandler.setCurrentApp(LedgerApp.solana);
+
+      await session.onApduCommand(
+          const ApduCommand(cla: Cla.os, ins: 0xFF, p1: 0, p2: 0).toBytes(),
+          'seed-hex');
+
+      expect(
+          ApduResponse.fromBytes(blePeripheral.sentResponses.single).statusWord,
+          Sw.insNotSupported);
+      expect(chainHost.submitted, isEmpty);
     });
   });
-}
-
-/// Build APDU data: `[depth(1B)] [4B BE components...] [remainder]`.
-Uint8List _blePathData(List<int> components,
-    {List<int> remainder = const []}) {
-  final bytes = Uint8List(1 + components.length * 4 + remainder.length);
-  bytes[0] = components.length;
-  for (var i = 0; i < components.length; i++) {
-    final value = components[i];
-    final offset = 1 + i * 4;
-    bytes[offset] = (value >> 24) & 0xFF;
-    bytes[offset + 1] = (value >> 16) & 0xFF;
-    bytes[offset + 2] = (value >> 8) & 0xFF;
-    bytes[offset + 3] = value & 0xFF;
-  }
-  bytes.setRange(1 + components.length * 4, bytes.length, remainder);
-  return bytes;
 }

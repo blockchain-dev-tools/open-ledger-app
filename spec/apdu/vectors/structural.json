@@ -1,5 +1,5 @@
 {
-  "_about": "APDU conformance corpus. Vectors here are language-neutral: the Flutter device (apps/mobile-flutter) and the TS simulator (packages/apdu) must both reproduce `response` byte-for-byte. `needsCrypto: false` vectors run in `flutter test` with FakeCryptoService; `needsCrypto: true` vectors run in integration_test with the real Rust FFI. `provenance` records where the expected bytes came from: `regression` = snapshot of the current implementation (drift guard, not proof of conformance); `speculos` = captured from real Ledger firmware (the actual conformance source). Replace `regression` entries with `speculos` captures as they arrive.",
+  "_about": "APDU conformance corpus for the OS / app shell. Every vector here is served by the Dart ApduHandler (dashboard commands, OPEN_APP / QUIT_APP, frame-level probes). Chain commands (signing, address derivation) are served by the Rust chain-app modules and are covered by their crate tests plus the device e2e suite. `provenance` records where the expected bytes came from: `regression` = snapshot of the current implementation (drift guard, not proof of conformance); `speculos` = captured from real Ledger firmware (the actual conformance source). Replace `regression` entries with `speculos` captures as they arrive.",
   "vectors": [
     {
       "id": "os-unknown-cla",
@@ -91,19 +91,6 @@
       "data": null,
       "response": "9000",
       "note": "ERC-20 metadata provisioning is acknowledged without confirmation."
-    },
-    {
-      "id": "eth-get-address-locked",
-      "provenance": "regression",
-      "needsCrypto": false,
-      "currentApp": "ethereum",
-      "cla": 224,
-      "ins": 2,
-      "p1": 0,
-      "p2": 0,
-      "data": null,
-      "response": "6982",
-      "note": "E0 02 with no wallet context: the wallet is locked, so SECURITY_STATUS_NOT_SATISFIED (0x6982). Matches ble_session.dart and the Ledger convention for an unauthenticated device."
     },
     {
       "id": "eth-get-app-configuration",

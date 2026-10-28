@@ -17,7 +17,7 @@
       "id": "sol-get-pubkey-verified-aligned",
       "ref": "docs/reference/ble.md",
       "area": "solana",
-      "description": "Verified aligned, kept as a positive note (not an open gap): app-solana INS 0x05 GET_PUBKEY / 0x06 SIGN_MESSAGE and a bare 32-byte Ed25519 pubkey response with no length prefix. Open Ledger App (apdu_handler.dart _handleSolGetAddress, _buildSolVersion) matches. Pending byte-exact vectors once a capture is possible. Source: app-solana/src/globals.h:58-66, src/handle_get_pubkey.c (set_result_get_pubkey returns PUBKEY_LENGTH)."
+      "description": "Verified aligned, kept as a positive note (not an open gap): app-solana INS 0x05 GET_PUBKEY / 0x06 SIGN_MESSAGE and a bare 32-byte Ed25519 pubkey response with no length prefix. Open Ledger App matches (crates/chain-app-solana; ApduHandler only answers the local GET_VERSION probe). Pending byte-exact vectors once a capture is possible. Source: app-solana/src/globals.h:58-66, src/handle_get_pubkey.c (set_result_get_pubkey returns PUBKEY_LENGTH)."
     }
   ]
 }

@@ -6,13 +6,9 @@
 /// stale F1-F6 table in docs/decisions/002-apdu-protocol-alignment.md), test
 /// vectors do not.
 ///
-/// Two tiers, matching the repo's testing strategy:
-///   * `needsCrypto: false`  — runs here against [FakeCryptoService] (fast,
-///     no Rust). Routing, status words, response layout.
-///   * `needsCrypto: true`   — runs in the sibling runner
-///     `real_crypto_conformance_test.dart` against the real Rust FFI
-///     (deterministic via the vector's `seedHex`). This runner reports them
-///     as deferred so the corpus cannot silently rot.
+/// The corpus only covers the OS / app shell. Chain commands are served by
+/// the Rust chain-app modules and are verified by their crate tests plus the
+/// device e2e suite.
 ///
 /// `spec/apdu/gaps.json` lists known deviations; each surfaces as a skipped
 /// test so it cannot silently rot.
@@ -28,16 +24,13 @@ import 'package:open_ledger_app/biz/apdu_handler.dart';
 import 'package:open_ledger_app/core/models/apdu_message.dart';
 import 'package:open_ledger_app/core/models/chain.dart';
 
-import '../../support/fake_crypto_service.dart';
-
 void main() {
   final specDir = _findSpecDir();
   final vectors = _loadAllVectors(Directory('${specDir.path}/vectors'));
   final gaps = _loadList(File('${specDir.path}/gaps.json'), 'gaps');
 
-  group('APDU conformance · structural (FakeCryptoService)', () {
+  group('APDU conformance · structural', () {
     for (final v in vectors) {
-      if (v['needsCrypto'] == true) continue; // handled by integration_test
       final id = v['id'] as String;
       test(id, () {
         final response = _buildHandler(v).handle(_buildCommand(v));
@@ -45,16 +38,6 @@ void main() {
           _hex(response.toBytes()),
           (v['response'] as String).toLowerCase(),
           reason: '$id [provenance=${v['provenance']}] ${v['note'] ?? ''}',
-        );
-      });
-    }
-
-    final deferred = vectors.where((v) => v['needsCrypto'] == true).toList();
-    if (deferred.isNotEmpty) {
-      test('crypto vectors (deferred to integration_test)', () {
-        markTestSkipped(
-          '${deferred.length} vector(s) need real Rust FFI: '
-          '${deferred.map((v) => v['id']).join(', ')}',
         );
       });
     }
@@ -72,11 +55,9 @@ void main() {
 // ── Vector → handler ────────────────────────────────────────────────────
 
 ApduHandler _buildHandler(Map<String, dynamic> v) {
-  final handler = ApduHandler(crypto: const FakeCryptoService());
+  final handler = ApduHandler();
   final app = v['currentApp'] as String?;
   if (app != null) handler.setCurrentApp(LedgerApp.values.byName(app));
-  final seedHex = v['seedHex'] as String?;
-  if (seedHex != null) handler.setContext(seedHex: seedHex);
   return handler;
 }
 

@@ -8,11 +8,13 @@ import '../core/interfaces/backup_verifier.dart';
 import '../core/interfaces/export_service.dart';
 import '../core/interfaces/screen_security.dart';
 import '../core/interfaces/ble_peripheral.dart';
+import '../core/interfaces/chain_host_service.dart';
 import '../core/interfaces/history_repository.dart';
 import '../core/models/apdu_message.dart';
 import '../core/models/ble_types.dart';
 import '../core/models/chain.dart';
 import '../core/models/signature_record.dart';
+import '../infrastructure/ffi/chain_host_bridge.dart';
 import '../infrastructure/ffi/crypto_service_adapter.dart';
 import '../infrastructure/platform/screen_security_channel.dart';
 import '../biz/apdu_handler.dart';
@@ -43,10 +45,9 @@ class AppState extends ChangeNotifier {
 
   AppState({required this._settingsService}) {
     _settingsService.addListener(_onSettingsChanged);
-    _apduHandler = ApduHandler(crypto: const CryptoServiceAdapter());
+    _apduHandler = ApduHandler();
     _signConfirmation = SignConfirmation(
       crypto: const CryptoServiceAdapter(),
-      apduHandler: _apduHandler,
     );
     // Terminal status words emitted by the state-layer backstop (timeout /
     // superseded request) go out over BLE directly, so a request whose
@@ -143,6 +144,7 @@ class AppState extends ChangeNotifier {
       walletService: ws,
       apduHandler: _apduHandler,
       signConfirmation: _signConfirmation,
+      chainHost: _chainHostBridge,
     );
     _bleSession!.onWalletLocked = () {
       // A pending confirmation cannot be approved without a seed: answer the
@@ -233,6 +235,11 @@ class AppState extends ChangeNotifier {
   late final SignConfirmation _signConfirmation;
   BleSession? _bleSession;
 
+  /// Native chain-app host (stage 2b). Lives as long as the app so a rebuilt
+  /// [BleSession] keeps the same Rust-side session and seed.
+  final ChainHostBridge _chainHostBridge = ChainHostBridge();
+  IChainHostService get chainHost => _chainHostBridge;
+
   set blePeripheral(IBlePeripheral? bp) {
     _blePeripheral = bp;
     _bleSession?.blePeripheral = bp;
@@ -283,25 +290,16 @@ class AppState extends ChangeNotifier {
 
   /// The user approved the pending sign request.
   ///
-  /// The sign callback is passed to [SignConfirmation.approve] which
-  /// handles the response via [ApduHandler] (for legacy command-based
-  /// requests) or [SignConfirmation.signIntent] (for intent-based
-  /// chunked ETH tx requests), sends it over BLE, and awaits delivery.
+  /// The sign callback is passed to [SignConfirmation.approve]: the Rust
+  /// chain-app host consumed the approval and encodes the reply, which is
+  /// sent over BLE and awaited.
   Future<void> approveSign() async {
     await _signConfirmation.approve(() async {
       final req = _signConfirmation.pendingRequest!;
-      Uint8List responseBytes;
-      if (req.intent != null) {
-        // Semantic signing — sign the intent's payload directly,
-        // no raw APDU re-dispatch.
-        final sig = _signConfirmation.signIntent(req.intent!);
-        final resp = ApduResponse(data: sig, sw1: 0x90, sw2: 0x00);
-        responseBytes = resp.toBytes();
-      } else {
-        // Legacy re-dispatch through ApduHandler (EIP-712, etc.).
-        final response = _apduHandler.handle(req.command!);
-        responseBytes = response.toBytes();
-      }
+      // A host that cannot answer gets a terminal execution error rather than
+      // leaving the request unanswered.
+      final responseBytes = _resolveChainReview(req, approved: true) ??
+          ApduResponse(data: null, sw1: 0x64, sw2: 0x00).toBytes();
       await _blePeripheral?.sendApduResponse(responseBytes);
       return responseBytes;
     });
@@ -315,12 +313,25 @@ class AppState extends ChangeNotifier {
   /// error-response delivery completes before clearing state.
   Future<void> rejectSign() async {
     await _signConfirmation.reject(() async {
-      final resp = ApduResponse(data: null, sw1: 0x69, sw2: 0x85);
-      final bytes = resp.toBytes();
+      final req = _signConfirmation.pendingRequest;
+      final fromHost =
+          req == null ? null : _resolveChainReview(req, approved: false);
+      final bytes = fromHost ??
+          ApduResponse(data: null, sw1: 0x69, sw2: 0x85).toBytes();
       await _blePeripheral?.sendApduResponse(bytes);
       return bytes;
     });
     notifyListeners();
+  }
+
+  /// Asks the native chain-app host to finish a parked signing review.
+  ///
+  /// Returns `null` when the host cannot answer, so the caller sends a
+  /// terminal execution error instead of leaving the request unanswered.
+  Uint8List? _resolveChainReview(PendingSignRequest req,
+      {required bool approved}) {
+    return _bleSession?.resolveChainReview(req.chainReviewId,
+        approved: approved);
   }
 
   /// Clear the last sign result (after the result screen is dismissed).
@@ -331,14 +342,12 @@ class AppState extends ChangeNotifier {
 
   /// The user approved the pending address-display request.
   ///
-  /// Re-dispatches the original GET_PUBLIC_KEY command through [ApduHandler],
-  /// which returns the address response (with chain code when P2=0x01), and
-  /// sends it over BLE.
+  /// The Rust chain-app host produces the final bytes (it already consumed
+  /// the approval).
   Future<void> approveAddress() async {
     await _signConfirmation.approveAddress(() async {
       final req = _signConfirmation.pendingAddressRequest!;
-      final response = _apduHandler.handle(req.command);
-      final bytes = response.toBytes();
+      final bytes = _resolveAddressRequest(req, approved: true);
       await _blePeripheral?.sendApduResponse(bytes);
       return bytes;
     });
@@ -350,12 +359,29 @@ class AppState extends ChangeNotifier {
   /// Sends SW 0x6985 (user rejected) over BLE.
   Future<void> rejectAddress() async {
     await _signConfirmation.rejectAddress(() async {
-      final resp = ApduResponse(data: null, sw1: 0x69, sw2: 0x85);
-      final bytes = resp.toBytes();
+      final req = _signConfirmation.pendingAddressRequest;
+      final bytes = req != null
+          ? _resolveAddressRequest(req, approved: false)
+          : ApduResponse(data: null, sw1: 0x69, sw2: 0x85).toBytes();
       await _blePeripheral?.sendApduResponse(bytes);
       return bytes;
     });
     notifyListeners();
+  }
+
+  /// Resolves a pending address request through the native chain-app host.
+  ///
+  /// When the host cannot answer (unavailable symbols, already-consumed
+  /// review, module error) the external wallet still gets a terminal
+  /// response: user-rejected on rejection, execution error on approval.
+  Uint8List _resolveAddressRequest(PendingAddressRequest req,
+      {required bool approved}) {
+    final bytes = _bleSession?.resolveChainReview(req.chainReviewId,
+        approved: approved);
+    if (bytes != null) return bytes;
+    return approved
+        ? ApduResponse(data: null, sw1: 0x64, sw2: 0x00).toBytes()
+        : ApduResponse(data: null, sw1: 0x69, sw2: 0x85).toBytes();
   }
 
   /// History of all completed signing operations (approved/rejected/timeout).
@@ -483,6 +509,7 @@ class AppState extends ChangeNotifier {
     _bleSession?.dispose();
     _signConfirmation.dispose();
     _blePeripheral?.dispose();
+    _chainHostBridge.dispose();
     super.dispose();
   }
 }

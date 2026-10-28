@@ -5,6 +5,7 @@ import 'package:open_ledger_app/core/models/apdu_message.dart';
 /// Represents an Ethereum EIP-1559 transfer with a decoded ERC-20 approve
 /// action — the richest variant of the sign-approval UI.
 final PendingSignRequest sampleSignRequest = PendingSignRequest(
+  chainReviewId: 0,
   chain: 'ethereum',
   derivationPath: "m/44'/60'/0'/0/0",
   signingAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
@@ -56,7 +57,7 @@ Map<String, dynamic> sampleSignResult() => {
 /// Mirrors an ETH GET_PUBLIC_KEY intercept (CLA 0xE0, INS 0x02) with P1=0x01
 /// — the "show the address and wait for confirmation" flow.
 final PendingAddressRequest sampleAddressRequest = PendingAddressRequest(
-  command: const ApduCommand(cla: 0xE0, ins: 0x02, p1: 0x01, p2: 0x00),
+  chainReviewId: 0,
   chain: 'ethereum',
   derivationPath: "m/44'/60'/0'/0/0",
   address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',

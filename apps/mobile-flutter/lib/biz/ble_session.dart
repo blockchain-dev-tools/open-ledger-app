@@ -7,8 +7,9 @@
 ///   1. **Auto-lock timers** — a background timeout and a foreground idle
 ///      timeout (sliding window: every user interaction restarts it); both
 ///      lock the wallet and fire [onWalletLocked].
-///   2. **APDU-BLE bridge** — parses incoming raw APDU bytes, dispatches
-///      sign commands to [SignConfirmation] and all others to [ApduHandler].
+///   2. **APDU-BLE bridge** — parses incoming raw APDU bytes. Chain commands
+///      go to the Rust chain-app host (parked reviews reach
+///      [SignConfirmation]); OS/app-level frames go to [ApduHandler].
 ///   3. **BLE advertising management** — thin wrappers around
 ///      [IBlePeripheral] with _wasAdvertising flag tracking for
 ///      foreground/background transitions.
@@ -22,14 +23,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../core/interfaces/ble_peripheral.dart';
+import '../core/interfaces/chain_host_service.dart';
 import '../core/interfaces/wallet_service.dart';
 import '../core/models/apdu_message.dart';
 import '../core/models/ble_types.dart';
 import '../core/models/chain.dart';
+import '../core/models/chain_host_reply.dart';
 import '../protocols/apdu/apdu_constants.dart';
-import '../protocols/apdu/eth_tx_assembler.dart';
 import 'apdu_handler.dart';
-import 'path_parser.dart';
 import 'sign_confirmation.dart';
 
 /// Manages BLE session lifecycle, auto-lock timer, and APDU dispatch.
@@ -39,6 +40,11 @@ class BleSession {
   final IWalletService _walletService;
   final ApduHandler _apduHandler;
   final SignConfirmation _signConfirmation;
+
+  /// Rust chain-app host. Every chain command is routed here; `null` or an
+  /// unavailable host answers INS_NOT_SUPPORTED instead of falling back to a
+  /// second Dart implementation.
+  final IChainHostService? _chainHost;
 
   // ── Auto-lock state ──────────────────────────────────────────────────
 
@@ -71,16 +77,7 @@ class BleSession {
 
   IBlePeripheral? _blePeripheral;
   StreamSubscription<Uint8List>? _apduSub;
-  StreamSubscription<BleState>? _stateSub;
   String? _seedHex;
-
-  /// ETH transaction APDU assembler — accumulates chunked INS=0x04
-  /// P1=0x00/0x80 APDUs into a complete RLP payload before producing
-  /// a [SigningIntent] for user confirmation.
-  ///
-  /// State is cleared on BLE disconnect/error, wallet lock, and
-  /// new first chunk (P1=0x00 always resets).
-  final EthTxAssembler _ethTxAssembler = EthTxAssembler();
 
   // ── Constructor ──────────────────────────────────────────────────────
 
@@ -88,6 +85,7 @@ class BleSession {
     required this._walletService,
     required this._apduHandler,
     required this._signConfirmation,
+    this._chainHost,
     this.autoLockDuration = const Duration(minutes: 5),
     this.idleLockDuration = const Duration(minutes: 5),
   });
@@ -99,26 +97,18 @@ class BleSession {
   /// Set (or replace) the active [IBlePeripheral].
   ///
   /// Subscribes to the peripheral's APDU stream and state stream, and
-  /// sets the APDU context if the wallet is unlocked. Setting to `null`
-  /// unsubscribes and clears the handler context.
-  ///
-  /// The state-stream subscription resets the ETH tx assembler on
-  /// [BleState.idle] / [BleState.error] transitions so a half-assembled
-  /// transaction cannot be completed across a disconnect or BLE error.
+  /// hands the seed to the chain host if the wallet is unlocked. Setting to
+  /// `null` unsubscribes and clears the host seed.
   set blePeripheral(IBlePeripheral? bp) {
     _apduSub?.cancel();
     _apduSub = null;
-    _stateSub?.cancel();
-    _stateSub = null;
-    _apduHandler.clearContext();
-    _ethTxAssembler.reset();
     _seedHex = null;
+    _chainHost?.setSeed(null);
 
     _blePeripheral = bp;
 
     if (bp != null) {
       _apduSub = bp.apduStream.listen(_onRawApdu);
-      _stateSub = bp.stateStream.listen(_onBleState);
       trySetApduContext();
     }
   }
@@ -245,8 +235,7 @@ class BleSession {
 
     _walletService.lock();
     _seedHex = null;
-    _ethTxAssembler.reset();
-    _apduHandler.clearContext();
+    _chainHost?.lock();
     onWalletLocked?.call();
   }
 
@@ -276,31 +265,28 @@ class BleSession {
   //  APDU Context
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// Set the APDU handler context from the current wallet state.
+  /// Push the current wallet seed into the session cache and chain host.
   ///
-  /// Reads the seed hex from [IWalletService] and passes it to both
-  /// [ApduHandler] and the internal cache. Does nothing if the wallet
-  /// is locked or has no seed.
+  /// Reads the seed hex from [IWalletService]. The Rust host keeps its own
+  /// copy and never hands it back. Does nothing if the wallet is locked or
+  /// has no seed.
   void trySetApduContext() {
     if (_walletService.isUnlocked) {
       final seedHex = _walletService.seedHex;
       if (seedHex != null) {
         _seedHex = seedHex;
-        _apduHandler.setContext(seedHex: seedHex);
+        _chainHost?.setSeed(seedHex);
       }
     }
   }
 
   /// Refresh the signing context after the wallet's **active vault** changed.
   ///
-  /// A connected host must never sign with the previous vault's seed: drop any
-  /// half-assembled chunked transaction (its payload was collected for the old
-  /// seed) and re-read the seed from the wallet. Wired from
+  /// A connected host must never sign with the previous vault's seed: drop
+  /// the cached seed and re-read it from the wallet. Wired from
   /// `IWalletService.onActiveVaultChanged`.
   void onActiveVaultChanged() {
-    _ethTxAssembler.reset();
     _seedHex = null;
-    _apduHandler.clearContext();
     trySetApduContext();
   }
 
@@ -311,14 +297,15 @@ class BleSession {
   /// Handle an incoming raw APDU command from the BLE stream.
   ///
   /// Parses the raw bytes into an [ApduCommand], then dispatches:
-  ///   - Sign commands → [SignConfirmation.interceptSignCommand]
-  ///     (creates a pending request, triggers UI navigation)
-  ///   - All others → [ApduHandler.handle]
-  ///     (processed immediately, response sent over BLE)
+  ///   - Chain commands → Rust chain-app host. The host either writes the
+  ///     reply itself ([ChainHostEmit]) or parks a review that turns into a
+  ///     [SignConfirmation] request.
+  ///   - Everything else → [ApduHandler] (OS / app-level frames).
   ///
-  /// [seedHex] is the pre-computed seed from the wallet — used by
-  /// [SignConfirmation] to derive the signing address. May be `null`
-  /// when the wallet is locked; sign commands will be rejected.
+  /// [seedHex] is the pre-computed seed from the wallet. A chain command
+  /// arriving while locked is refused with SW 0x6985; a chain command whose
+  /// host cannot answer gets SW 0x6D00 — there is no second Dart
+  /// implementation to fall back to.
   Future<void> onApduCommand(Uint8List rawApdu, String? seedHex) async {
     final ble = _blePeripheral;
     if (ble == null) return;
@@ -337,51 +324,24 @@ class BleSession {
           'P2=0x${command.p2.toRadixString(16).padLeft(2, '0')} '
           'dataLen=${command.data?.length ?? 0}');
 
-      // ── ETH tx chunked assembly (INS=0x04) ─────────────────────
-      // Intercept before isSignCommand — chunked ETH tx must be
-      // assembled into a complete RLP before showing one confirmation.
-      // Every ETH_SIGN APDU goes here so P1/P2 are validated and the
-      // P2 flow-control byte is honoured (see _handleEthTxApdu).
-      // Guarded by the Ethereum app context: INS 0x04 in the Solana app
-      // is GET_VERSION (no data, different P1/P2) and must not be fed
-      // to the RLP assembler.
-      if (_apduHandler.currentApp == LedgerApp.ethereum &&
-          command.cla == Cla.os &&
-          command.ins == Ins.ethSign) {
-        await _handleEthTxApdu(command, ble, seedHex);
-        return;
-      }
-
-      // ── ETH address display + confirm (INS=0x02, P1=0x01) ────────
-      // On a real Ledger, GET_PUBLIC_KEY P1=0x01 means "show the address
-      // on screen and wait for the user to confirm". Route it through the
-      // address confirmation UI instead of returning the address at once.
-      if (_apduHandler.currentApp == LedgerApp.ethereum &&
-          command.cla == Cla.os &&
-          command.ins == Ins.getPublicKey &&
-          command.p1 == P1.ethConfirm) {
-        await _handleEthConfirmAddress(command, ble, seedHex);
-        return;
-      }
-
-      // ── Sign-interception: delegate to SignConfirmation ──────────
-      if (SignConfirmation.isSignCommand(command,
-          currentApp: _apduHandler.currentApp)) {
+      // ── Chain commands: the Rust chain-app host owns every one ────
+      // ETH: GET_PUBLIC_KEY (P1=0x00 return / P1=0x01 confirm), SIGN,
+      // SIGN_PERSONAL, SIGN_EIP_712. BTC (CLA 0xE1/0xF8) and Sui (0x07) keep
+      // their own CLA; SOL/Tron share CLA 0xE0 and are selected by the app
+      // the host opened via OPEN_APP.
+      if (_isChainCommand(command)) {
         if (seedHex == null) {
           await _sendError(Sw.securityStatusNotSatisfied);
           return;
         }
-
-        final intercepted =
-            await _signConfirmation.interceptSignCommand(command, seedHex);
-        if (!intercepted) {
-          await _sendError(Sw.wrongData);
-        }
-        // If intercepted, the response will be sent later via approve() / reject().
+        if (await _handleViaChainHost(command, ble, seedHex)) return;
+        // Host missing or unable to answer — refuse instead of re-implementing
+        // the chain in Dart.
+        await _sendError(Sw.insNotSupported);
         return;
       }
 
-      // ── Non-sign: delegate to ApduHandler ────────────────────────
+      // ── OS / app-level frames: delegate to ApduHandler ───────────
       final response = _apduHandler.handle(command);
       final responseBytes = response.toBytes();
       final responseHex = responseBytes
@@ -399,182 +359,320 @@ class BleSession {
     }
   }
 
-  /// Handle an ETH_SIGN APDU (INS=0x04) — validates P1/P2 and assembles the
-  /// transaction.
+  /// Whether this command belongs to a Rust chain module.
   ///
-  /// P1: 0x00 starts/restarts assembly — parses the derivation path from
-  /// the APDU data, stores it, and begins accumulating RLP bytes.
-  /// 0x80 appends raw RLP bytes (no path parsing). Anything else is
-  /// SWO_WRONG_P1_P2 (0x6A86).
+  /// CLA 0xE0 is shared by Ethereum, Solana and Tron, so the opened app decides
+  /// which INS table (and therefore which module) owns the frame. BTC and Sui
+  /// keep their own CLA and never depend on the app context.
+  bool _isChainCommand(ApduCommand command) {
+    if (command.cla == Cla.bitcoin || command.cla == Cla.bitcoinExt) {
+      return command.ins == Ins.btcGetWalletPublicKey ||
+          command.ins == Ins.btcSignTx;
+    }
+    if (command.cla == Cla.sui) {
+      return command.ins == Ins.suiGetPublicKey || command.ins == Ins.suiSignTx;
+    }
+    if (command.cla != Cla.os) return false;
+    switch (_apduHandler.currentApp) {
+      case LedgerApp.ethereum:
+        return command.ins == Ins.getPublicKey ||
+            command.ins == Ins.ethSign ||
+            command.ins == Ins.signEthPersonalMessage ||
+            command.ins == Ins.ethSignEip712;
+      case LedgerApp.solana:
+        return command.ins == Ins.solGetVersion ||
+            command.ins == Ins.solGetAddress ||
+            command.ins == Ins.solSignMessage ||
+            command.ins == Ins.solSignOffchainMessage;
+      case LedgerApp.tron:
+        // 0x04/0x05/0x08/0x0A/0x0C 全部由 Rust 模块处理；未实现时模块回 6D00。
+        return command.ins == Ins.tronGetPublicKey ||
+            command.ins == Ins.tronGetAppConfiguration ||
+            command.ins == Ins.tronSignTx ||
+            command.ins == Ins.tronSignHash ||
+            command.ins == Ins.tronSignPersonalMessage ||
+            command.ins == Ins.tronEcdhSecret ||
+            command.ins == Ins.tronSignTip712;
+      case LedgerApp.bitcoin:
+      case LedgerApp.sui:
+      case null:
+        return false;
+    }
+  }
+
+  /// Route one complete APDU through the Rust chain-app host.
   ///
-  /// P2 (official `app-ethereum/doc/apdu.md:101-103`):
-  /// 0x00 process & start flow (assemble, then confirm + sign);
-  /// 0x01 store only (assemble but never sign); 0x02 start flow with no
-  /// data (acknowledge and wait for the first block).
+  /// Returns `true` when the host produced the outcome (bytes written, or a
+  /// review parked awaiting the user). Returns `false` when the host is
+  /// missing, unavailable, or answered with a non-terminal status.
+  Future<bool> _handleViaChainHost(
+      ApduCommand command, IBlePeripheral ble, String seedHex) async {
+    final host = _chainHost;
+    if (host == null || !host.isAvailable) return false;
+
+    // 选模块：BTC/Sui 有独立 CLA；CLA 0xE0 由当前打开的 App 决定
+    // （Ethereum / Solana / Tron）。
+    if (command.cla == Cla.bitcoin || command.cla == Cla.bitcoinExt) {
+      host.openApp('openledger.bitcoin');
+    } else if (command.cla == Cla.sui) {
+      host.openApp('openledger.sui');
+    } else if (_apduHandler.currentApp == LedgerApp.solana) {
+      host.openApp('openledger.solana');
+    } else if (_apduHandler.currentApp == LedgerApp.tron) {
+      host.openApp('openledger.tron');
+    } else {
+      host.openApp('openledger.ethereum');
+    }
+
+    final ChainHostReply? reply;
+    try {
+      reply = host.submit(command.toBytes());
+    } catch (error) {
+      debugPrint('[CHAIN HOST] submit failed: $error');
+      return false;
+    }
+    if (reply == null) return false;
+
+    switch (reply) {
+      case ChainHostEmit(:final payload):
+        debugPrint('[CHAIN HOST] emit ${payload.length}B');
+        await ble.sendApduResponse(payload);
+        return true;
+
+      case ChainHostReview(:final reviewId):
+        if (!await _openReview(reply, seedHex)) return false;
+        debugPrint('[CHAIN HOST] review #$reviewId awaiting user decision');
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  /// Opens the confirmation surface matching the review's action.
   ///
-  /// Incomplete chunks receive SW 9000 immediately and never create a
-  /// confirmation request. When the RLP is complete, produces a
-  /// [SigningIntent] via [SignConfirmation.interceptIntent] which
-  /// triggers the confirmation UI. The response is sent later via
-  /// [SignConfirmation.approve] / [.reject].
-  Future<void> _handleEthTxApdu(
-      ApduCommand command, IBlePeripheral ble, String? seedHex) async {
-    if (seedHex == null) {
-      await _sendError(Sw.securityStatusNotSatisfied);
-      return;
-    }
-
-    // P1 = first / subsequent block; P2 = flow control.
-    if (command.p1 != 0x00 && command.p1 != 0x80) {
-      await _sendError(Sw.incorrectP1P2);
-      return;
-    }
-    if (command.p2 != 0x00 && command.p2 != 0x01 && command.p2 != 0x02) {
-      await _sendError(Sw.incorrectP1P2);
-      return;
-    }
-
-    // P2=0x02 — start flow with no data: acknowledge and wait for the
-    // first block (P1=0x00). Nothing is assembled yet.
-    if (command.p2 == 0x02) {
-      await _sendSuccess();
-      return;
-    }
-
-    // P2=0x01 — store only: accumulate but never produce a signature.
-    final storeOnly = command.p2 == 0x01;
-    final data = command.data;
-
-    if (command.p1 == 0x00) {
-      // First chunk — parse derivation path + RLP start.
-      if (data == null || data.isEmpty) {
-        _ethTxAssembler.reset();
-        await _sendError(Sw.wrongData);
-        return;
-      }
-
-      final pathResult = PathParser.parsePathWithRemainder(data);
-      if (pathResult == null) {
-        // Malformed path — reset assembly and return error.
-        _ethTxAssembler.reset();
-        await _sendError(Sw.wrongData);
-        return;
-      }
-
-      final result = _ethTxAssembler.handleFirstChunk(
-        derivationPath: pathResult.path,
-        seedHex: seedHex,
-        rlpData: pathResult.remainder,
+  /// [seedHex] only keys the encrypted history record — the host already
+  /// holds the signing key.
+  Future<bool> _openReview(ChainHostReview review, String seedHex) {
+    if (!review.isSign) {
+      return _signConfirmation.interceptAddressCommand(
+        review.address,
+        review.path,
+        chainReviewId: review.reviewId,
       );
-
-      await _processEthAssemblyResult(result, ble, storeOnly: storeOnly);
-      return;
     }
-
-    // P1=0x80 — continuation chunk.
-    if (data == null || data.isEmpty) {
-      await _sendError(Sw.wrongData);
-      return;
-    }
-
-    final result = _ethTxAssembler.handleContinuation(data);
-    await _processEthAssemblyResult(result, ble, storeOnly: storeOnly);
+    return _signConfirmation.interceptChainReview(
+      reviewId: review.reviewId,
+      chain: _chainForReview(review),
+      derivationPath: review.path,
+      signingAddress: review.address,
+      payloadHex: review.payloadHex,
+      parsedData: _parsedFromReview(review),
+      seedHex: seedHex,
+    );
   }
 
-  /// Process an [EthAssemblyResult] from the assembler.
-  ///
-  /// - Incomplete → send SW 9000 immediately (no confirmation).
-  /// - Complete → create a [SigningIntent] via [interceptIntent] and
-  ///   trigger the confirmation UI. Response is sent later via
-  ///   approve/reject.
-  /// - Error → send the error status word over BLE.
-  ///
-  /// [storeOnly] (P2=0x01) suppresses the confirmation/signature: the
-  /// accumulated transaction is discarded with SW 9000 once complete.
-  Future<void> _processEthAssemblyResult(
-      EthAssemblyResult result, IBlePeripheral ble,
-      {bool storeOnly = false}) async {
-    if (result.isError) {
-      await _sendError(result.errorSw!);
-      return;
+  /// The display class comes from the module's section title, so the existing
+  /// confirmation screens need no changes.
+  static String _chainForReview(ChainHostReview review) {
+    switch (review.sectionKind) {
+      case 'review.section.transaction':
+        return 'eth_tx';
+      case 'review.section.eip712':
+        return 'eip712';
+      case 'review.section.bitcoin':
+        return 'bitcoin';
+      case 'review.section.solana':
+        return 'solana';
+      case 'review.section.sui':
+        return 'sui';
+      case 'review.section.tron':
+        return 'tron';
+      default:
+        return 'personal_msg';
     }
+  }
 
-    if (result.isComplete) {
-      if (storeOnly) {
-        // P2=0x01 — store only: accept the data, return no signature.
-        _ethTxAssembler.reset();
-        await _sendSuccess();
-        return;
+  /// Maps the module's review fields onto the shape [TxDetailsCard] renders.
+  static Map<String, dynamic> _parsedFromReview(ChainHostReview review) {
+    final fields = _reviewFields(review.document);
+    switch (review.sectionKind) {
+      case 'review.section.transaction':
+        final data = fields['review.field.data'] ?? '';
+        return {
+          'type': 'eth_tx',
+          'to': fields['review.field.to'] ?? '',
+          'value': fields['review.field.value'] ?? '0',
+          'gas': fields['review.field.gas'] ?? '',
+          'gasPrice': fields['review.field.gas_price'] ?? '0',
+          'nonce': fields['review.field.nonce'] ?? '0',
+          'data': data.isEmpty || data.startsWith('0x') ? data : '0x$data',
+        };
+      case 'review.section.eip712':
+        return {
+          'type': 'eip712',
+          'domainHash': fields['review.field.domain_hash'] ?? '',
+          'structHash': fields['review.field.struct_hash'] ?? '',
+        };
+      case 'review.section.bitcoin':
+        return {
+          'type': 'btc_tx',
+          'address': fields['review.field.address'] ?? review.address,
+          'inputs': fields['review.field.inputs'] ?? '1',
+        };
+      case 'review.section.solana':
+        return {
+          'type': 'solana_tx',
+          'to': fields['review.field.to'] ?? '',
+          'lamports': fields['review.field.amount'] ?? '',
+          'programId': fields['review.field.program'] ?? '',
+          'version': fields['review.field.version'] ?? 'legacy',
+        };
+      case 'review.section.sui':
+        return {
+          'type': 'personal_msg',
+          'message': '',
+          'messageHex': fields['review.field.message_hex'] ?? '',
+        };
+      case 'review.section.tron':
+        // Tron 的字段随命令与合约类型变化（多合约、通用视图），必须按顺序
+        // 渲染而不是走 Map（同名 label 会被覆盖）。
+        final lines = <String>[];
+        final risks = review.document['risks'];
+        if (risks is List) {
+          for (final risk in risks) {
+            if (risk is Map) {
+              final line = _tronRiskLine(risk);
+              if (line != null) lines.add(line);
+            }
+          }
+        }
+        for (final (label, value) in _reviewFieldEntries(review.document)) {
+          switch (label) {
+            case 'review.field.address':
+              break; // 账户地址已由确认页头部展示
+            case 'review.field.contract_type':
+              lines.add(value);
+            case 'review.field.contract_index':
+              lines.add('Contract $value');
+            case 'review.field.to':
+              lines.add('To: $value');
+            case 'review.field.amount':
+              lines.add('Amount: $value');
+            case 'review.field.contract':
+              lines.add('Contract: $value');
+            case 'review.field.selector':
+              lines.add('Selector: 0x$value');
+            case 'review.field.asset':
+              lines.add('Asset: $value');
+            case 'review.field.permission':
+              lines.add('Permission: $value');
+            case 'review.field.domain_hash':
+              lines.add('Domain: 0x$value');
+            case 'review.field.struct_hash':
+              lines.add('Struct: 0x$value');
+            case 'review.field.hash':
+              lines.add('Hash: 0x$value');
+            case 'review.field.fee_limit':
+              lines.add('Fee limit: $value sun');
+            case 'review.field.message_hex':
+              break; // 卡片底部已展示原始 hex
+            default:
+              // review.field.param：模块已格式化为 `field N: …`
+              lines.add(value);
+          }
+        }
+        return {
+          'type': 'personal_msg',
+          'message': lines.join('\n'),
+          'messageHex': review.payloadHex,
+        };
+      default:
+        return {
+          'type': 'personal_msg',
+          'message': fields['review.field.message'] ?? '',
+          'messageHex': fields['review.field.message_hex'] ?? '',
+        };
+    }
+  }
+
+  /// Ordered `(label_key, display value)` pairs.
+  ///
+  /// Tron multi-contract / generic reviews repeat the same label key, so they
+  /// must not go through [_reviewFields]' map.
+  static List<(String, String)> _reviewFieldEntries(
+      Map<String, dynamic> document) {
+    final out = <(String, String)>[];
+    final sections = document['sections'];
+    if (sections is! List) return out;
+    for (final section in sections) {
+      final fields = section is Map ? section['fields'] : null;
+      if (fields is! List) continue;
+      for (final field in fields) {
+        if (field is! Map) continue;
+        final label = field['label_key'];
+        final value = field['value'];
+        if (label is! String || value is! Map) continue;
+        final String? text = switch (value['type']) {
+          'amount' || 'fee' => value['raw'] as String?,
+          'bytes' || 'text' || 'address' => value['value'] as String?,
+          _ => null,
+        };
+        if (text != null) out.add((label, text));
       }
-      // RLP is fully assembled — create a SigningIntent and intercept.
-      final intercepted = await _signConfirmation.interceptIntent(
-        chain: 'ethereum',
-        derivationPath: result.derivationPath!,
-        seedHex: result.seedHex!,
-        payload: result.payload!,
-      );
-      if (!intercepted) {
-        await _sendError(Sw.wrongData);
+    }
+    return out;
+  }
+
+  /// Tron 风险项 → 确认页上的一行提示。没有对应文案时返回 `null`。
+  static String? _tronRiskLine(Map<dynamic, dynamic> risk) {
+    final prefix = risk['severity'] == 'critical' ? '[HIGH RISK]' : '[WARNING]';
+    return switch (risk['code']) {
+      'tron.unknown_contract_type' =>
+        '$prefix Unverified contract type — check the raw payload before signing',
+      'tron.unknown_selector' =>
+        '$prefix Unrecognized contract call — verify the target and call value',
+      'tron.critical_contract_type' =>
+        '$prefix Permission or contract-creation transaction — high risk',
+      'tron.sign_by_hash' => '$prefix Blind signing: only a transaction hash is provided',
+      _ => null,
+    };
+  }
+
+  /// `label_key` → display value: text/address/bytes carry `value`, amounts and
+  /// fees carry a decimal `raw`.
+  static Map<String, String> _reviewFields(Map<String, dynamic> document) {
+    final out = <String, String>{};
+    final sections = document['sections'];
+    if (sections is! List) return out;
+    for (final section in sections) {
+      final fields = section is Map ? section['fields'] : null;
+      if (fields is! List) continue;
+      for (final field in fields) {
+        if (field is! Map) continue;
+        final label = field['label_key'];
+        final value = field['value'];
+        if (label is! String || value is! Map) continue;
+        final String? text = switch (value['type']) {
+          'amount' || 'fee' => value['raw'] as String?,
+          'bytes' || 'text' || 'address' => value['value'] as String?,
+          _ => null,
+        };
+        if (text != null) out[label] = text;
       }
-      // If intercepted, the response will be sent later via approve/reject.
-      return;
     }
-
-    // Incomplete — send SW 9000 immediately, no confirmation.
-    await _sendSuccess();
+    return out;
   }
 
-  /// Handle ETH GET_PUBLIC_KEY (INS 0x02) with P1=0x01 — display the
-  /// address and wait for the user to confirm before returning it.
+  /// Completes a review parked by the Rust chain-app host.
   ///
-  /// Derives the address from the derivation path in [command] (defaulting
-  /// to `m/44'/60'/0'/0/0` when none is supplied), then creates a pending
-  /// address request via [SignConfirmation.interceptAddressCommand]. The
-  /// response is delivered later via [SignConfirmation.approveAddress] /
-  /// [SignConfirmation.rejectAddress].
-  Future<void> _handleEthConfirmAddress(
-      ApduCommand command, IBlePeripheral ble, String? seedHex) async {
-    if (seedHex == null) {
-      await _sendError(Sw.securityStatusNotSatisfied);
-      return;
-    }
-
-    // P2 ∈ {0x00 no chain code, 0x01 chain code}.
-    if (command.p2 != P2.ethNoChainCode && command.p2 != P2.ethChainCode) {
-      await _sendError(Sw.incorrectP1P2);
-      return;
-    }
-
-    // Default path when none is provided (matches _handleGetPublicKey).
-    String? path = PathParser.parsePath(command.data);
-    if (path == null && (command.data == null || command.data!.isEmpty)) {
-      path = "m/44'/60'/0'/0/0";
-    }
-    if (path == null) {
-      await _sendError(Sw.wrongData);
-      return;
-    }
-
-    final address = _apduHandler.deriveEthAddressForPath(path);
-    if (address == null) {
-      await _sendError(Sw.unknownError);
-      return;
-    }
-
-    final intercepted =
-        await _signConfirmation.interceptAddressCommand(command, address, path);
-    if (!intercepted) {
-      await _sendError(Sw.wrongData);
-    }
-    // If intercepted, the response is sent later via approveAddress/rejectAddress.
-  }
-
-  /// Send a success APDU response (SW 9000, no data) over BLE.
-  Future<void> _sendSuccess() async {
-    final ble = _blePeripheral;
-    if (ble == null) return;
-    final resp = ApduResponse(data: null, sw1: 0x90, sw2: 0x00);
-    await ble.sendApduResponse(resp.toBytes());
+  /// Returns the full APDU response (data + status word) the host encoded, or
+  /// `null` when the host could not produce a terminal response.
+  Uint8List? resolveChainReview(int reviewId, {required bool approved}) {
+    final bytes = _chainHost?.resolve(reviewId, approved: approved);
+    debugPrint('[CHAIN HOST] resolve #$reviewId approved=$approved → '
+        '${bytes == null ? 'no response' : '${bytes.length}B'}');
+    return bytes;
   }
 
   /// Send an error APDU response over BLE.
@@ -598,39 +696,20 @@ class BleSession {
     onApduCommand(rawApdu, _seedHex);
   }
 
-  /// BLE state-stream listener — resets the ETH tx assembler when the
-  /// peripheral transitions to [BleState.idle] or [BleState.error].
-  ///
-  /// A half-assembled chunked ETH transaction must not survive a
-  /// disconnect or BLE error: the next first chunk starts a fresh
-  /// assembly. [BleState.broadcasting] and [BleState.connected] do not
-  /// reset — the session is still active and a pending multi-chunk
-  /// transaction may legitimately span the transition.
-  void _onBleState(BleState state) {
-    if (state == BleState.idle || state == BleState.error) {
-      _ethTxAssembler.reset();
-    }
-  }
-
   // ═══════════════════════════════════════════════════════════════════════
   //  Cleanup
   // ═══════════════════════════════════════════════════════════════════════
 
   /// Dispose all managed resources.
   ///
-  /// Cancels both auto-lock timers, unsubscribes from the APDU and state
-  /// streams, and clears the APDU handler context. Does NOT dispose the
-  /// peripheral — the caller owns its lifecycle.
+  /// Cancels both auto-lock timers and unsubscribes from the APDU stream.
+  /// Does NOT dispose the peripheral — the caller owns its lifecycle.
   void dispose() {
     _lockTimer?.cancel();
     _lockTimer = null;
     _cancelIdleTimer();
     _apduSub?.cancel();
     _apduSub = null;
-    _stateSub?.cancel();
-    _stateSub = null;
-    _apduHandler.clearContext();
-    _ethTxAssembler.reset();
     _seedHex = null;
     _blePeripheral = null;
   }
