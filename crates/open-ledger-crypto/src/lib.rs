@@ -15,4 +15,5 @@ pub mod keccak256;
 pub mod pbkdf2_chacha20;
 pub mod rlp;
 pub mod secp256k1;
+pub mod sha256;
 pub mod sha256d;

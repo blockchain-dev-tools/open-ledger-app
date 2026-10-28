@@ -15,7 +15,7 @@ pub fn hash(data: &[u8]) -> [u8; 20] {
         hasher.finalize()
     };
     let mut hasher = Ripemd160::new();
-    hasher.update(&sha);
+    hasher.update(sha);
     hasher.finalize().into()
 }
 

@@ -115,7 +115,8 @@ class _OpenLedgerAppAppState extends State<OpenLedgerAppApp>
     _appState.attachHistoryRepository(HistoryRepositoryImpl(storage, crypto));
 
     final pinAuthService = PinAuthService(crypto: crypto, repo: vaultRepo);
-    final accountService = AccountService(crypto: crypto);
+    final accountService =
+        AccountService(crypto: crypto, chainHost: _appState.chainHost);
     final mnemonicService = MnemonicService(crypto: crypto);
     _appState.mnemonicService = mnemonicService;
 

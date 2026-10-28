@@ -133,12 +133,20 @@ class RustGatt:
             return DEFAULT_MTU
         return (payload[0] << 8) | payload[1]
 
-    def send(self, apdu: bytes) -> None:
-        """发一条 APDU 但不等待响应（需先驱动 UI 再收响应的用例）。"""
+    def prepare_recv(self) -> None:
+        """开始一次新的请求/响应（与 BlueZ central 的方法名保持一致）。"""
         self._call({"cmd": "drain"}, 10)
         self._reasm = Reassembler()
-        for chunk in fragment(apdu, DEFAULT_MTU):
+
+    def send_raw(self, apdu: bytes, mtu: int = DEFAULT_MTU) -> None:
+        """把一段 APDU 按 tag-first 分块写下去（调用方自己管理接收状态）。"""
+        for chunk in fragment(apdu, mtu):
             self._write(chunk)
+
+    def send(self, apdu: bytes) -> None:
+        """发一条 APDU 但不等待响应（需先驱动 UI 再收响应的用例）。"""
+        self.prepare_recv()
+        self.send_raw(apdu)
 
     def recv(self, timeout: float = 15.0) -> bytes:
         """等待并消费一个完整响应。"""

@@ -155,7 +155,6 @@ class ApduLogDecoder {
 
     // GET_PUBKEY (ETH / Tron / Sui): data = BIP-32 path.
     final isGetPubkey = (cla == Cla.os && ins == Ins.getPublicKey) ||
-        (cla == Cla.tron && ins == Ins.tronGetPublicKey) ||
         (cla == Cla.sui && ins == Ins.suiGetPublicKey);
     if (isGetPubkey) {
       return 'P1=${_h(p1)} P2=${_h(p2)} path=${_decodePath(data)}';
@@ -232,7 +231,6 @@ class ApduLogDecoder {
     // GET_PUBKEY (ETH/Tron/Sui):
     //   [pubkey_len][pubkey 65B][addr_len][addr ASCII hex]
     final isGetPubkey = (cla == Cla.os && ins == Ins.getPublicKey) ||
-        (cla == Cla.tron && ins == Ins.tronGetPublicKey) ||
         (cla == Cla.sui && ins == Ins.suiGetPublicKey);
     if (isGetPubkey) {
       final pubkeyLen = payload[0];

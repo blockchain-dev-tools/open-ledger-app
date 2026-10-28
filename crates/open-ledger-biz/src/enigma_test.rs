@@ -80,7 +80,7 @@ fn chinese_riddle_sensitive_to_secret() {
 
 #[test]
 fn chinese_mnemonic_is_valid_bip39() {
-    assert!(Mnemonic::parse(&zh("人生得意须尽欢", "8888")).is_ok());
+    assert!(Mnemonic::parse(zh("人生得意须尽欢", "8888")).is_ok());
 }
 
 #[test]

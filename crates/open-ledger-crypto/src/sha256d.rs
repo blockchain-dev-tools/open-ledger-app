@@ -14,7 +14,7 @@ pub fn hash(data: &[u8]) -> [u8; 32] {
         hasher.finalize()
     };
     let mut hasher = Sha256::new();
-    hasher.update(&first);
+    hasher.update(first);
     hasher.finalize().into()
 }
 

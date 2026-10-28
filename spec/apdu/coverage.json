@@ -259,12 +259,14 @@
     {
       "app": "tron",
       "ins": "0x0a",
-      "state": "missing"
+      "dart": "tronEcdhSecret",
+      "state": "aligned"
     },
     {
       "app": "tron",
       "ins": "0x0c",
-      "state": "missing"
+      "dart": "tronSignTip712",
+      "state": "aligned"
     },
     {
       "app": "bitcoin",

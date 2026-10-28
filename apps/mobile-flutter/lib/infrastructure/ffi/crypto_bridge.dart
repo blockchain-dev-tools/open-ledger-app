@@ -79,6 +79,10 @@ class CryptoBridge {
 
   static final DynamicLibrary _lib = _loadLibrary();
 
+  /// The loaded native library, shared with sibling FFI bindings so the
+  /// platform-specific loading rules live in exactly one place.
+  static DynamicLibrary get nativeLibrary => _lib;
+
   static DynamicLibrary _loadLibrary() {
     // iOS: Rust staticlib is linked into the main executable → symbols are
     // visible via DynamicLibrary.process().

@@ -44,6 +44,21 @@ pub fn public_key_bytes(private_key: &[u8], compressed: bool) -> Result<Vec<u8>>
     Ok(encoded.as_bytes().to_vec())
 }
 
+/// ECDH：`peer_public_key * private_key`，返回未压缩点（`0x04 || X || Y`，65 字节）。
+///
+/// 与 Ledger app-tron 的 `cx_ecdh(CX_ECDH_POINT)` 输出一致；不是只取 X 坐标。
+pub fn ecdh_shared_point(private_key: &[u8], peer_public_key: &[u8]) -> Result<Vec<u8>> {
+    use k256::elliptic_curve::sec1::ToEncodedPoint;
+
+    let secret = k256::SecretKey::from_slice(private_key)
+        .map_err(|e| CryptoError::InvalidKey(e.to_string()))?;
+    let peer = k256::PublicKey::from_sec1_bytes(peer_public_key)
+        .map_err(|e| CryptoError::InvalidKey(e.to_string()))?;
+    let shared = k256::ProjectivePoint::from(*peer.as_affine()) * *secret.to_nonzero_scalar();
+    let point = k256::AffinePoint::from(shared);
+    Ok(point.to_encoded_point(false).as_bytes().to_vec())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,7 +70,7 @@ mod tests {
         let seed = mnemonic.to_seed("");
         // Use bip32 crate to derive
         let path: bip32::DerivationPath = "m/44'/60'/0'/0/0".parse().unwrap();
-        let xprv = bip32::XPrv::derive_from_path(&seed, &path).unwrap();
+        let xprv = bip32::XPrv::derive_from_path(seed, &path).unwrap();
         xprv.private_key().to_bytes().to_vec()
     }
 

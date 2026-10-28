@@ -3,8 +3,7 @@ import 'dart:typed_data';
 /// Unified hex encoding/decoding utilities.
 ///
 /// This is the single source of truth for hex operations in the project.
-/// All other hex implementations (CryptoBridge.hexEncode, airgap Hex class)
-/// should eventually delegate here.
+/// Other hex implementations (e.g. CryptoBridge.hexEncode) should delegate here.
 class Hex {
   /// Encode bytes to lowercase hex string.
   static String encode(Uint8List bytes) {

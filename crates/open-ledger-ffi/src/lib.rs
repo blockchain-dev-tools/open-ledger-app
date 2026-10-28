@@ -1,3 +1,8 @@
+// 本 crate 全部导出都是 `extern "C"` 指针接口：安全约束写在 `chain_host.rs`
+// 的 `# Safety` 段落里，这里统一豁免 clippy 的逐函数文档要求。
+#![allow(clippy::missing_safety_doc)]
+
+pub mod chain_host;
 pub mod types;
 
 use std::ffi::{CStr, CString};
@@ -60,7 +65,7 @@ pub unsafe extern "C" fn mnemonic_to_seed(
     mnemonic_ptr: *const c_char, passphrase_ptr: *const c_char,
 ) -> *mut FfiResult {
     let mnemonic = match cstr_to_str(mnemonic_ptr) { Some(s) => s, None => return null_err() };
-    let passphrase = match cstr_to_str(passphrase_ptr) { Some(s) => s, None => "" };
+    let passphrase = cstr_to_str(passphrase_ptr).unwrap_or_default();
     result_to_ffi(open_ledger_crypto::bip39::mnemonic_to_seed(mnemonic, passphrase).map_err(Into::into))
 }
 

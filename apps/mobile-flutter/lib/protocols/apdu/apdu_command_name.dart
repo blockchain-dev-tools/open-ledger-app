@@ -72,17 +72,6 @@ String apduCommandName(Uint8List apdu) {
     return _unknown(cla, ins);
   }
 
-  // CLA 0x14 — Tron.
-  if (cla == Cla.tron) {
-    switch (ins) {
-      case Ins.tronGetPublicKey:
-        return 'TRON_GET_PUBKEY';
-      case Ins.tronSignTx:
-        return 'TRON_SIGN_TX';
-    }
-    return _unknown(cla, ins);
-  }
-
   // CLA 0x07 — Sui.
   if (cla == Cla.sui) {
     switch (ins) {

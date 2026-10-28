@@ -118,12 +118,23 @@ def scroll_to(by: str, value: str) -> str:
 def _collect_texts_snippet() -> str:
     return ("final out = <String>[]; void walk(Element e) { final w = e.widget; "
             "if (w is Text && w.data != null) out.add(w.data!); "
+            "else if (w is SelectableText && w.data != null) out.add(w.data!); "
             "e.visitChildren(walk); } walk(WidgetsBinding.instance.rootElement!);")
 
 
 def text_count() -> str:
     """当前树中 Text 节点数量（用于逐条取文本，绕开 valueAsString 截断）。"""
     return "(() { " + _collect_texts_snippet() + " return out.length.toString(); })()"
+
+
+def text_contains(needle: str) -> str:
+    """当前树里是否有 Text/SelectableText 包含 `needle`。
+
+    只返回 "true"/"false"：长文本经 valueAsString 会被截断，不能整段取回。
+    """
+    lit = dart_string_literal(needle)
+    return ("(() { " + _collect_texts_snippet()
+            + " return out.any((s) => s.contains(" + lit + ")).toString(); })()")
 
 
 def text_at(index: int, max_chars: int = 100) -> str:

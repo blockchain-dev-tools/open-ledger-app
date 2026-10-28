@@ -34,9 +34,16 @@ class Device:
         out = adb(self.serial, "shell", "pm", "clear", PACKAGE, capture=True)
         if "Exception" not in out and "Failed" not in out:
             return
-        # run-as 仅对 debuggable 包可用；删除唯一的持久化文件即可
-        adb(self.serial, "shell", "run-as", PACKAGE,
-            "rm", "-f", "shared_prefs/FlutterSharedPreferences.xml")
+        # run-as 仅对 debuggable 包可用；先停进程避免退出时回写，再删全部
+        # SharedPreferences XML（secure storage / 旧明文迁移源都在这里）。
+        self.stop_app()
+        for name in (
+            "FlutterSecureStorage.xml",
+            "FlutterSecureKeyStorage.xml",
+            "FlutterSharedPreferences.xml",
+        ):
+            adb(self.serial, "shell", "run-as", PACKAGE,
+                "rm", "-f", f"shared_prefs/{name}")
 
     def stop_app(self) -> None:
         adb(self.serial, "shell", "am", "force-stop", PACKAGE)

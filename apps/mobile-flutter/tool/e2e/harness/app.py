@@ -58,6 +58,10 @@ class FlutterApp:
                 out.append(value)
         return out
 
+    async def has_text(self, needle: str) -> bool:
+        """当前树里是否有 Text/SelectableText 包含 `needle`（不受长文本截断影响）。"""
+        return (await self.eval_str(expr.text_contains(needle))) == "true"
+
     async def wait_for_screen(self, names: set[str], timeout: float = 10.0) -> list[str]:
         """轮询直到当前屏出现 `names` 之一（或超时）。返回最后一次读到的屏幕列表。"""
         deadline = asyncio.get_event_loop().time() + timeout

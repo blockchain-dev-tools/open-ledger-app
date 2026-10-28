@@ -15,9 +15,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from harness.session import DeviceSession  # noqa: E402
 
 
+async def wait_for_key(app, key: str, timeout: float = 10.0) -> str:
+    """轮询直到按 ValueKey 找到节点；解锁后首帧还没构出账户卡片是正常时序。"""
+    deadline = asyncio.get_event_loop().time() + timeout
+    geom = ""
+    while asyncio.get_event_loop().time() < deadline:
+        geom = await app.find("key", key)
+        if geom.startswith("size="):
+            return geom
+        await asyncio.sleep(0.3)
+    return geom
+
+
 async def check_entries(app) -> None:
     for chain in ("ethereum", "solana", "tron"):
-        assert (await app.find("key", f"chain-header-{chain}")).startswith("size="), chain
+        assert (await wait_for_key(app, f"chain-header-{chain}")).startswith("size="), chain
     for chain in ("bitcoin", "sui"):
         assert await app.find("key", f"chain-header-{chain}") == "NOT_FOUND", chain
 

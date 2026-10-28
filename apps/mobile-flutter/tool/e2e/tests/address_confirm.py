@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """E2E：ETH GET_PUBLIC_KEY P1=0x01 地址确认（T-016）。
 
-覆盖两条终止路径：
+覆盖三条终止路径：
 
   1. 点 Reject → host 立即收到 0x6985；
   2. 不操作，等确认屏 60s 倒计时到期 → host 仍收到终态 SW，
-     而不是"什么都不回、只能等 host 自己超时"。
+     而不是"什么都不回、只能等 host 自己超时"；
+  3. 点 Approve → host 收到 9000 + 地址响应（与独立派生一致）。
 
 运行（macOS 走 CoreBluetooth，首次需给终端蓝牙权限）：
 
@@ -21,8 +22,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from harness.apdu import parse_response  # noqa: E402
+from harness import ethsig  # noqa: E402
+from harness.apdu import parse_eth_address, parse_response  # noqa: E402
 from harness.ble_transport import open_gatt  # noqa: E402
+from harness.device import TEST_MNEMONIC  # noqa: E402
 from harness.session import DeviceSession  # noqa: E402
 
 CLA_OS = 0xE0
@@ -30,6 +33,7 @@ INS_GET_PUBLIC_KEY = 0x02
 P1_CONFIRM = 0x01
 P2_NO_CHAIN_CODE = 0x00
 
+SW_SUCCESS = 0x9000
 SW_USER_REJECTED = 0x6985
 SW_TIMEOUT = 0x6400
 
@@ -50,6 +54,8 @@ async def open_confirm_screen(ble, app) -> None:
 
 
 async def run() -> int:
+    expected_addr, _ = ethsig.derive_address(TEST_MNEMONIC)
+    print(f"独立派生地址: {expected_addr}")
     serial = os.environ.get("ANDROID_SERIAL") or None
     async with DeviceSession.start(
             fresh=True, chain_id="ethereum", serial=serial) as sess:
@@ -63,7 +69,7 @@ async def run() -> int:
             print(f"  ✓ 已连接，MTU={ble.get_mtu()}")
 
             # ── 1) 用户拒绝 ─────────────────────────────────────────
-            print("\n[1/2] 用户点 Reject → 立即回 0x6985")
+            print("\n[1/3] 用户点 Reject → 立即回 0x6985")
             await open_confirm_screen(ble, app)
             print("  ✓ 设备弹出地址确认页")
 
@@ -80,7 +86,7 @@ async def run() -> int:
             print("  ✓ host 收到 0x6985，确认页已关闭")
 
             # ── 2) 用户不操作，等倒计时 ─────────────────────────────
-            print("\n[2/2] 不操作，等确认屏 60s 倒计时到期 → 终态 SW")
+            print("\n[2/3] 不操作，等确认屏 60s 倒计时到期 → 终态 SW")
             await app.settle(1.0)
             await open_confirm_screen(ble, app)
             print("  ✓ 设备再次弹出地址确认页（等 60s）")
@@ -95,6 +101,25 @@ async def run() -> int:
             screens = await app.wait_for_screen({"MainScreen"}, timeout=5)
             expect("MainScreen" in screens, f"超时后未回到主屏：{screens}")
             print("  ✓ 确认页已关闭")
+
+            # ── 3) 用户批准 ─────────────────────────────────────────
+            print("\n[3/3] 用户点 Approve → 9000 + 地址")
+            await app.settle(1.0)
+            await open_confirm_screen(ble, app)
+            print("  ✓ 设备第三次弹出地址确认页")
+
+            hit = await app.tap_key("address-confirm-approve")
+            expect(hit.startswith("TAPPED"), f"点不到 Approve：{hit!r}")
+
+            data, sw = parse_response(ble.recv(timeout=15))
+            expect(sw == SW_SUCCESS, f"批准后 SW=0x{sw:04x}，期望 0x9000")
+            addr, _pub = parse_eth_address(data)
+            expect(addr.lower() == expected_addr.lower(),
+                   f"批准返回地址 {addr} 与独立派生 {expected_addr} 不一致")
+
+            screens = await app.wait_for_screen({"MainScreen"}, timeout=5)
+            expect("MainScreen" in screens, f"批准后未回到主屏：{screens}")
+            print(f"  ✓ host 收到 0x9000，地址 {addr} 与独立派生一致")
         finally:
             ble.close()
 

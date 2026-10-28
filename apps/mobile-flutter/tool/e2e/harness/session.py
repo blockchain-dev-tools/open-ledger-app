@@ -20,6 +20,22 @@ if TYPE_CHECKING:  # pragma: no cover - import-time only
     # `harness.ble` needs Linux BlueZ (dbus/gi); keep it out of module import so
     # adb-only cases (e.g. ble_recovery.py) still run on macOS.
     from .ble import GattCentral
+    from .ble_transport import RustGatt
+
+    Central = GattCentral | RustGatt
+
+
+def _open_central() -> "Central":
+    """选一个 GATT central：有 BlueZ 用 BlueZ，否则用 Rust helper。"""
+    try:
+        from .ble import GattCentral
+    except ImportError:  # macOS / 任何没有 dbus-python 的机器
+        from .ble_transport import open_gatt
+
+        return open_gatt()
+    central = GattCentral()
+    central.start()
+    return central
 
 
 class DeviceSession:
@@ -57,12 +73,14 @@ class DeviceSession:
                 await app.aclose()
 
     @contextlib.contextmanager
-    def ble_connected(self, scan_timeout: float = 25.0) -> Iterator[GattCentral]:
-        """作为 host 扫描并连接设备的 GATT，订阅响应 notify。"""
-        from .ble import GattCentral  # Linux-only dependency, loaded on demand
+    def ble_connected(self, scan_timeout: float = 25.0) -> Iterator[Central]:
+        """作为 host 扫描并连接设备的 GATT，订阅响应 notify。
 
-        ble = GattCentral()
-        ble.start()
+        传输层按平台自动选择：Linux 有 BlueZ（dbus）时用 Python 的 BlueZ
+        central，否则退回 `tool/e2e/ble-central`（macOS=CoreBluetooth），
+        因此签名类用例也能在 macOS 上跑真机。
+        """
+        ble = _open_central()
         try:
             ble.scan(scan_timeout)
             ble.connect()

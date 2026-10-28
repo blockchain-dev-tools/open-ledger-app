@@ -152,6 +152,80 @@ dependencies = [
 ]
 
 [[package]]
+name = "chain-app-api"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "chain-app-bitcoin"
+version = "0.1.0"
+dependencies = [
+ "chain-app-api",
+ "chain-app-runtime",
+ "hex",
+ "open-ledger-biz",
+ "open-ledger-crypto",
+]
+
+[[package]]
+name = "chain-app-ethereum"
+version = "0.1.0"
+dependencies = [
+ "chain-app-api",
+ "chain-app-runtime",
+ "open-ledger-biz",
+ "open-ledger-crypto",
+ "rlp",
+]
+
+[[package]]
+name = "chain-app-runtime"
+version = "0.1.0"
+dependencies = [
+ "chain-app-api",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "chain-app-solana"
+version = "0.1.0"
+dependencies = [
+ "chain-app-api",
+ "chain-app-runtime",
+ "ed25519-dalek",
+ "hex",
+ "open-ledger-biz",
+ "open-ledger-crypto",
+]
+
+[[package]]
+name = "chain-app-sui"
+version = "0.1.0"
+dependencies = [
+ "chain-app-api",
+ "chain-app-runtime",
+ "ed25519-dalek",
+ "hex",
+ "open-ledger-biz",
+ "open-ledger-crypto",
+]
+
+[[package]]
+name = "chain-app-tron"
+version = "0.1.0"
+dependencies = [
+ "chain-app-api",
+ "chain-app-runtime",
+ "hex",
+ "k256",
+ "open-ledger-biz",
+ "open-ledger-crypto",
+]
+
+[[package]]
 name = "cipher"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -481,6 +555,14 @@ dependencies = [
 name = "open-ledger-ffi"
 version = "0.1.0"
 dependencies = [
+ "chain-app-api",
+ "chain-app-bitcoin",
+ "chain-app-ethereum",
+ "chain-app-runtime",
+ "chain-app-solana",
+ "chain-app-sui",
+ "chain-app-tron",
+ "ed25519-dalek",
  "hex",
  "open-ledger-biz",
  "open-ledger-crypto",

@@ -5,6 +5,10 @@
 //     → {"address":"0x...","publicKey":"04..."}
 //   {"op":"recover","kind":"personal"|"raw","data":"<hex>","r":"<hex32>","s":"<hex32>","v":27|28|0|1}
 //     → {"address":"0x..."}
+//   {"op":"tip712","domain":"<hex32>","message":"<hex32>"}
+//     → {"digest":"<hex32>"}
+//   {"op":"ecdh","mnemonic":"...","path":"m/44'/195'/0'/0/0","peerPublicKey":"04..."}
+//     → {"shared":"04..."}
 //
 // personal = EIP-191（"\x19Ethereum Signed Message:\n"+len+msg），raw = keccak256(data)。
 import { mnemonicToSeedSync } from '@scure/bip39';
@@ -55,6 +59,10 @@ if (input.op === 'derive') {
   if (input.kind === 'personal') {
     const prefix = Buffer.from(`\x19Ethereum Signed Message:\n${data.length}`, 'utf8');
     hash = keccak_256(Buffer.concat([prefix, Buffer.from(data)]));
+  } else if (input.kind === 'digest') {
+    // 直签 32 字节摘要（BTC sighash 等），不再做任何哈希。
+    if (data.length !== 32) throw new Error('digest 模式要求 32 字节输入');
+    hash = data;
   } else {
     hash = keccak_256(data);
   }
@@ -65,6 +73,17 @@ if (input.op === 'derive') {
     .addRecoveryBit(recid);
   const pub = sig.recoverPublicKey(hash).toBytes(false);
   out = { address: addressOf(pub) };
+} else if (input.op === 'tip712') {
+  const domain = unhex(input.domain);
+  const message = unhex(input.message);
+  if (domain.length !== 32 || message.length !== 32) throw new Error('tip712 需要两个 32 字节哈希');
+  const digest = keccak_256(Buffer.concat([Buffer.from([0x19, 0x01]), domain, message]));
+  out = { digest: hex(digest) };
+} else if (input.op === 'ecdh') {
+  const seed = mnemonicToSeedSync(input.mnemonic, '');
+  const hd = HDKey.fromMasterSeed(seed).derive(input.path);
+  const peer = unhex(input.peerPublicKey);
+  out = { shared: hex(secp256k1.getSharedSecret(hd.privateKey, peer, false)) };
 } else {
   throw new Error('unknown op: ' + input.op);
 }

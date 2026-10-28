@@ -8,8 +8,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:open_ledger_app/core/interfaces/chain_host_service.dart';
 import 'package:open_ledger_app/core/interfaces/crypto_service.dart';
 import '../support/inert_key_hierarchy.dart';
+import 'package:open_ledger_app/core/models/chain_host_reply.dart';
 import 'package:open_ledger_app/core/models/wallet_accounts.dart';
 import 'package:open_ledger_app/services/account_service.dart';
 
@@ -478,4 +480,102 @@ void main() {
       expect(account.publicKey, '02feedface');
     });
   });
+
+  // ── 11. Stage 4: local account unified entry ─────────────────────────
+
+  group('deriveSingleAccount — Rust chain host', () {
+    test('uses the host for an index-address path', () async {
+      final host = _FakeChainHost(
+        material: const ChainAccountMaterial(
+          address: '0xHostDerived',
+          publicKeyHex: '04deadbeef',
+        ),
+      );
+      final service = AccountService(
+        crypto: _MockCryptoService(address: '0xLegacy'),
+        chainHost: host,
+      );
+
+      final account =
+          await service.deriveSingleAccount('ethereum', _testPath, _testSeed);
+
+      expect(account, isNotNull);
+      expect(account!.address, '0xHostDerived');
+      expect(account.publicKey, '04deadbeef');
+      expect(host.calls, ['openledger.ethereum#0']);
+    });
+
+    test('falls back to the legacy derivation when the host refuses',
+        () async {
+      final host = _FakeChainHost(material: null);
+      final service = AccountService(
+        crypto: _MockCryptoService(
+          address: '0xLegacy',
+          secp256k1PrivKey: _bytes('cafebabe'),
+          chainPubKeyBytes: _bytes('04cafe'),
+        ),
+        chainHost: host,
+      );
+
+      final account =
+          await service.deriveSingleAccount('ethereum', _testPath, _testSeed);
+
+      expect(account, isNotNull);
+      expect(account!.address, '0xLegacy');
+      expect(host.calls, ['openledger.ethereum#0']);
+    });
+
+    test('never asks the host for a custom (non-index) path', () async {
+      final host = _FakeChainHost(
+        material: const ChainAccountMaterial(address: 'x', publicKeyHex: ''),
+      );
+      final service = AccountService(
+        crypto: _MockCryptoService(
+          address: '0xLegacy',
+          secp256k1PrivKey: _bytes('cafebabe'),
+          chainPubKeyBytes: _bytes('04cafe'),
+        ),
+        chainHost: host,
+      );
+
+      final account = await service.deriveSingleAccount(
+          'ethereum', "m/44'/60'/0'/0/7/9", _testSeed);
+
+      expect(account!.address, '0xLegacy');
+      expect(host.calls, isEmpty);
+    });
+  });
+}
+
+/// Minimal [IChainHostService] stand-in for the local-account tests.
+class _FakeChainHost implements IChainHostService {
+  _FakeChainHost({required this.material});
+
+  final ChainAccountMaterial? material;
+  final List<String> calls = <String>[];
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  ChainAccountMaterial? deriveAccount(String moduleId,
+      {int accountProfileIndex = 0, required int addressIndex}) {
+    calls.add('$moduleId#$addressIndex');
+    return material;
+  }
+
+  @override
+  void setSeed(String? seedHex) {}
+
+  @override
+  void openApp(String moduleId) {}
+
+  @override
+  ChainHostReply? submit(Uint8List apdu) => null;
+
+  @override
+  Uint8List? resolve(int reviewId, {required bool approved}) => null;
+
+  @override
+  void lock() {}
 }

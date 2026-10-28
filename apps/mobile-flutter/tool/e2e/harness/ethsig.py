@@ -38,3 +38,22 @@ def recover_address(kind: str, data: bytes, v: int, r: bytes, s: bytes) -> str:
         "v": v, "r": r.hex(), "s": s.hex(),
     })
     return out["address"]
+
+
+def tip712_digest(domain_hash: bytes, message_hash: bytes) -> bytes:
+    """`keccak256(0x19 0x01 || domainHash || messageHash)`（Tron TIP-712）。"""
+    out = _run({
+        "op": "tip712",
+        "domain": domain_hash.hex(),
+        "message": message_hash.hex(),
+    })
+    return bytes.fromhex(out["digest"])
+
+
+def ecdh_shared(mnemonic: str, path: str, peer_public_key: bytes) -> bytes:
+    """独立计算 ECDH 共享点（65B 未压缩，`04 || X || Y`）。"""
+    out = _run({
+        "op": "ecdh", "mnemonic": mnemonic, "path": path,
+        "peerPublicKey": peer_public_key.hex(),
+    })
+    return bytes.fromhex(out["shared"])

@@ -1,0 +1,14 @@
+[package]
+name = "chain-app-sui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chain-app-api = { path = "../chain-app-api" }
+open-ledger-crypto = { path = "../open-ledger-crypto" }
+hex = { workspace = true }
+
+[dev-dependencies]
+chain-app-runtime = { path = "../chain-app-runtime" }
+open-ledger-biz = { path = "../open-ledger-biz" }
+ed25519-dalek = { workspace = true }

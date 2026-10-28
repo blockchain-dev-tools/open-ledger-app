@@ -1,0 +1,13 @@
+[package]
+name = "chain-app-ethereum"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chain-app-api = { path = "../chain-app-api" }
+open-ledger-crypto = { path = "../open-ledger-crypto" }
+rlp = { workspace = true }
+
+[dev-dependencies]
+chain-app-runtime = { path = "../chain-app-runtime" }
+open-ledger-biz = { path = "../open-ledger-biz" }

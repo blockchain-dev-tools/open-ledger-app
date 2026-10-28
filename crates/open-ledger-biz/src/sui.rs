@@ -66,4 +66,16 @@ mod tests {
         let b = derive_address(&seed, "m/44'/784'/1'/0'/0'").unwrap();
         assert_ne!(a, b);
     }
+
+    /// 独立向量：Python `hashlib.blake2b(0x00 || pubkey, digest_size=32)` +
+    /// @noble Ed25519 SLIP-10 派生，验证 BLAKE2b-256（不是 512 截断）。
+    #[test]
+    fn derive_address_matches_the_independent_vector() {
+        let seed = test_seed();
+        let addr = derive_address(&seed, "m/44'/784'/0'/0'/0'").unwrap();
+        assert_eq!(
+            addr,
+            "0x5e93a736d04fbb25737aa40bee40171ef79f65fae833749e3c089fe7cc2161f1"
+        );
+    }
 }

@@ -7,7 +7,6 @@
 ///   0xe0 — OS commands / Ethereum / Solana / Tron
 ///   0xe1 — Bitcoin (legacy)
 ///   0xf8 — Bitcoin (extended)
-///   0x14 — Tron (legacy/self-defined alias — see note below)
 ///   0x07 — Sui
 ///
 /// NOTE on Tron: the real Ledger Tron app (@ledgerhq/hw-app-trx in
@@ -15,8 +14,7 @@
 /// and Solana apps — a real device runs only one app at a time, so the OS
 /// routes 0xE0 to whichever app is open. Host wallets (TronLink, OKX) send
 /// Tron commands on 0xE0, so ApduHandler dispatches 0xE0 by the currently
-/// exposed app, exactly like Solana. CLA 0x14 is kept only for backward
-/// compatibility with this repo's earlier Tron handler.
+/// exposed app, exactly like Solana.
 library;
 
 /// Class byte (CLA) identifiers — determines which chain/service handles
@@ -35,9 +33,6 @@ class Cla {
 
   /// Bitcoin (extended protocol).
   static const int bitcoinExt = 0xf8;
-
-  /// Tron.
-  static const int tron = 0x14;
 
   /// Sui.
   static const int sui = 0x07;
@@ -187,6 +182,12 @@ class Ins {
 
   /// Sign a Tron personal message (CLA 0xE0: SIGN_MESSAGE).
   static const int tronSignPersonalMessage = 0x08;
+
+  /// Tron ECDH shared secret (CLA 0xE0: GET_ECDH_SECRET).
+  static const int tronEcdhSecret = 0x0A;
+
+  /// Sign a Tron TIP-712 domain/message hash pair (CLA 0xE0: SIGN_TIP_712_MESSAGE).
+  static const int tronSignTip712 = 0x0C;
 
   // ── Sui instructions (CLA 0x07) ────────────────────────────────────────
 

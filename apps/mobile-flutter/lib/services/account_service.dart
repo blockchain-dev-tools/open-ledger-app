@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../core/interfaces/account_service.dart';
+import '../core/interfaces/chain_host_service.dart';
 import '../core/interfaces/crypto_service.dart';
 import '../core/models/chain.dart';
 import '../core/models/wallet_accounts.dart';
@@ -22,7 +23,22 @@ import '../utils/fnv.dart';
 class AccountService implements IAccountService {
   final ICryptoService _crypto;
 
-  AccountService({required this._crypto});
+  /// Rust chain-app host (stage 4). When present, derivation goes through
+  /// `LocalCommand::DeriveAccount`, so the seed never crosses FFI per call.
+  /// Any failure falls back to [ICryptoService] — the migration stays
+  /// reversible per chain.
+  final IChainHostService? _chainHost;
+
+  AccountService({required this._crypto, this._chainHost});
+
+  /// Chain id → Rust module id.
+  static const Map<String, String> _moduleIds = {
+    'ethereum': 'openledger.ethereum',
+    'solana': 'openledger.solana',
+    'bitcoin': 'openledger.bitcoin',
+    'tron': 'openledger.tron',
+    'sui': 'openledger.sui',
+  };
 
   // ── Default derivation paths ──────────────────────────────────────────
 
@@ -61,6 +77,9 @@ class AccountService implements IAccountService {
   @override
   Future<ChainAccount?> deriveSingleAccount(
       String chain, String path, String seedHex) async {
+    final fromHost = _deriveViaHost(chain, path, seedHex);
+    if (fromHost != null) return fromHost;
+
     final address = _deriveAddress(chain, seedHex, path);
     if (address == null) return null;
 
@@ -78,6 +97,36 @@ class AccountService implements IAccountService {
       address: address,
       derivationPath: path,
       publicKey: pubKeyBytes != null ? _crypto.hexEncode(pubKeyBytes) : '',
+    );
+  }
+
+  /// Stage 4：本机账户统一入口。只在「路径恰好是 `accountPathForIndex`」时
+  /// 走 Rust 模块，保证任意自定义路径仍由旧实现处理。
+  ChainAccount? _deriveViaHost(String chain, String path, String seedHex) {
+    final host = _chainHost;
+    if (host == null || !host.isAvailable) return null;
+    final moduleId = _moduleIds[chain];
+    if (moduleId == null) return null;
+
+    Chain? model;
+    for (final candidate in Chain.values) {
+      if (candidate.id == chain) {
+        model = candidate;
+        break;
+      }
+    }
+    if (model == null) return null;
+    final index = model.accountIndexFromPath(path);
+    if (model.accountPathForIndex(index) != path) return null;
+
+    host.setSeed(seedHex);
+    final material = host.deriveAccount(moduleId, addressIndex: index);
+    if (material == null) return null;
+    return ChainAccount(
+      chain: chain,
+      address: material.address,
+      derivationPath: path,
+      publicKey: material.publicKeyHex,
     );
   }
 

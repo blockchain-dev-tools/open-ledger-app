@@ -12,6 +12,13 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 open-ledger-crypto = { path = "../open-ledger-crypto" }
 open-ledger-biz = { path = "../open-ledger-biz" }
+chain-app-api = { path = "../chain-app-api" }
+chain-app-runtime = { path = "../chain-app-runtime" }
+chain-app-ethereum = { path = "../chain-app-ethereum" }
+chain-app-bitcoin = { path = "../chain-app-bitcoin" }
+chain-app-solana = { path = "../chain-app-solana" }
+chain-app-tron = { path = "../chain-app-tron" }
+chain-app-sui = { path = "../chain-app-sui" }
 hex = { workspace = true }
 thiserror = { workspace = true }
 zeroize = { workspace = true }
@@ -24,3 +31,6 @@ sol = []
 btc = []
 tron = []
 sui = []
+
+[dev-dependencies]
+ed25519-dalek = { workspace = true }

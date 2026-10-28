@@ -5,15 +5,32 @@
 from __future__ import annotations
 
 CLA_OS = 0xE0
+CLA_BTC = 0xE1
+CLA_SUI = 0x07
 INS_OPEN_APP = 0xD8
 INS_GET_PUBLIC_KEY = 0x02
 INS_SIGN_ETH_TX = 0x04
 INS_GET_APP_CONFIG = 0x06
 INS_SIGN_PERSONAL = 0x08
+INS_SIGN_EIP712 = 0x0C
+INS_BTC_GET_PUBLIC_KEY = 0x40
+INS_BTC_SIGN_TX = 0x44
+INS_SOL_VERSION = 0x04
+INS_SOL_GET_ADDR = 0x05
+INS_SOL_SIGN = 0x06
+INS_SUI_GET_PUBLIC_KEY = 0x02
+INS_SUI_SIGN_TX = 0x04
+INS_TRON_GET_ADDRESS = 0x02
+INS_TRON_SIGN_TX = 0x04
+INS_TRON_CONFIG = 0x06
 
 SW_SUCCESS = 0x9000
 
 ETH_PATH = "m/44'/60'/0'/0/0"
+BTC_PATH = "m/84'/0'/0'/0/0"
+SOL_PATH = "m/44'/501'/0'/0'"
+SUI_PATH = "m/44'/784'/0'/0'/0'"
+TRON_PATH = "m/44'/195'/0'/0/0"
 
 # 固定测试钱包（abandon ×11 + about）在 ETH_PATH 上的地址（EIP-55）
 TEST_ETH_ADDRESS = "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
@@ -67,6 +84,30 @@ def sign_eth_transaction(rlp: bytes, path: str = ETH_PATH) -> list[bytes]:
     return out
 
 
+def sign_eip712(domain_hash: bytes, struct_hash: bytes, path: str = ETH_PATH) -> bytes:
+    """EIP-712 V0 单步：`[path][domainHash(32)][structHash(32)]`，P1=0x00/P2=0x00。"""
+    if len(domain_hash) != 32 or len(struct_hash) != 32:
+        raise ValueError("domain_hash / struct_hash 必须是 32 字节")
+    return apdu(CLA_OS, INS_SIGN_EIP712, 0x00, 0x00,
+                encode_path(path) + domain_hash + struct_hash)
+
+
+def btc_get_public_key(path: str = BTC_PATH) -> bytes:
+    """BTC GET_WALLET_PUBLIC_KEY：返回 P2WPKH 地址（ASCII）。"""
+    return apdu(CLA_BTC, INS_BTC_GET_PUBLIC_KEY, 0x00, 0x00, encode_path(path))
+
+
+def btc_sign(sighashes: list[bytes], path: str = BTC_PATH) -> bytes:
+    """多输入签名：`[path][count][sighash(32)]*count`。"""
+    if not sighashes or len(sighashes) > 16:
+        raise ValueError("sighashes 数量必须在 1..=16")
+    for sighash in sighashes:
+        if len(sighash) != 32:
+            raise ValueError("每个 sighash 必须是 32 字节")
+    data = encode_path(path) + bytes([len(sighashes)]) + b"".join(sighashes)
+    return apdu(CLA_BTC, INS_BTC_SIGN_TX, 0x00, 0x00, data)
+
+
 def parse_response(resp: bytes) -> tuple[bytes, int]:
     """返回 (data, sw)。"""
     if len(resp) < 2:
@@ -90,3 +131,55 @@ def parse_eth_address(data: bytes) -> str:
     addr_len = data[1 + pub_len]
     ascii_addr = data[2 + pub_len:2 + pub_len + addr_len].decode("ascii")
     return "0x" + ascii_addr, pub
+
+
+# ── Solana（CLA 0xE0，按 OPEN_APP 选择 INS 表） ──────────────────────
+
+def sol_get_version() -> bytes:
+    return apdu(CLA_OS, INS_SOL_VERSION, 0x00, 0x00)
+
+
+def sol_get_address(path: str = SOL_PATH, confirm: bool = False) -> bytes:
+    return apdu(CLA_OS, INS_SOL_GET_ADDR, 0x01 if confirm else 0x00, 0x00,
+                encode_path(path))
+
+
+def sol_sign(message: bytes, path: str = SOL_PATH) -> bytes:
+    """单块签名：`[path][message]`。"""
+    return apdu(CLA_OS, INS_SOL_SIGN, 0x00, 0x00, encode_path(path) + message)
+
+
+# ── Sui（CLA 0x07） ──────────────────────────────────────────────────
+
+def sui_get_public_key(path: str = SUI_PATH) -> bytes:
+    return apdu(CLA_SUI, INS_SUI_GET_PUBLIC_KEY, 0x00, 0x00, encode_path(path))
+
+
+def sui_sign(message: bytes, path: str = SUI_PATH) -> bytes:
+    return apdu(CLA_SUI, INS_SUI_SIGN_TX, 0x00, 0x00, encode_path(path) + message)
+
+
+# ── Tron（CLA 0xE0，按 OPEN_APP 选择 INS 表） ────────────────────────
+
+def tron_get_address(path: str = TRON_PATH) -> bytes:
+    return apdu(CLA_OS, INS_TRON_GET_ADDRESS, 0x00, 0x00, encode_path(path))
+
+
+def tron_get_version() -> bytes:
+    return apdu(CLA_OS, INS_TRON_CONFIG, 0x00, 0x00)
+
+
+def tron_sign_tx(payload: bytes, path: str = TRON_PATH) -> bytes:
+    """单块签名：P1=0x10（官方 hw-app-trx 单块即签）。"""
+    return apdu(CLA_OS, INS_TRON_SIGN_TX, 0x10, 0x00, encode_path(path) + payload)
+
+
+def parse_tron_address(data: bytes) -> tuple[bytes, str]:
+    """`[pub_len][65B pub][addr_len][ascii]` → (pubkey, address)。"""
+    if len(data) < 1 + 65 + 1:
+        raise ValueError(f"Tron 地址响应过短: {data.hex()}")
+    pub_len = data[0]
+    pub = data[1:1 + pub_len]
+    addr_len = data[1 + pub_len]
+    address = data[2 + pub_len:2 + pub_len + addr_len].decode("ascii")
+    return pub, address

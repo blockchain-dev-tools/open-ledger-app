@@ -4,6 +4,13 @@ members = [
     "open-ledger-crypto",
     "open-ledger-biz",
     "open-ledger-ffi",
+    "chain-app-api",
+    "chain-app-runtime",
+    "chain-app-ethereum",
+    "chain-app-bitcoin",
+    "chain-app-solana",
+    "chain-app-tron",
+    "chain-app-sui",
 ]
 
 [workspace.package]
