@@ -1530,6 +1530,36 @@ abstract class AppLocalizations {
   /// **'Sui'**
   String get chainSui;
 
+  /// No description provided for @chainNear.
+  ///
+  /// In en, this message translates to:
+  /// **'NEAR'**
+  String get chainNear;
+
+  /// No description provided for @chainTon.
+  ///
+  /// In en, this message translates to:
+  /// **'TON'**
+  String get chainTon;
+
+  /// No description provided for @manageChains.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage chains'**
+  String get manageChains;
+
+  /// No description provided for @manageChainsSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage chains'**
+  String get manageChainsSheetTitle;
+
+  /// No description provided for @manageChainsSheetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn a chain off to hide it here and from the Bluetooth app list. Its accounts stay.'**
+  String get manageChainsSheetHint;
+
   /// No description provided for @chainPersonalMessage.
   ///
   /// In en, this message translates to:

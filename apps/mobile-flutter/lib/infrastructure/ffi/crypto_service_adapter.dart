@@ -116,6 +116,14 @@ class CryptoServiceAdapter implements ICryptoService {
   String? deriveSuiAddress(String seedHex, String path) =>
       CryptoBridge.deriveSuiAddress(seedHex, path);
 
+  @override
+  String? deriveNearAddress(String seedHex, String path) =>
+      CryptoBridge.deriveNearAddress(seedHex, path);
+
+  @override
+  String? deriveTonAddress(String seedHex, String path) =>
+      CryptoBridge.deriveTonAddress(seedHex, path);
+
   // ── Address from Public Key ─────────────────────────────────────────
 
   @override

@@ -1,6 +1,6 @@
 //! 宿主审核策略与模块实现之间的错误类型。
 
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, serde::Serialize, serde::Deserialize)]
 pub enum AppError {
     /// 事件与当前状态不匹配（例如错误的 service_id）。
     #[error("event rejected: {0}")]

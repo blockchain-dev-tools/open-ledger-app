@@ -739,6 +739,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chainSui => 'Sui';
 
   @override
+  String get chainNear => 'NEAR';
+
+  @override
+  String get chainTon => 'TON';
+
+  @override
+  String get manageChains => '管理链';
+
+  @override
+  String get manageChainsSheetTitle => '管理链';
+
+  @override
+  String get manageChainsSheetHint =>
+      '关闭某条链后，它不会显示在这里，也不会出现在蓝牙 App 列表中；账户仍会保留。';
+
+  @override
   String get chainPersonalMessage => 'Ethereum — 个人消息签名';
 
   @override

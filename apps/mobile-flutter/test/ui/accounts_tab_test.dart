@@ -28,13 +28,31 @@ class _FakeWalletService implements IWalletService {
   Future<bool> verifySessionPin(String pin) async => true;
   _FakeWalletService(this._accounts);
 
-  final WalletAccounts? _accounts;
+  WalletAccounts? _accounts;
+
+  /// Chains turned off in "Manage chains".
+  final Set<String> _hidden = {};
 
   @override
   WalletAccounts? getAccounts() => _accounts;
 
   @override
-  Future<WalletAccounts> addAccount(String chain, String path) async => _accounts!;
+  Future<WalletAccounts> addAccount(String chain, String path) async {
+    final accounts = _accounts;
+    if (accounts == null) {
+      return WalletAccounts(accounts: const [], mnemonicFingerprint: 'test');
+    }
+    _accounts = accounts.copyWith(accounts: [
+      ...accounts.accounts,
+      ChainAccount(
+        address: 'added-$chain',
+        derivationPath: path,
+        publicKey: 'aa',
+        chain: chain,
+      ),
+    ]);
+    return _accounts!;
+  }
 
   @override
   Future<void> clearWallet() async {}
@@ -69,6 +87,14 @@ class _FakeWalletService implements IWalletService {
   @override
   Future<WalletAccounts> removeAccount(String chain, String address) async =>
       _accounts!;
+
+  @override
+  Set<String> get hiddenChains => _hidden;
+
+  @override
+  Future<void> setChainHidden(String chain, {required bool hidden}) async {
+    hidden ? _hidden.add(chain) : _hidden.remove(chain);
+  }
 
   @override
   Future<String?> revealMnemonic(String pin) async => null;
@@ -193,21 +219,23 @@ WalletAccounts _accounts() => const WalletAccounts(
       ],
     );
 
-Widget _app(WalletAccounts accounts) {
+Widget _app(WalletAccounts accounts, {_FakeWalletService? service}) {
   return MaterialApp(
     localizationsDelegates: const [AppLocalizations.delegate],
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
-      body: AccountsTab(walletService: _FakeWalletService(accounts)),
+      body: AccountsTab(walletService: service ?? _FakeWalletService(accounts)),
     ),
   );
 }
 
 void main() {
+  // The default four plus Sui (as if it had been added from the sheet);
+  // NEAR/TON are deliberately absent so the "hidden until added" rule shows.
   final allAccounts = WalletAccounts(
     mnemonicFingerprint: 'test',
     accounts: [
-      for (final chain in Chain.values)
+      for (final chain in [...Chain.defaultVisible, Chain.sui])
         ChainAccount(
           address: 'test-${chain.id}',
           derivationPath: chain.defaultAccountPath,
@@ -218,7 +246,8 @@ void main() {
   );
 
   for (final brightness in Brightness.values) {
-    testWidgets('hides BTC/Sui account sections in $brightness', (tester) async {
+    testWidgets('shows the default chains plus any chain with an account in '
+        '$brightness', (tester) async {
       await tester.pumpWidget(MaterialApp(
         theme: ThemeData(brightness: brightness),
         localizationsDelegates: const [AppLocalizations.delegate],
@@ -228,16 +257,20 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      for (final chain in ['ethereum', 'solana', 'tron']) {
+      // Default four, plus Sui because the fixture already derives one.
+      for (final chain in ['bitcoin', 'ethereum', 'solana', 'tron', 'sui']) {
         expect(find.byKey(ValueKey('chain-header-$chain')), findsOneWidget);
       }
-      for (final chain in ['bitcoin', 'sui']) {
+      // Never-enabled chains stay hidden.
+      for (final chain in ['near', 'ton']) {
         expect(find.byKey(ValueKey('chain-header-$chain')), findsNothing);
       }
+      expect(find.byKey(const ValueKey('manage-chains-tile')), findsOneWidget);
       expect(allAccounts.accounts, hasLength(5));
     });
 
-    testWidgets('hides BTC/Sui private-key entries in $brightness', (tester) async {
+    testWidgets('lists every derived account\'s private key in $brightness',
+        (tester) async {
       await tester.pumpWidget(MaterialApp(
         theme: ThemeData(brightness: brightness),
         localizationsDelegates: const [AppLocalizations.delegate],
@@ -245,11 +278,9 @@ void main() {
         home: PrivateKeyListScreen(accounts: allAccounts.accounts),
       ));
       await tester.pumpAndSettle();
-      for (final chain in [Chain.ethereum, Chain.solana, Chain.tron]) {
+      for (final chain in Chain.values) {
+        if (!allAccounts.accounts.any((a) => a.chain == chain.id)) continue;
         expect(find.text(chain.defaultAccountPath), findsOneWidget);
-      }
-      for (final chain in [Chain.bitcoin, Chain.sui]) {
-        expect(find.text(chain.defaultAccountPath), findsNothing);
       }
       expect(allAccounts.accounts, hasLength(5));
     });
@@ -299,5 +330,49 @@ void main() {
     await tester.tapAt(blankSpot);
     await tester.pumpAndSettle();
     expect(find.text('0x9686b…dc989'), findsNothing);
+  });
+
+  testWidgets('manage chains toggles a chain off and on', (tester) async {
+    final service = _FakeWalletService(allAccounts);
+    await tester.pumpWidget(_app(allAccounts, service: service));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('chain-header-ethereum')), findsOneWidget);
+    expect(find.byKey(const ValueKey('chain-header-near')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('manage-chains-tile')));
+    await tester.pumpAndSettle();
+
+    // Every chain is listed with a switch — added and not-yet-added alike.
+    for (final chain in Chain.withLedgerApp) {
+      expect(find.byKey(ValueKey('chain-toggle-${chain.id}')), findsOneWidget);
+    }
+    expect(
+      tester.widget<Switch>(find.byKey(const ValueKey('chain-toggle-sui'))).value,
+      isTrue,
+      reason: 'the fixture already derives a Sui account',
+    );
+    expect(
+      tester
+          .widget<Switch>(find.byKey(const ValueKey('chain-toggle-near')))
+          .value,
+      isFalse,
+    );
+
+    // Turning Ethereum off hides its section (accounts are kept).
+    await tester.tap(find.byKey(const ValueKey('chain-toggle-ethereum')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('chain-header-ethereum')), findsNothing);
+    expect(service.hiddenChains, contains('ethereum'));
+    // Turning NEAR on derives account 0 and reveals its section.
+    await tester.tap(find.byKey(const ValueKey('chain-toggle-near')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('chain-header-near')), findsOneWidget);
+
+    // Turning Ethereum back on reuses its account — nothing is re-derived.
+    await tester.tap(find.byKey(const ValueKey('chain-toggle-ethereum')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('chain-header-ethereum')), findsOneWidget);
+    expect(service.hiddenChains, isNot(contains('ethereum')));
   });
 }

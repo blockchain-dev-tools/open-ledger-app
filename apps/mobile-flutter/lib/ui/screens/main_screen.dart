@@ -7,6 +7,7 @@ import '../../core/interfaces/ble_peripheral.dart';
 import '../../core/interfaces/chain_ble_control.dart';
 import '../../core/interfaces/ur_codec.dart';
 import '../../core/interfaces/wallet_service.dart';
+import '../../core/models/chain.dart';
 import '../../core/models/signature_record.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../../services/settings_service.dart';
@@ -164,6 +165,32 @@ class _MainScreenState extends State<MainScreen> {
     ),
   ];
 
+  /// Chains the BLE picker may expose — exactly the ones the Vault shows:
+  /// the default set plus every chain that already has a derived account
+  /// (i.e. the user added it), minus the chains turned off in "Manage chains".
+  /// A locked vault has no accounts, so fall back to the defaults rather than
+  /// showing nothing.
+  List<Chain> _visibleBleChains() {
+    final accounts = widget.walletService?.getAccounts();
+    final hidden = widget.walletService?.hiddenChains ?? const <String>{};
+    if (accounts == null) {
+      return [
+        for (final chain in Chain.defaultVisible)
+          if (!hidden.contains(chain.id)) chain,
+      ];
+    }
+    final shown = <String>{
+      for (final chain in Chain.defaultVisible)
+        if (!hidden.contains(chain.id)) chain.id,
+      for (final account in accounts.accounts)
+        if (!hidden.contains(account.chain)) account.chain,
+    };
+    return [
+      for (final chain in Chain.withLedgerApp)
+        if (shown.contains(chain.id)) chain,
+    ];
+  }
+
   /// Open the one BLE sheet. The APDU log is its second view, not a second
   /// sheet — house rule: never stack a sheet on a sheet.
   void _openBleSheet({bool showLogs = false}) {
@@ -172,6 +199,7 @@ class _MainScreenState extends State<MainScreen> {
     BleControlSheet.open(
       context,
       control: control,
+      chains: _visibleBleChains(),
       logController: _bleLogs,
       showLogs: showLogs,
     );

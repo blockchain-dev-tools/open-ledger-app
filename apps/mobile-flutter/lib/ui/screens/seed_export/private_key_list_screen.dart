@@ -58,8 +58,10 @@ class PrivateKeyListScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
+    // Every derived account belongs to a known chain, so this only filters
+    // pseudo-chains; TON/NEAR accounts must still export their key.
     final visibleAccounts = accounts
-        .where((account) => Chain.visible.contains(Chain.fromId(account.chain)))
+        .where((account) => Chain.fromId(account.chain) != null)
         .toList();
 
     return Scaffold(

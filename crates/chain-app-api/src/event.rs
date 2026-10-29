@@ -14,7 +14,7 @@ pub type ServiceId = u64;
 pub type ReviewId = u64;
 
 /// 本机账户页面发起的请求。与 APDU 共享地址编码、路径校验与密钥请求逻辑。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LocalCommand {
     AccountProfiles,
     DeriveAccount {
@@ -30,14 +30,14 @@ pub enum LocalCommand {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum StorageOp {
     Read { key: String },
     Write { key: String, value: Vec<u8> },
     Delete { key: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ServiceResult {
     PublicKey(PublicKey),
     Storage(Option<Vec<u8>>),
@@ -46,7 +46,7 @@ pub enum ServiceResult {
     Failed(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ReviewOutcome {
     Approved { signatures: Vec<Signature> },
     Rejected,
@@ -55,14 +55,14 @@ pub enum ReviewOutcome {
 }
 
 /// 投递结果。UR/QR 只能给到「已显示」，不能记成「已交付」。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum DeliveryAck {
     Acknowledged,
     BestEffort,
     Failed(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CancelReason {
     UserCancelled,
     Locked,
@@ -71,7 +71,7 @@ pub enum CancelReason {
     HostShutdown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Event {
     /// 外部钱包来的一帧（完整 APDU 或一条 UR 请求）。
     Wire {
@@ -101,7 +101,7 @@ pub enum Event {
 }
 
 /// 一轮回复的状态。`Reply` 只结束一轮，不代表整笔操作完成。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum OperationState {
     /// 还要继续收集或等待客户端续传。
     Collecting,
@@ -109,7 +109,7 @@ pub enum OperationState {
     Final,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum FinishStatus {
     Delivered,
     Rejected,
@@ -117,7 +117,7 @@ pub enum FinishStatus {
     Failed,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Effect {
     /// 需要投递到外部钱包的字节或帧。
     Emit {

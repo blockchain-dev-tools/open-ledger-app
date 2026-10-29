@@ -133,6 +133,14 @@ class _MockCryptoService with InertKeyHierarchy, InertExport implements ICryptoS
       _fail('deriveSuiAddress');
 
   @override
+  String? deriveNearAddress(String seedHex, String path) =>
+      _fail('deriveNearAddress');
+
+  @override
+  String? deriveTonAddress(String seedHex, String path) =>
+      _fail('deriveTonAddress');
+
+  @override
   String? p2wpkhAddress(String compressedPubkeyHex) =>
       _fail('p2wpkhAddress');
 

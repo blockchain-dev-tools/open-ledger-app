@@ -11,5 +11,7 @@ pub mod solana;
 pub mod btc;
 pub mod tron;
 pub mod sui;
+pub mod near;
+pub mod ton;
 pub mod export;
 pub mod parser;

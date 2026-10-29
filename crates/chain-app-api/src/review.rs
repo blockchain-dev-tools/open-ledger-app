@@ -2,7 +2,7 @@
 
 use crate::sign::{Curve, DerivationScheme};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParseStatus {
     /// 全部字段可解释。
     Complete,
@@ -12,7 +12,7 @@ pub enum ParseStatus {
     Opaque,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RiskLevel {
     Info,
     Warning,
@@ -20,14 +20,14 @@ pub enum RiskLevel {
 }
 
 /// 风险来源必须显式：外部服务给出的结论不能伪装成本机验证事实。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RiskSource {
     Module,
     Host,
     External { provider: String, verified: bool },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Risk {
     /// 稳定 code；宿主据此选固定样式与最低确认要求。
     pub code: String,
@@ -36,7 +36,7 @@ pub struct Risk {
     pub source: RiskSource,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum FeeKind {
     Known,
     UpperBound,
@@ -44,7 +44,7 @@ pub enum FeeKind {
     Unknown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum FieldValue {
     Address {
         value: String,
@@ -76,20 +76,20 @@ pub enum FieldValue {
     Boolean(bool),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Field {
     /// 本地化 key，模块不自带文案。
     pub label_key: String,
     pub value: FieldValue,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReviewSection {
     pub title_key: String,
     pub fields: Vec<Field>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum OperationKind {
     Transaction,
     Message,
@@ -97,13 +97,13 @@ pub enum OperationKind {
     SettingsChange,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct NetworkId {
     pub name: String,
     pub chain_id: Option<u64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReviewDocument {
     pub operation: OperationKind,
     pub network: NetworkId,
@@ -145,7 +145,7 @@ impl ReviewDocument {
 
 /// 模块请求宿主执行的动作。三类动作的确认要求不同：
 /// 地址确认按协议可跳过，签名必须确认，改变风险的设置必须是本机用户操作。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ReviewAction {
     DisplayAddress {
         derivation_scheme: DerivationScheme,
@@ -166,7 +166,7 @@ impl ReviewAction {
 }
 
 /// 附在审批请求上的完整载荷；宿主复制并冻结，模块之后拿不到可修改引用。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReviewRequest {
     pub document: ReviewDocument,
     pub action: ReviewAction,

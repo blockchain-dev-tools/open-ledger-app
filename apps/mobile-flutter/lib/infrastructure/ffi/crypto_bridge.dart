@@ -172,6 +172,12 @@ class CryptoBridge {
   static final _Fn2Dart _deriveSuiAddr = _lib
       .lookupFunction<_Fn2C, _Fn2Dart>('derive_sui_address_ffi');
 
+  static final _Fn2Dart _deriveNearAddr = _lib
+      .lookupFunction<_Fn2C, _Fn2Dart>('derive_near_address_ffi');
+
+  static final _Fn2Dart _deriveTonAddr = _lib
+      .lookupFunction<_Fn2C, _Fn2Dart>('derive_ton_address_ffi');
+
   static final _Fn1Dart _p2wpkh = _lib
       .lookupFunction<_Fn1C, _Fn1Dart>('p2wpkh_address_ffi');
 
@@ -571,6 +577,30 @@ class CryptoBridge {
     final p = _str(path);
     try {
       return _resultToOptionalStr(_deriveSuiAddr(s, p));
+    } finally {
+      calloc.free(s);
+      calloc.free(p);
+    }
+  }
+
+  /// NEAR 隐式账户地址（ed25519 公钥的 hex）。
+  static String? deriveNearAddress(String seedHex, String path) {
+    final s = _str(seedHex);
+    final p = _str(path);
+    try {
+      return _resultToOptionalStr(_deriveNearAddr(s, p));
+    } finally {
+      calloc.free(s);
+      calloc.free(p);
+    }
+  }
+
+  /// TON Wallet v4r2 地址（base64url，bounceable）。
+  static String? deriveTonAddress(String seedHex, String path) {
+    final s = _str(seedHex);
+    final p = _str(path);
+    try {
+      return _resultToOptionalStr(_deriveTonAddr(s, p));
     } finally {
       calloc.free(s);
       calloc.free(p);

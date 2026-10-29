@@ -749,6 +749,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chainSui => 'Sui';
 
   @override
+  String get chainNear => 'NEAR';
+
+  @override
+  String get chainTon => 'TON';
+
+  @override
+  String get manageChains => 'チェーン管理';
+
+  @override
+  String get manageChainsSheetTitle => 'チェーン管理';
+
+  @override
+  String get manageChainsSheetHint =>
+      'チェーンをオフにすると、ここにも Bluetooth のアプリ一覧にも表示されません。アカウントは保持されます。';
+
+  @override
   String get chainPersonalMessage => 'Ethereum — パーソナルメッセージ';
 
   @override

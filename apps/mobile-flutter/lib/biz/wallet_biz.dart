@@ -643,6 +643,21 @@ class WalletBiz {
     return updated;
   }
 
+  Set<String> get hiddenChains => activeVault?.hiddenChains ?? const {};
+
+  Future<void> setChainHidden(String chain, {required bool hidden}) async {
+    final vault = activeVault;
+    if (vault == null) {
+      throw StateError('Wallet is locked. Call unlockWallet() first.');
+    }
+    if (vault.hiddenChains.contains(chain) == hidden) return;
+    final next = {...vault.hiddenChains};
+    hidden ? next.add(chain) : next.remove(chain);
+    final updated = vault.copyWith(hiddenChains: next);
+    _replaceVault(updated);
+    await _repo.saveVault(updated);
+  }
+
   /// Rename a vault in the current session.
   Future<void> renameVault(String id, String label) async {
     _assertUnlocked();

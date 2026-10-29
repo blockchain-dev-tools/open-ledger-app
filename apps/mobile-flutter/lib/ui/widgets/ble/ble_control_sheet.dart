@@ -32,12 +32,10 @@ const Color _broadcastBlue = Color(0xFF1565C0);
 class BleControlSheet {
   const BleControlSheet._();
 
-  /// Chains shown in the picker, in the registry's canonical order.
-  static const chains = Chain.visible;
-
   static Future<void> open(
     BuildContext context, {
     required IChainBleControl control,
+    required List<Chain> chains,
     BleLogController? logController,
     bool showLogs = false,
   }) {
@@ -52,6 +50,7 @@ class BleControlSheet {
       shape: neoSheetShape(c),
       builder: (context) => _BleControlSheetContent(
         control: control,
+        chains: chains,
         c: c,
         logController: logController,
         showLogsInitially: showLogs,
@@ -62,12 +61,17 @@ class BleControlSheet {
 
 class _BleControlSheetContent extends StatefulWidget {
   final IChainBleControl control;
+
+  /// Chains the Vault currently shows — the picker must match that list, so a
+  /// chain the user never added is never offered here.
+  final List<Chain> chains;
   final ColorTokens c;
   final BleLogController? logController;
   final bool showLogsInitially;
 
   const _BleControlSheetContent({
     required this.control,
+    required this.chains,
     required this.c,
     this.logController,
     this.showLogsInitially = false,
@@ -309,7 +313,7 @@ class _BleControlSheetContentState extends State<_BleControlSheetContent> {
                         crossAxisSpacing: 10,
                         childAspectRatio: 1.15,
                         children: [
-                          for (final chain in BleControlSheet.chains)
+                          for (final chain in widget.chains)
                             _ChainCell(
                               key: ValueKey('ble-chain-${chain.id}'),
                               c: c,

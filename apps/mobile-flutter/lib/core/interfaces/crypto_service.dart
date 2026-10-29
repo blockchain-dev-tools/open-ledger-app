@@ -99,6 +99,12 @@ abstract class ICryptoService {
   /// Derive a Sui address from seed + SLIP-10 path.
   String? deriveSuiAddress(String seedHex, String path);
 
+  /// Derive a NEAR implicit-account id (hex ed25519 public key).
+  String? deriveNearAddress(String seedHex, String path);
+
+  /// Derive a TON Wallet v4r2 address (base64url, bounceable).
+  String? deriveTonAddress(String seedHex, String path);
+
   // ── Address from Public Key ─────────────────────────────────────────
 
   /// Derive a Bitcoin P2WPKH bech32 address from compressed public key.

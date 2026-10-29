@@ -204,6 +204,14 @@ class MockCryptoService implements ICryptoService {
       throw UnimplementedError();
 
   @override
+  String? deriveNearAddress(String seedHex, String path) =>
+      throw UnimplementedError();
+
+  @override
+  String? deriveTonAddress(String seedHex, String path) =>
+      throw UnimplementedError();
+
+  @override
   String? p2wpkhAddress(String compressedPubkeyHex) =>
       throw UnimplementedError();
 

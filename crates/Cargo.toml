@@ -12,6 +12,8 @@ members = [
     "chain-app-solana",
     "chain-app-tron",
     "chain-app-sui",
+    "chain-app-near",
+    "chain-app-ton",
 ]
 
 [workspace.package]
@@ -47,4 +49,6 @@ bs58 = "0.5"
 hex = "0.4"
 rlp = { version = "0.5", default-features = false }
 thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+postcard = { version = "1", default-features = false, features = ["alloc"] }
 zeroize = "1"

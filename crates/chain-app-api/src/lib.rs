@@ -12,6 +12,7 @@ pub mod host;
 pub mod manifest;
 pub mod review;
 pub mod sign;
+pub mod wire;
 
 pub use app::{ChainApp, ModuleFactory, SessionConfig};
 pub use error::{AppError, HostError};

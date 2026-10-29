@@ -8,8 +8,10 @@ import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/neo_button.dart';
 import 'components/chain_section.dart';
 import 'components/empty_vault.dart';
+import 'components/manage_chains_sheet.dart';
 
 /// Account list tab — the Vault home.
 ///
@@ -37,9 +39,23 @@ class _AccountsTabState extends State<AccountsTab> {
 
   // ── Canonical data ──────────────────────────────────────────────────
 
-  /// Chain sections in display order — from the chain registry, the single
-  /// source of truth shared with the BLE control sheet.
-  static final _chainOrder = [for (final chain in Chain.visible) chain.id];
+  /// Chains shown in the Vault, in display order: the default set first, then
+  /// any chain that already has an account (so a chain added from the
+  /// "Manage chains" sheet survives a restart), minus the chains the user
+  /// turned off.
+  List<String> _enabledChains(WalletAccounts accounts) {
+    final derived = {for (final a in accounts.accounts) a.chain};
+    final hidden = widget.walletService?.hiddenChains ?? const <String>{};
+    final ordered = <String>[
+      for (final c in Chain.defaultVisible)
+        if (!hidden.contains(c.id)) c.id,
+    ];
+    for (final c in Chain.values) {
+      if (hidden.contains(c.id)) continue;
+      if (!ordered.contains(c.id) && derived.contains(c.id)) ordered.add(c.id);
+    }
+    return ordered;
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────
 
@@ -47,7 +63,7 @@ class _AccountsTabState extends State<AccountsTab> {
 
   Map<String, List<ChainAccount>> _groupByChain(WalletAccounts accounts) {
     final map = <String, List<ChainAccount>>{
-      for (final ch in _chainOrder) ch: <ChainAccount>[],
+      for (final ch in _enabledChains(accounts)) ch: <ChainAccount>[],
     };
     for (final acct in accounts.accounts) {
       map.putIfAbsent(acct.chain, () => []).add(acct);
@@ -126,6 +142,56 @@ class _AccountsTabState extends State<AccountsTab> {
     }
   }
 
+  // ── Manage chains ──────────────────────────────────────────────────
+
+  Future<void> _openManageChainsSheet() async {
+    final accounts = _accounts;
+    if (accounts == null) return;
+    final visible = _enabledChains(accounts).toSet();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ManageChainsSheet(
+        visible: visible,
+        onToggle: _setChainVisible,
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// Shows or hides [chain]. Showing one that has no account derives account 0
+  /// first; hiding keeps the accounts (and their history) and only drops the
+  /// section from the Vault and the BLE picker.
+  ///
+  /// Returns false when the change failed, so the sheet can snap its switch
+  /// back to the previous position.
+  Future<bool> _setChainVisible(Chain chain, bool visible) async {
+    final ws = widget.walletService;
+    if (ws == null) return false;
+    try {
+      if (visible) {
+        final derived =
+            _accounts?.accounts.any((a) => a.chain == chain.id) ?? false;
+        if (!derived) {
+          await ws.addAccount(chain.id, chain.defaultAccountPath);
+        }
+        await ws.setChainHidden(chain.id, hidden: false);
+        if (mounted) setState(() => _expandedChains.add(chain.id));
+      } else {
+        await ws.setChainHidden(chain.id, hidden: true);
+      }
+      if (mounted) setState(() {});
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      AppToast.show(
+        context,
+        message: '${AppLocalizations.of(context)!.error}: $e',
+      );
+      return false;
+    }
+  }
+
   /// Toggles a chain section's expansion (default: all collapsed).
   void _toggleChain(String chain) {
     setState(() {
@@ -155,7 +221,7 @@ class _AccountsTabState extends State<AccountsTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        for (final chain in _chainOrder) ...[
+        for (final chain in _enabledChains(accounts)) ...[
           ChainSection(
             chain: chain,
             accounts: grouped[chain] ?? [],
@@ -169,7 +235,54 @@ class _AccountsTabState extends State<AccountsTab> {
           // legacy card has no shadow, so it keeps the tighter original gap.
           SizedBox(height: c.neobrutalism ? 14.0 : 10.0),
         ],
+        _ManageChainsTile(tokens: c, onTap: _openManageChainsSheet),
       ],
+    );
+  }
+}
+
+/// The "Manage chains" action at the foot of the Vault list.
+class _ManageChainsTile extends StatelessWidget {
+  final ColorTokens tokens;
+  final VoidCallback onTap;
+
+  const _ManageChainsTile({required this.tokens, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (tokens.neobrutalism) {
+      return NeoButton(
+        key: const ValueKey('manage-chains-tile'),
+        label: l10n.manageChains,
+        icon: Icons.tune,
+        expanded: true,
+        onTap: onTap,
+      );
+    }
+    return InkWell(
+      key: const ValueKey('manage-chains-tile'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.tune, size: 18, color: tokens.accent),
+            const SizedBox(width: 6),
+            Text(
+              l10n.manageChains,
+              style: TextStyle(
+                color: tokens.accent,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

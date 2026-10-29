@@ -339,6 +339,42 @@
     {
       "dart": "suiSignTx",
       "reason": "no official app-sui source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "nearGetVersion",
+      "reason": "no official app-near source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "nearGetPublicKey",
+      "reason": "no official app-near source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "nearSignTransaction",
+      "reason": "no official app-near source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "tonGetVersion",
+      "reason": "no official ledger-app-ton source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "tonGetAppName",
+      "reason": "no official ledger-app-ton source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "tonGetPublicKey",
+      "reason": "no official ledger-app-ton source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "tonSignTx",
+      "reason": "no official ledger-app-ton source is vendored in spec/apdu/commands.json"
+    },
+    {
+      "dart": "tonGetAddressProof",
+      "reason": "declared but not implemented; the TON module answers 6D00"
+    },
+    {
+      "dart": "tonSignData",
+      "reason": "declared but not implemented; the TON module answers 6D00"
     }
   ]
 }

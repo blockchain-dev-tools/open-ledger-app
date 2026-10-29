@@ -129,9 +129,13 @@ class ApduHandler {
       LedgerApp.tron => _handleTronApp(command),
       // The Ethereum app owns the default CLA-0xE0 table.
       LedgerApp.ethereum => _handleEthereumApp(command),
-      // Bitcoin (0xE1/0xF8) and Sui (0x07) are routed by CLA, so nothing is
-      // ever served through 0xE0 while one of them is open.
-      LedgerApp.bitcoin || LedgerApp.sui =>
+      // Bitcoin (0xE1/0xF8), Sui (0x07) and NEAR (0x80) are routed by CLA, so
+      // nothing is ever served through 0xE0 while one of them is open. TON's
+      // chain frames are routed by ble_session before they reach this table.
+      LedgerApp.bitcoin ||
+      LedgerApp.sui ||
+      LedgerApp.near ||
+      LedgerApp.ton =>
         _errorResponse(Sw.insNotSupported),
     };
   }

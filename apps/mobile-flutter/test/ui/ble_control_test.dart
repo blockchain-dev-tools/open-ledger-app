@@ -73,7 +73,11 @@ class _FakeBleControl extends ChangeNotifier implements IChainBleControl {
   }
 }
 
-Widget _app(_FakeBleControl control, {BleLogController? logController}) {
+Widget _app(
+  _FakeBleControl control, {
+  BleLogController? logController,
+  List<Chain> chains = Chain.withLedgerApp,
+}) {
   return MaterialApp(
     locale: const Locale('en'),
     localizationsDelegates: const [AppLocalizations.delegate],
@@ -84,6 +88,7 @@ Widget _app(_FakeBleControl control, {BleLogController? logController}) {
         onTap: () => BleControlSheet.open(
           _navigatorKey.currentContext!,
           control: control,
+          chains: chains,
           logController: logController,
         ),
       ),
@@ -95,7 +100,7 @@ Widget _app(_FakeBleControl control, {BleLogController? logController}) {
 final _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  testWidgets('idle: FAB opens a 3-chain picker; tapping one starts BLE',
+  testWidgets('idle: FAB opens the emulated-app picker; tapping one starts BLE',
       (tester) async {
     final control = _FakeBleControl();
     await tester.pumpWidget(_app(control));
@@ -106,15 +111,21 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     for (final label in const [
+      'Bitcoin',
       'Ethereum',
       'Solana',
       'Tron',
+      'Sui',
+      'NEAR',
+      'TON',
     ]) {
       expect(find.text(label), findsOneWidget);
     }
 
-    expect(find.byKey(const ValueKey('ble-chain-bitcoin')), findsNothing);
-    expect(find.byKey(const ValueKey('ble-chain-sui')), findsNothing);
+    // Every chain has an emulated Rust app; with all of them passed in, the
+    // picker offers each one.
+    expect(find.byKey(const ValueKey('ble-chain-near')), findsOneWidget);
+    expect(find.byKey(const ValueKey('ble-chain-ton')), findsOneWidget);
 
     await tester.tap(find.text('Ethereum'));
     await tester.pump();
@@ -128,6 +139,24 @@ void main() {
     expect(find.byIcon(Icons.power_settings_new), findsOneWidget);
     expect(find.text('Tap the active chain again to stop broadcasting.'),
         findsOneWidget);
+  });
+
+  testWidgets('picker offers only the chains the vault shows', (tester) async {
+    final control = _FakeBleControl();
+    // A vault where the user has not added Sui/NEAR/TON yet.
+    await tester.pumpWidget(_app(control, chains: Chain.defaultVisible));
+    await tester.pump();
+
+    await tester.tap(find.byType(BleFab));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    for (final chain in Chain.defaultVisible) {
+      expect(find.byKey(ValueKey('ble-chain-${chain.id}')), findsOneWidget);
+    }
+    for (final chain in Chain.addable) {
+      expect(find.byKey(ValueKey('ble-chain-${chain.id}')), findsNothing);
+    }
   });
 
   testWidgets('active: switch to another chain is a hot switch',

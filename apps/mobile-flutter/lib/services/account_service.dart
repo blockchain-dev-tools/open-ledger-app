@@ -38,14 +38,18 @@ class AccountService implements IAccountService {
     'bitcoin': 'openledger.bitcoin',
     'tron': 'openledger.tron',
     'sui': 'openledger.sui',
+    'near': 'openledger.near',
+    'ton': 'openledger.ton',
   };
 
   // ── Default derivation paths ──────────────────────────────────────────
 
-  /// Account-0 paths for every chain, derived from the [Chain] registry so
-  /// the UI can never disagree with what gets derived here.
+  /// Account-0 paths for the chains a new vault shows by default, derived
+  /// from the [Chain] registry so the UI can never disagree with what gets
+  /// derived here.
   static final Map<String, String> _defaultPaths = Map.unmodifiable({
-    for (final chain in Chain.values) chain.id: chain.defaultAccountPath,
+    for (final chain in Chain.defaultVisible)
+      chain.id: chain.defaultAccountPath,
   });
 
   @override
@@ -143,16 +147,22 @@ class AccountService implements IAccountService {
         return _crypto.deriveTronAddress(seedHex, path);
       case 'sui':
         return _crypto.deriveSuiAddress(seedHex, path);
+      case 'near':
+        return _crypto.deriveNearAddress(seedHex, path);
+      case 'ton':
+        return _crypto.deriveTonAddress(seedHex, path);
       default:
         return null;
     }
   }
 
-  /// Ed25519 for Solana / Sui, secp256k1 for the rest.
+  /// Ed25519 for Solana / Sui / NEAR / TON, secp256k1 for the rest.
   Uint8List? _derivePrivateKey(String chain, String seedHex, String path) {
     switch (chain) {
       case 'solana':
       case 'sui':
+      case 'near':
+      case 'ton':
         return _crypto.deriveEd25519PrivateKey(seedHex, path);
       case 'ethereum':
       case 'bitcoin':

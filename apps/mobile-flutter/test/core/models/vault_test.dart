@@ -94,4 +94,31 @@ void main() {
       expect(updated.enigmaLanguage, 0);
     });
   });
+
+  group('Vault hiddenChains (Manage chains)', () {
+    test('round-trips the turned-off chain ids', () {
+      final vault = _vault().copyWith(hiddenChains: {'ethereum', 'near'});
+
+      final restored = Vault.fromJson(vault.toJson());
+
+      expect(restored.hiddenChains, {'ethereum', 'near'});
+    });
+
+    test('legacy JSON without the key reads as "nothing hidden"', () {
+      final legacy = {
+        'id': 'legacy',
+        'label': '',
+        'depth': 0,
+        'mnemonicEncrypted': 'enc',
+        'accounts': {'accounts': <dynamic>[], 'mnemonicFingerprint': 'fp'},
+        'createdAt': 0,
+      };
+
+      expect(Vault.fromJson(legacy).hiddenChains, isEmpty);
+    });
+
+    test('an empty set is omitted from the payload', () {
+      expect(_vault().toJson().containsKey('hiddenChains'), isFalse);
+    });
+  });
 }

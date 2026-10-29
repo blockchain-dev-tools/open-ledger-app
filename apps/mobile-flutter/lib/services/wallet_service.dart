@@ -195,6 +195,13 @@ class WalletService implements IWalletService {
       _biz.removeAccount(chain, address);
 
   @override
+  Set<String> get hiddenChains => _biz.hiddenChains;
+
+  @override
+  Future<void> setChainHidden(String chain, {required bool hidden}) =>
+      _biz.setChainHidden(chain, hidden: hidden);
+
+  @override
   Future<String?> revealMnemonic(String pin) => _biz.revealMnemonic(pin);
 
   @override

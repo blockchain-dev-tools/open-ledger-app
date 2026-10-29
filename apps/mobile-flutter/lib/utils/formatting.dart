@@ -23,6 +23,8 @@ extension ChainLabelL10n on AppLocalizations {
         Chain.bitcoin => chainBitcoin,
         Chain.tron => chainTron,
         Chain.sui => chainSui,
+        Chain.near => chainNear,
+        Chain.ton => chainTon,
       };
     }
     return switch (chainId) {

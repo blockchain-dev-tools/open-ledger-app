@@ -752,6 +752,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chainSui => 'Sui';
 
   @override
+  String get chainNear => 'NEAR';
+
+  @override
+  String get chainTon => 'TON';
+
+  @override
+  String get manageChains => '체인 관리';
+
+  @override
+  String get manageChainsSheetTitle => '체인 관리';
+
+  @override
+  String get manageChainsSheetHint =>
+      '체인을 끄면 여기와 Bluetooth 앱 목록에 표시되지 않습니다. 계정은 그대로 유지됩니다.';
+
+  @override
   String get chainPersonalMessage => 'Ethereum — 개인 메시지';
 
   @override

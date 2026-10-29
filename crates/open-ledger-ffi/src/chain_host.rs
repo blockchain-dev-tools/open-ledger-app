@@ -35,6 +35,8 @@ pub const BTC_MODULE_ID: &str = "openledger.bitcoin";
 pub const SOL_MODULE_ID: &str = "openledger.solana";
 pub const TRON_MODULE_ID: &str = "openledger.tron";
 pub const SUI_MODULE_ID: &str = "openledger.sui";
+pub const NEAR_MODULE_ID: &str = "openledger.near";
+pub const TON_MODULE_ID: &str = "openledger.ton";
 
 // ── 宿主服务实现 ──────────────────────────────────────────────────────
 
@@ -252,16 +254,22 @@ pub struct ChainHost {
 
 impl ChainHost {
     fn new() -> Result<Self, String> {
+        Self::assemble(vec![
+            Arc::new(chain_app_ethereum::EthereumFactory) as Arc<dyn ModuleFactory>,
+            Arc::new(chain_app_bitcoin::BitcoinFactory),
+            Arc::new(chain_app_solana::SolanaFactory),
+            Arc::new(chain_app_tron::TronFactory),
+            Arc::new(chain_app_sui::SuiFactory),
+            Arc::new(chain_app_near::NearFactory),
+            Arc::new(chain_app_ton::TonFactory),
+        ])
+    }
+
+    fn assemble(factories: Vec<Arc<dyn ModuleFactory>>) -> Result<Self, String> {
         let keys = Arc::new(HostKeyService::new());
         let key_service: Arc<dyn KeyService> = keys.clone();
         let mut runtime = Runtime::new("default", Budget::default(), key_service, Box::new(NoStorage));
-        for factory in [
-            Arc::new(chain_app_ethereum::EthereumFactory) as Arc<dyn ModuleFactory>,
-            Arc::new(chain_app_bitcoin::BitcoinFactory) as Arc<dyn ModuleFactory>,
-            Arc::new(chain_app_solana::SolanaFactory) as Arc<dyn ModuleFactory>,
-            Arc::new(chain_app_tron::TronFactory) as Arc<dyn ModuleFactory>,
-            Arc::new(chain_app_sui::SuiFactory) as Arc<dyn ModuleFactory>,
-        ] {
+        for factory in factories {
             runtime
                 .register_module(factory, &host_policy())
                 .map_err(|e| e.to_string())?;
@@ -333,6 +341,26 @@ impl ChainHost {
     }
 }
 
+/// 只用「编码后的模块」装配宿主：真实 APDU 会完整走一遍 Event/Effect 的字节。
+///
+/// 测试专用；换成动态库或 WASM 载体时，替换的就是这里的装配方式。
+#[cfg(test)]
+impl ChainHost {
+    fn new_encoded() -> Result<Self, String> {
+        use chain_app_api::wire::EncodedFactory;
+        Self::assemble(vec![
+            Arc::new(EncodedFactory::new(chain_app_ethereum::EthereumFactory))
+                as Arc<dyn ModuleFactory>,
+            Arc::new(EncodedFactory::new(chain_app_bitcoin::BitcoinFactory)),
+            Arc::new(EncodedFactory::new(chain_app_solana::SolanaFactory)),
+            Arc::new(EncodedFactory::new(chain_app_tron::TronFactory)),
+            Arc::new(EncodedFactory::new(chain_app_sui::SuiFactory)),
+            Arc::new(EncodedFactory::new(chain_app_near::NearFactory)),
+            Arc::new(EncodedFactory::new(chain_app_ton::TonFactory)),
+        ])
+    }
+}
+
 fn host_policy() -> CapabilitySet {
     CapabilitySet {
         derivation_rules: vec![
@@ -352,12 +380,29 @@ fn host_policy() -> CapabilitySet {
                 hardened_positions: vec![0, 1, 2, 3],
                 max_index: 1000,
             },
-            // Sui：`m/44'/784'/{account}'/0'/0'`（全硬化，5 段）。
+            // Sui：`m/44'/784'/{account}'/0'/0'`；NEAR：`m/44'/397'/{account}'/0'/1'`
+            //（都是全硬化，5 段）。
             DerivationRule {
                 derivation_scheme: DerivationScheme::Slip10Ed25519,
                 curve: Curve::Ed25519,
                 depth: 5,
                 hardened_positions: vec![0, 1, 2, 3, 4],
+                max_index: 1000,
+            },
+            // TON 账户：`m/44'/607'/0'/0'/{account}'/0'`（全硬化，6 段）。
+            DerivationRule {
+                derivation_scheme: DerivationScheme::Slip10Ed25519,
+                curve: Curve::Ed25519,
+                depth: 6,
+                hardened_positions: vec![0, 1, 2, 3, 4, 5],
+                max_index: 1000,
+            },
+            // TON host 的其它合法路径：官方 app 只要求 `m/44'/607'/` 起头、至少 3 段。
+            DerivationRule {
+                derivation_scheme: DerivationScheme::Slip10Ed25519,
+                curve: Curve::Ed25519,
+                depth: 3,
+                hardened_positions: vec![0, 1, 2],
                 max_index: 1000,
             },
         ],
@@ -1390,5 +1435,103 @@ mod tests {
         );
 
         unsafe { chain_host_free(host) };
+    }
+
+    fn review_id(json: &str) -> u64 {
+        json.split("\"review_id\":")
+            .nth(1)
+            .and_then(|rest| rest.split(',').next())
+            .and_then(|id| id.parse::<u64>().ok())
+            .expect("review id")
+    }
+
+    fn resolve_review(host: *mut ChainHost, review_id: u64, approve: bool) -> String {
+        unsafe {
+            let result = chain_host_resolve(host, review_id, u8::from(approve));
+            assert!(!result.is_null());
+            let result_ref = &*result;
+            assert_eq!(result_ref.error_code, 0, "{}", error_msg(result_ref));
+            let data = CStr::from_ptr(result_ref.data).to_str().unwrap().to_string();
+            crate::types::free_ffi_result(result);
+            data
+        }
+    }
+
+    fn bitcoin_address_request() -> Vec<u8> {
+        let mut data = vec![5u8];
+        for component in [0x8000_0054u32, 0x8000_0000, 0x8000_0000, 0, 0] {
+            data.extend_from_slice(&component.to_be_bytes());
+        }
+        apdu(0xE1, 0x40, &data)
+    }
+
+    fn solana_sign_request() -> Vec<u8> {
+        let mut data = solana_path();
+        data.extend_from_slice(b"host-level solana message");
+        apdu(0xE0, 0x06, &data)
+    }
+
+    fn tron_sign_request() -> Vec<u8> {
+        let mut data = tron_path();
+        data.extend_from_slice(&[0x11u8; 32]);
+        apdu(0xE0, 0x05, &data)
+    }
+
+    /// 同一串真实 APDU 分别喂给「直连模块」和「编码后模块」的宿主，
+    /// 断言两条链路逐字节一致：这说明 Event/Effect 的线格式足以承载全部流量。
+    #[test]
+    fn serialised_module_boundary_matches_the_direct_path() {
+        let direct = chain_host_new();
+        assert!(!direct.is_null());
+        let encoded = Box::into_raw(Box::new(ChainHost::new_encoded().expect("encoded host")));
+        set_seed(direct, &seed_hex());
+        set_seed(encoded, &seed_hex());
+
+        // (要切换的模块, APDU, 是否在挂起审阅后批准)
+        let steps: Vec<(Option<&str>, Vec<u8>, Option<bool>)> = vec![
+            (None, get_public_key(), None),
+            (None, vec![0xE0, 0x02, 0x01, 0x00, 0x00], Some(true)),
+            (Some(BTC_MODULE_ID), bitcoin_address_request(), None),
+            (Some(SOL_MODULE_ID), apdu(0xE0, 0x05, &solana_path()), None),
+            (Some(SOL_MODULE_ID), solana_sign_request(), Some(true)),
+            (Some(TRON_MODULE_ID), apdu(0xE0, 0x02, &tron_path()), None),
+            (Some(TRON_MODULE_ID), tron_sign_request(), Some(true)),
+            (Some(SUI_MODULE_ID), apdu(0x07, 0x02, &sui_path()), None),
+        ];
+
+        for (module, request, approve) in steps {
+            if let Some(module) = module {
+                open_module(direct, module);
+                open_module(encoded, module);
+            }
+            let expected = call(direct, &request);
+            let actual = call(encoded, &request);
+            assert_eq!(
+                actual,
+                expected,
+                "module {module:?} apdu {}",
+                hex::encode(&request)
+            );
+
+            if let Some(approve) = approve {
+                let expected_id = review_id(&expected);
+                assert_eq!(review_id(&actual), expected_id);
+                assert_eq!(
+                    resolve_review(encoded, expected_id, approve),
+                    resolve_review(direct, expected_id, approve)
+                );
+            }
+        }
+
+        // 本机账户派生走 LocalRequest，同样要能跨边界。
+        assert_eq!(
+            derive_account(encoded, BTC_MODULE_ID, 3),
+            derive_account(direct, BTC_MODULE_ID, 3)
+        );
+
+        unsafe {
+            chain_host_free(direct);
+            chain_host_free(encoded);
+        }
     }
 }

@@ -182,6 +182,13 @@ class _FakeVaultService implements IWalletService {
       throw UnimplementedError();
 
   @override
+  Set<String> get hiddenChains => const {};
+
+  @override
+  Future<void> setChainHidden(String chain, {required bool hidden}) async =>
+      throw UnimplementedError();
+
+  @override
   Future<String?> revealMnemonic(String pin) async => null;
 
   @override

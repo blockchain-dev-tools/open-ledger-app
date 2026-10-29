@@ -20,18 +20,22 @@ chain-app-bitcoin = { path = "../chain-app-bitcoin" }
 chain-app-solana = { path = "../chain-app-solana" }
 chain-app-tron = { path = "../chain-app-tron" }
 chain-app-sui = { path = "../chain-app-sui" }
+chain-app-near = { path = "../chain-app-near" }
+chain-app-ton = { path = "../chain-app-ton" }
 hex = { workspace = true }
 thiserror = { workspace = true }
 zeroize = { workspace = true }
 
 [features]
 default = ["all"]
-all = ["eth", "sol", "btc", "tron", "sui"]
+all = ["eth", "sol", "btc", "tron", "sui", "near", "ton"]
 eth = []
 sol = []
 btc = []
 tron = []
 sui = []
+near = []
+ton = []
 
 [dev-dependencies]
 ed25519-dalek = { workspace = true }

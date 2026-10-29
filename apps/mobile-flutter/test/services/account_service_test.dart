@@ -12,6 +12,7 @@ import 'package:open_ledger_app/core/interfaces/chain_host_service.dart';
 import 'package:open_ledger_app/core/interfaces/crypto_service.dart';
 import '../support/inert_key_hierarchy.dart';
 import 'package:open_ledger_app/core/models/chain_host_reply.dart';
+import 'package:open_ledger_app/core/models/chain.dart';
 import 'package:open_ledger_app/core/models/wallet_accounts.dart';
 import 'package:open_ledger_app/services/account_service.dart';
 
@@ -63,6 +64,12 @@ class _MockCryptoService with InertKeyHierarchy implements ICryptoService {
 
   @override
   String? deriveSuiAddress(String seedHex, String path) => address;
+
+  @override
+  String? deriveNearAddress(String seedHex, String path) => address;
+
+  @override
+  String? deriveTonAddress(String seedHex, String path) => address;
 
   // ── HD Key Derivation ─────────────────────────────────────────────────
 
@@ -245,19 +252,19 @@ ChainAccount _account({
 void main() {
   // ── 1. defaultPaths ──────────────────────────────────────────────────
 
-  test('defaultPaths returns 5 chain paths', () {
+  test('defaultPaths covers the default visible chains', () {
     final service = AccountService(crypto: _MockCryptoService());
 
     final paths = service.defaultPaths;
 
-    expect(paths, hasLength(5));
+    expect(paths, hasLength(Chain.defaultVisible.length));
     expect(paths.keys, containsAll([
       'ethereum',
       'solana',
       'bitcoin',
       'tron',
-      'sui',
     ]));
+    expect(paths.keys, isNot(contains('sui')));
   });
 
   // ── 2. deriveSingleAccount — ethereum ───────────────────────────────
@@ -320,7 +327,7 @@ void main() {
 
   // ── 5. deriveDefaultAccounts ────────────────────────────────────────
 
-  test('deriveDefaultAccounts returns WalletAccounts with 5 accounts',
+  test('deriveDefaultAccounts covers the default visible chains',
       () async {
     final privKey = _bytes('cafebabe');
     final edPriv = _bytes('deadbeef');
@@ -336,7 +343,7 @@ void main() {
     final wallet = await service.deriveDefaultAccounts(
         _testMnemonic, '', _testSeed);
 
-    expect(wallet.accounts, hasLength(5));
+    expect(wallet.accounts, hasLength(Chain.defaultVisible.length));
     expect(wallet.mnemonicFingerprint, isNotEmpty);
     expect(wallet.mnemonicFingerprint, hasLength(8));
 
@@ -346,7 +353,6 @@ void main() {
       'solana',
       'bitcoin',
       'tron',
-      'sui',
     ]));
   });
 

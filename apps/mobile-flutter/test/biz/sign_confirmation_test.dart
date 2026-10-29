@@ -40,6 +40,8 @@ class _MockCryptoService with InertKeyHierarchy, InertExport implements ICryptoS
   @override String? deriveBtcAddress(String s, String p) => throw UnimplementedError();
   @override String? deriveTronAddress(String s, String p) => throw UnimplementedError();
   @override String? deriveSuiAddress(String s, String p) => throw UnimplementedError();
+  @override String? deriveNearAddress(String s, String p) => throw UnimplementedError();
+  @override String? deriveTonAddress(String s, String p) => throw UnimplementedError();
   @override String? parseSignData(String c, String p) => throw UnimplementedError();
   @override String generateMnemonic({int strength = 128}) => throw UnimplementedError();
   @override bool validateMnemonic(String m) => throw UnimplementedError();

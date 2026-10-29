@@ -116,6 +116,13 @@ class _MockWalletService implements IWalletService {
       throw UnimplementedError();
 
   @override
+  Set<String> get hiddenChains => const {};
+
+  @override
+  Future<void> setChainHidden(String chain, {required bool hidden}) =>
+      throw UnimplementedError();
+
+  @override
   Future<String?> revealMnemonic(String pin) => Future.value(null);
 
   @override

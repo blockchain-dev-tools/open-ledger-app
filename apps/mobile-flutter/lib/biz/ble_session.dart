@@ -372,6 +372,11 @@ class BleSession {
     if (command.cla == Cla.sui) {
       return command.ins == Ins.suiGetPublicKey || command.ins == Ins.suiSignTx;
     }
+    if (command.cla == Cla.near) {
+      return command.ins == Ins.nearGetPublicKey ||
+          command.ins == Ins.nearSignTransaction ||
+          command.ins == Ins.nearGetVersion;
+    }
     if (command.cla != Cla.os) return false;
     switch (_apduHandler.currentApp) {
       case LedgerApp.ethereum:
@@ -393,8 +398,17 @@ class BleSession {
             command.ins == Ins.tronSignPersonalMessage ||
             command.ins == Ins.tronEcdhSecret ||
             command.ins == Ins.tronSignTip712;
+      case LedgerApp.ton:
+        // TON 的版本/应用名/公钥/签名都在模块里；0x08/0x09 回 6D00。
+        return command.ins == Ins.tonGetVersion ||
+            command.ins == Ins.tonGetAppName ||
+            command.ins == Ins.tonGetPublicKey ||
+            command.ins == Ins.tonSignTx ||
+            command.ins == Ins.tonGetAddressProof ||
+            command.ins == Ins.tonSignData;
       case LedgerApp.bitcoin:
       case LedgerApp.sui:
+      case LedgerApp.near:
       case null:
         return false;
     }
@@ -416,10 +430,14 @@ class BleSession {
       host.openApp('openledger.bitcoin');
     } else if (command.cla == Cla.sui) {
       host.openApp('openledger.sui');
+    } else if (command.cla == Cla.near) {
+      host.openApp('openledger.near');
     } else if (_apduHandler.currentApp == LedgerApp.solana) {
       host.openApp('openledger.solana');
     } else if (_apduHandler.currentApp == LedgerApp.tron) {
       host.openApp('openledger.tron');
+    } else if (_apduHandler.currentApp == LedgerApp.ton) {
+      host.openApp('openledger.ton');
     } else {
       host.openApp('openledger.ethereum');
     }

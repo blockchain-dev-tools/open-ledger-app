@@ -86,6 +86,12 @@ class FakeCryptoService implements ICryptoService {
   String? deriveSuiAddress(String seedHex, String path) => null;
 
   @override
+  String? deriveNearAddress(String seedHex, String path) => null;
+
+  @override
+  String? deriveTonAddress(String seedHex, String path) => null;
+
+  @override
   String? p2wpkhAddress(String compressedPubkeyHex) => null;
 
   @override

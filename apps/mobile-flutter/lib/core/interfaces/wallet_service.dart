@@ -171,6 +171,18 @@ abstract class IWalletService {
   /// Remove an account by [chain] and [address].
   Future<WalletAccounts> removeAccount(String chain, String address);
 
+  // ── Chain management ───────────────────────────────────────────────
+
+  /// Chain ids the active vault has turned off in "Manage chains".
+  Set<String> get hiddenChains;
+
+  /// Persist whether [chain] is hidden in the active vault.
+  ///
+  /// Hiding keeps the chain's accounts (and history) — it only removes the
+  /// chain from the Vault and the BLE picker. Showing a chain with no account
+  /// derives nothing here; the caller adds account 0 first.
+  Future<void> setChainHidden(String chain, {required bool hidden});
+
   // ── Mnemonic / Seed ────────────────────────────────────────────────
 
   /// Reveal the active vault's mnemonic (PIN-gated, I6).

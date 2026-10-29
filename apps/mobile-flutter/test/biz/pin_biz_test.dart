@@ -117,6 +117,8 @@ class _MockCryptoService implements ICryptoService {
   @override String? deriveBtcAddress(String s, String p) => throw UnimplementedError();
   @override String? deriveTronAddress(String s, String p) => throw UnimplementedError();
   @override String? deriveSuiAddress(String s, String p) => throw UnimplementedError();
+  @override String? deriveNearAddress(String s, String p) => throw UnimplementedError();
+  @override String? deriveTonAddress(String s, String p) => throw UnimplementedError();
   @override String? p2wpkhAddress(String k) => throw UnimplementedError();
   @override String? tronAddressFromPubkey(String k) => throw UnimplementedError();
   @override String? suiAddress(String k) => throw UnimplementedError();

@@ -97,6 +97,16 @@ class FakeWalletService implements IWalletService {
   Future<WalletAccounts> removeAccount(String chain, String address) async =>
       _accounts;
 
+  final Set<String> _hidden = {};
+
+  @override
+  Set<String> get hiddenChains => _hidden;
+
+  @override
+  Future<void> setChainHidden(String chain, {required bool hidden}) async {
+    hidden ? _hidden.add(chain) : _hidden.remove(chain);
+  }
+
   @override
   Future<String?> revealMnemonic(String pin) async => null;
 

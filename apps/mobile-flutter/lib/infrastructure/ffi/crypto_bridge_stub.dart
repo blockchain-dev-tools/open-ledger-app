@@ -104,6 +104,10 @@ class CryptoBridge {
 
   static String? deriveSuiAddress(String seedHex, String path) => null;
 
+  static String? deriveNearAddress(String seedHex, String path) => null;
+
+  static String? deriveTonAddress(String seedHex, String path) => null;
+
   // ── Address from Public Key ─────────────────────────────────────────
 
   static String? p2wpkhAddress(String compressedPubkeyHex) => null;

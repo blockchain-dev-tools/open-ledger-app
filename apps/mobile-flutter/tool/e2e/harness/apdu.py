@@ -7,6 +7,7 @@ from __future__ import annotations
 CLA_OS = 0xE0
 CLA_BTC = 0xE1
 CLA_SUI = 0x07
+CLA_NEAR = 0x80
 INS_OPEN_APP = 0xD8
 INS_GET_PUBLIC_KEY = 0x02
 INS_SIGN_ETH_TX = 0x04
@@ -23,6 +24,13 @@ INS_SUI_SIGN_TX = 0x04
 INS_TRON_GET_ADDRESS = 0x02
 INS_TRON_SIGN_TX = 0x04
 INS_TRON_CONFIG = 0x06
+INS_NEAR_SIGN_TX = 0x02
+INS_NEAR_GET_PUBLIC_KEY = 0x04
+INS_NEAR_VERSION = 0x06
+INS_TON_VERSION = 0x03
+INS_TON_APP_NAME = 0x04
+INS_TON_GET_PUBLIC_KEY = 0x05
+INS_TON_SIGN_TX = 0x06
 
 SW_SUCCESS = 0x9000
 
@@ -31,6 +39,10 @@ BTC_PATH = "m/84'/0'/0'/0/0"
 SOL_PATH = "m/44'/501'/0'/0'"
 SUI_PATH = "m/44'/784'/0'/0'/0'"
 TRON_PATH = "m/44'/195'/0'/0/0"
+# NEAR 的 Ledger app 只接受 5 段全硬化路径（near-ledger-js 账户 0 默认 `…/0'/0'/1'`）。
+NEAR_PATH = "m/44'/397'/0'/0'/1'"
+# TON 官方 `pathForAccount(mainnet, workchain 0, account 0)`（6 段，全硬化）。
+TON_PATH = "m/44'/607'/0'/0'/0'/0'"
 
 # 固定测试钱包（abandon ×11 + about）在 ETH_PATH 上的地址（EIP-55）
 TEST_ETH_ADDRESS = "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
@@ -183,3 +195,88 @@ def parse_tron_address(data: bytes) -> tuple[bytes, str]:
     addr_len = data[1 + pub_len]
     address = data[2 + pub_len:2 + pub_len + addr_len].decode("ascii")
     return pub, address
+
+
+# ── NEAR（CLA 0x80） ────────────────────────────────────────────────
+
+def near_path_bytes(path: str = NEAR_PATH) -> bytes:
+    """app-near 的路径没有长度前缀：正好 5 个大端 u32。"""
+    comps = [c for c in path.split("/")[1:] if c]
+    if len(comps) != 5:
+        raise ValueError(f"NEAR 路径必须 5 段: {path}")
+    out = bytearray()
+    for c in comps:
+        hardened = c[-1] in "'hH"
+        value = int(c.rstrip("'hH"))
+        if hardened:
+            value |= 0x80000000
+        out += value.to_bytes(4, "big")
+    return bytes(out)
+
+
+def near_get_version() -> bytes:
+    return apdu(CLA_NEAR, INS_NEAR_VERSION, 0x00, 0x00)
+
+
+def near_get_public_key(path: str = NEAR_PATH, display: bool = False) -> bytes:
+    """P1=0x00 显示并确认、P1=0x01 静默；P2 与官方一致填 0x57。"""
+    return apdu(CLA_NEAR, INS_NEAR_GET_PUBLIC_KEY, 0x00 if display else 0x01,
+                0x57, near_path_bytes(path))
+
+
+def near_sign_transaction(tx: bytes, path: str = NEAR_PATH) -> list[bytes]:
+    """`[path][borsh tx]` 按 123B 分块；末块 P1=0x80。"""
+    all_data = near_path_bytes(path) + tx
+    chunk_size = 123
+    chunks = [all_data[i:i + chunk_size] for i in range(0, len(all_data), chunk_size)]
+    out = []
+    for i, chunk in enumerate(chunks):
+        last = i == len(chunks) - 1
+        out.append(apdu(CLA_NEAR, INS_NEAR_SIGN_TX, 0x80 if last else 0x00, 0x57, chunk))
+    return out
+
+
+# ── TON（CLA 0xE0，按 OPEN_APP 选择 INS 表） ─────────────────────────
+
+def ton_path_bytes(path: str = TON_PATH) -> bytes:
+    """`[count][u32 BE × count]`。"""
+    comps = [c for c in path.split("/")[1:] if c]
+    out = bytearray([len(comps)])
+    for c in comps:
+        hardened = c[-1] in "'hH"
+        value = int(c.rstrip("'hH"))
+        if hardened:
+            value |= 0x80000000
+        out += value.to_bytes(4, "big")
+    return bytes(out)
+
+
+def ton_get_version() -> bytes:
+    return apdu(CLA_OS, INS_TON_VERSION, 0x00, 0x00)
+
+
+def ton_get_public_key(path: str = TON_PATH) -> bytes:
+    return apdu(CLA_OS, INS_TON_GET_PUBLIC_KEY, 0x00, 0x00, ton_path_bytes(path))
+
+
+def ton_sign_transaction(tx: bytes, path: str = TON_PATH) -> list[bytes]:
+    """首包 P2=0x03 带路径，续包 P2=0x02，末包 P2=0x00。
+
+    与官方 host 一致：首包永远是 `first + more`，即使交易能装进一帧，也会再
+    补一个空的末包收尾。
+    """
+    head = ton_path_bytes(path) + tx
+    chunk_size = 255
+    chunks = [head[i:i + chunk_size] for i in range(0, len(head), chunk_size)]
+    if len(chunks) == 1:
+        chunks.append(b"")
+    out = []
+    for i, chunk in enumerate(chunks):
+        last = i == len(chunks) - 1
+        if i == 0:
+            p2 = 0x03
+        else:
+            p2 = 0x00 if last else 0x02
+        out.append(apdu(CLA_OS, INS_TON_SIGN_TX, 0x00, p2, chunk))
+    return out
+

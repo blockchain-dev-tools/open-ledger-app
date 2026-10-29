@@ -86,6 +86,14 @@ class Vault {
   /// Derived accounts + mnemonic fingerprint for this vault.
   final WalletAccounts accounts;
 
+  /// Chain ids the user turned off in "Manage chains".
+  ///
+  /// Accounts of a hidden chain are kept (its history and keys survive); only
+  /// the Vault section and the BLE picker stop listing it. Empty for legacy
+  /// JSON, which keeps the pre-feature behaviour: every default chain plus
+  /// every chain that already has an account is shown.
+  final Set<String> hiddenChains;
+
   /// Creation time (epoch ms).
   final int createdAt;
 
@@ -105,6 +113,7 @@ class Vault {
     required this.mnemonicEncrypted,
     this.passphraseEncrypted,
     required this.accounts,
+    this.hiddenChains = const {},
     required this.createdAt,
     this.source = VaultSource.imported,
     this.enigmaLanguage = 0,
@@ -123,6 +132,9 @@ class Vault {
       passphraseEncrypted: json['passphraseEncrypted'] as String?,
       accounts:
           WalletAccounts.fromJson(json['accounts'] as Map<String, dynamic>),
+      hiddenChains:
+          (json['hiddenChains'] as List<dynamic>?)?.cast<String>().toSet() ??
+              const {},
       createdAt: (json['createdAt'] as num?)?.toInt() ?? 0,
       source: VaultSource.fromWire(json['source'] as String?),
       enigmaLanguage: (json['enigmaLanguage'] as num?)?.toInt() ?? 0,
@@ -138,6 +150,7 @@ class Vault {
       if (passphraseEncrypted != null)
         'passphraseEncrypted': passphraseEncrypted,
       'accounts': accounts.toJson(),
+      if (hiddenChains.isNotEmpty) 'hiddenChains': hiddenChains.toList(),
       'createdAt': createdAt,
       'source': source.wire,
       'enigmaLanguage': enigmaLanguage,
@@ -150,6 +163,7 @@ class Vault {
     String? mnemonicEncrypted,
     String? passphraseEncrypted,
     WalletAccounts? accounts,
+    Set<String>? hiddenChains,
     VaultSource? source,
     int? enigmaLanguage,
   }) {
@@ -160,6 +174,7 @@ class Vault {
       mnemonicEncrypted: mnemonicEncrypted ?? this.mnemonicEncrypted,
       passphraseEncrypted: passphraseEncrypted ?? this.passphraseEncrypted,
       accounts: accounts ?? this.accounts,
+      hiddenChains: hiddenChains ?? this.hiddenChains,
       createdAt: createdAt,
       source: source ?? this.source,
       enigmaLanguage: enigmaLanguage ?? this.enigmaLanguage,

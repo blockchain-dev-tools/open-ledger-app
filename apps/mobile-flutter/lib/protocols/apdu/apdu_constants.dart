@@ -36,6 +36,9 @@ class Cla {
 
   /// Sui.
   static const int sui = 0x07;
+
+  /// NEAR (own CLA; no overlap with the 0xE0 family).
+  static const int near = 0x80;
 }
 
 /// Parameter-1 (P1) flags for the currently open app's INS table.
@@ -196,6 +199,38 @@ class Ins {
 
   /// Sign a Sui transaction.
   static const int suiSignTx = 0x04;
+
+  // ── NEAR instructions (CLA 0x80) ───────────────────────────────────────
+
+  /// Sign a borsh transaction (chunked; P1 bit 0x80 marks the last frame).
+  static const int nearSignTransaction = 0x02;
+
+  /// Get the ed25519 public key for a 5-component path.
+  static const int nearGetPublicKey = 0x04;
+
+  /// NEAR app version.
+  static const int nearGetVersion = 0x06;
+
+  // ── TON instructions (CLA 0xE0 real app) ───────────────────────────────
+  //
+  // The TON app shares CLA 0xE0 with Ethereum/Solana/Tron; `currentApp`
+  // selects this table. 0x03/0x05/0x06 overlap other apps' INS bytes.
+
+  /// TON GET_VERSION.
+  static const int tonGetVersion = 0x03;
+
+  /// TON GET_APP_NAME (returns the app name as ASCII).
+  static const int tonGetAppName = 0x04;
+
+  /// TON GET_PUBLIC_KEY.
+  static const int tonGetPublicKey = 0x05;
+
+  /// TON SIGN_TX (first frame P2=0x03, then P2=0x02/0x00).
+  static const int tonSignTx = 0x06;
+
+  /// TON GET_ADDRESS_PROOF / SIGN_DATA (not implemented — module answers 6D00).
+  static const int tonGetAddressProof = 0x08;
+  static const int tonSignData = 0x09;
 }
 
 /// Status word (SW) — returned as SW1+SW2 in every APDU response.

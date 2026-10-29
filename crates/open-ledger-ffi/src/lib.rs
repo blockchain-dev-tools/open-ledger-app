@@ -334,6 +334,22 @@ pub unsafe extern "C" fn derive_sui_address_ffi(seed_hex_ptr: *const c_char, pat
     result_str_to_ffi(open_ledger_biz::sui::derive_address(&seed, path))
 }
 
+/// NEAR 隐式账户地址 = ed25519 公钥的 64 位 hex。
+#[no_mangle]
+pub unsafe extern "C" fn derive_near_address_ffi(seed_hex_ptr: *const c_char, path_ptr: *const c_char) -> *mut FfiResult {
+    let seed = match cstr_to_hex(seed_hex_ptr) { Some(v) => v, None => return null_err() };
+    let path = match cstr_to_str(path_ptr) { Some(s) => s, None => return null_err() };
+    result_str_to_ffi(open_ledger_biz::near::derive_address(&seed, path))
+}
+
+/// TON Wallet v4r2 地址（基础链上，bounceable）。
+#[no_mangle]
+pub unsafe extern "C" fn derive_ton_address_ffi(seed_hex_ptr: *const c_char, path_ptr: *const c_char) -> *mut FfiResult {
+    let seed = match cstr_to_hex(seed_hex_ptr) { Some(v) => v, None => return null_err() };
+    let path = match cstr_to_str(path_ptr) { Some(s) => s, None => return null_err() };
+    result_str_to_ffi(open_ledger_biz::ton::derive_address(&seed, path))
+}
+
 // ── BTC/address utilities ───────────────────────────────────────────
 
 #[cfg(feature = "btc")]

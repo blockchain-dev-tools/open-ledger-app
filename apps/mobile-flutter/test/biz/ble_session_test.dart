@@ -65,6 +65,8 @@ class _MockWalletService implements IWalletService {
   @override WalletAccounts? getAccounts() { calls.add('getAccounts'); return null; }
   @override Future<WalletAccounts> addAccount(String chain, String path) async { calls.add('addAccount'); return WalletAccounts(accounts: [], mnemonicFingerprint: ''); }
   @override Future<WalletAccounts> removeAccount(String chain, String address) async { calls.add('removeAccount'); return WalletAccounts(accounts: [], mnemonicFingerprint: ''); }
+  @override Set<String> get hiddenChains { calls.add('hiddenChains'); return const {}; }
+  @override Future<void> setChainHidden(String chain, {required bool hidden}) async { calls.add('setChainHidden'); }
   @override Future<String?> revealMnemonic(String pin) async { calls.add('revealMnemonic'); return null; }
   @override String? get mnemonic => null;
   @override String? get passphrase => null;
@@ -219,6 +221,8 @@ class _MockCryptoService with InertKeyHierarchy, InertExport implements ICryptoS
   @override String? deriveBtcAddress(String s, String p) => 'mock';
   @override String? deriveTronAddress(String s, String p) => 'mock';
   @override String? deriveSuiAddress(String s, String p) => 'mock';
+  @override String? deriveNearAddress(String s, String p) => 'mock';
+  @override String? deriveTonAddress(String s, String p) => 'mock';
   @override String? parseSignData(String c, String p) => null;
   @override String generateMnemonic({int strength = 128}) => '';
 

@@ -19,6 +19,8 @@ void main() {
         'bitcoin',
         'tron',
         'sui',
+        'near',
+        'ton',
       ]);
     });
 
@@ -42,6 +44,26 @@ void main() {
       expect(Chain.tron.defaultAccountPath, "m/44'/195'/0'/0/0");
       expect(Chain.sui.defaultAccountPath, "m/44'/784'/0'/0'/0'");
     });
+
+    test('NEAR/TON follow the official all-hardened Ledger paths', () {
+      // near-ledger-js default for account 0.
+      expect(Chain.near.defaultAccountPath, "m/44'/397'/0'/0'/1'");
+      // ton-ledger `pathForAccount(mainnet, workchain 0, account 0)`.
+      expect(Chain.ton.defaultAccountPath, "m/44'/607'/0'/0'/0'/0'");
+    });
+
+    test('account index round-trips through the chain-specific segment', () {
+      for (final chain in Chain.values) {
+        for (final index in const [0, 1, 7]) {
+          final path = chain.accountPathForIndex(index);
+          expect(chain.accountIndexFromPath(path), index,
+              reason: '${chain.id} $index → $path');
+        }
+      }
+      expect(Chain.near.accountPathForIndex(1), "m/44'/397'/1'/0'/1'");
+      expect(Chain.ton.accountPathForIndex(2), "m/44'/607'/0'/0'/2'/0'");
+      expect(Chain.ethereum.accountPathForIndex(3), "m/44'/60'/0'/0/3");
+    });
   });
 
   group('Chain.iconAssetPath', () {
@@ -56,12 +78,18 @@ void main() {
   });
 
   group('LedgerApp identity', () {
-    test('each chain maps to a distinct app, and back', () {
-      final apps = Chain.values.map((c) => c.ledgerApp).toList();
-      expect(apps.toSet().length, Chain.values.length);
-      for (final chain in Chain.values) {
+    test('each emulated chain maps to a distinct app, and back', () {
+      final apps = Chain.withLedgerApp.map((c) => c.ledgerApp).toList();
+      expect(apps.toSet().length, Chain.withLedgerApp.length);
+      for (final chain in Chain.withLedgerApp) {
         expect(chain.ledgerApp.chain, chain);
       }
+    });
+
+    test('every chain now has an emulated app', () {
+      expect(Chain.withLedgerApp.length, Chain.values.length);
+      expect(Chain.near.ledgerApp, LedgerApp.near);
+      expect(Chain.ton.ledgerApp, LedgerApp.ton);
     });
 
     test('reports the on-wire app names and versions hosts expect', () {
@@ -70,6 +98,8 @@ void main() {
       expect(LedgerApp.bitcoin.ledgerName, 'Bitcoin');
       expect(LedgerApp.tron.ledgerName, 'Tron');
       expect(LedgerApp.sui.ledgerName, 'Sui');
+      expect(LedgerApp.near.ledgerName, 'NEAR');
+      expect(LedgerApp.ton.ledgerName, 'TON');
       for (final app in LedgerApp.values) {
         expect(app.version, isNotEmpty);
       }

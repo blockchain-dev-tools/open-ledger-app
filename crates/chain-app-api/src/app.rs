@@ -6,7 +6,7 @@ use crate::manifest::{AppDescriptor, CapabilitySet};
 
 /// 会话配置。只含宿主绑定的身份、epoch、授予权限与公开配置；
 /// 不含 seed、PIN 或任何金库记录。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionConfig {
     pub session_id: SessionId,
     pub epoch: u64,

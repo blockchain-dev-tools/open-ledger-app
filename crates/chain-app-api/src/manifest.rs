@@ -12,7 +12,7 @@ pub const API_VERSION: u32 = 1;
 pub const HARDENED: u32 = 0x8000_0000;
 
 /// 对外线协议。2.0 的 UR/QR 是新增枚举值，不是新架构。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Wire {
     LedgerApdu,
     Ur,
@@ -28,7 +28,7 @@ impl Wire {
 }
 
 /// 一种对外协议的兼容声明。必须写清「不支持什么」，否则无法据此判断回归。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ProtocolProfile {
     /// 对外模拟的名称，例如 `Ethereum`。
     pub name: String,
@@ -41,7 +41,7 @@ pub struct ProtocolProfile {
     pub vector_sources: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AccountProfile {
     pub network: String,
     pub account_type: String,
@@ -52,7 +52,7 @@ pub struct AccountProfile {
 }
 
 /// 允许的派生范围。不能只用字符串前缀验证路径。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DerivationRule {
     pub derivation_scheme: DerivationScheme,
     pub curve: Curve,
@@ -80,7 +80,7 @@ impl DerivationRule {
 }
 
 /// 模块请求的能力。宿主与其审核策略求交集后才生效。
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct CapabilitySet {
     pub derivation_rules: Vec<DerivationRule>,
     pub allow_chain_code: bool,
@@ -138,7 +138,7 @@ impl CapabilitySet {
 }
 
 /// 模块清单。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AppDescriptor {
     /// 稳定内部 ID，例如 `openledger.ethereum`；不用展示名称作存储主键。
     pub module_id: String,

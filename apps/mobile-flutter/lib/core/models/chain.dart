@@ -20,12 +20,26 @@ enum Chain {
   solana,
   bitcoin,
   tron,
-  sui;
+  sui,
+  near,
+  ton;
 
-  /// Chains offered by account, BLE-picker and private-key export UI.
-  /// BTC and Sui are temporarily hidden pending validation. Restore them
-  /// here after testing; keep [values] intact for storage and protocols.
-  static const visible = [ethereum, solana, tron];
+  /// Chains a new vault derives and shows by default.
+  static const defaultVisible = [bitcoin, ethereum, solana, tron];
+
+  /// Chains the Vault's "Add chain" sheet offers on top of [defaultVisible].
+  static const addable = [ton, sui, near];
+
+  /// Chains whose BLE app we emulate (a Rust chain app exists).
+  static const withLedgerApp = [
+    ethereum,
+    solana,
+    bitcoin,
+    tron,
+    sui,
+    near,
+    ton,
+  ];
 
   /// Persisted identifier, used in [WalletAccounts] metadata, signing
   /// history, and the BLE control UI. Also the enum name, so
@@ -39,35 +53,50 @@ enum Chain {
         Chain.bitcoin => 'assets/icons/chains/btc.svg',
         Chain.tron => 'assets/icons/chains/tron.svg',
         Chain.sui => 'assets/icons/chains/sui.svg',
+        Chain.near => 'assets/icons/chains/near.svg',
+        Chain.ton => 'assets/icons/chains/ton.svg',
       };
 
   /// Account 0's BIP-32 path — auto-derived on wallet setup and unlock.
+  ///
+  /// NEAR and TON follow the official Ledger paths (all-hardened):
+  /// NEAR `m/44'/397'/{account}'/0'/1'` (near-ledger-js default for account 0),
+  /// TON `m/44'/607'/0'/0'/{account}'/0'` (ton-ledger `pathForAccount`).
   String get defaultAccountPath => switch (this) {
         Chain.ethereum => "m/44'/60'/0'/0/0",
         Chain.solana => "m/44'/501'/0'/0'",
         Chain.bitcoin => "m/84'/0'/0'/0/0",
         Chain.tron => "m/44'/195'/0'/0/0",
         Chain.sui => "m/44'/784'/0'/0'/0'",
+        Chain.near => "m/44'/397'/0'/0'/1'",
+        Chain.ton => "m/44'/607'/0'/0'/0'/0'",
       };
 
-  /// Whether the account number sits in the 4th path segment rather than the
-  /// last one.
+  /// Absolute index of the account segment in `path.split('/')` (index 0 is
+  /// `m`), or `null` when the last segment carries the account.
   ///
-  /// Solana and Sui harden the account segment and keep the trailing address
-  /// index at 0 (`m/44'/501'/{account}'/0'`); EVM and Tron vary the final
-  /// address index instead (`m/44'/60'/0'/0/{account}`). Reading "the last
-  /// segment" therefore reports 0 for every Solana/Sui account.
-  bool get _accountInFourthSegment => this == solana || this == sui;
+  /// Solana/Sui harden the account segment and keep a trailing address index
+  /// (`m/44'/501'/{account}'/0'`); NEAR's official Ledger path does the same
+  /// (`m/44'/397'/{account}'/0'/1'`); TON puts the account in the fifth
+  /// component (`m/44'/607'/0'/0'/{account}'/0'`). EVM and Tron vary the final
+  /// address index instead (`m/44'/60'/0'/0/{account}`), so reading "the last
+  /// segment" would report 0 for every Solana/Sui/NEAR account.
+  int? get _accountSegmentIndex => switch (this) {
+        Chain.ethereum || Chain.bitcoin || Chain.tron => null,
+        Chain.solana || Chain.sui || Chain.near => 3,
+        Chain.ton => 5,
+      };
+
+  /// Whether the account segment is hardened (`{account}'`).
+  bool get _hardenedAccount =>
+      this != ethereum && this != bitcoin && this != tron;
 
   /// The derivation path for account [index] on this chain — the inverse of
   /// [accountIndexFromPath].
   String accountPathForIndex(int index) {
     final parts = defaultAccountPath.split('/');
-    if (_accountInFourthSegment) {
-      parts[3] = "$index'";
-    } else {
-      parts[parts.length - 1] = '$index';
-    }
+    final pos = _accountSegmentIndex ?? parts.length - 1;
+    parts[pos] = _hardenedAccount ? "$index'" : '$index';
     return parts.join('/');
   }
 
@@ -78,7 +107,7 @@ enum Chain {
   /// account (`m/44'/501'/1'/0'`) reads 1, not 0.
   int accountIndexFromPath(String path) {
     final parts = path.split('/');
-    final pos = _accountInFourthSegment ? 3 : parts.length - 1;
+    final pos = _accountSegmentIndex ?? parts.length - 1;
     if (pos < 0 || pos >= parts.length) return 0;
     return int.tryParse(parts[pos].replaceAll("'", '')) ?? 0;
   }
@@ -90,6 +119,8 @@ enum Chain {
         Chain.bitcoin => LedgerApp.bitcoin,
         Chain.tron => LedgerApp.tron,
         Chain.sui => LedgerApp.sui,
+        Chain.near => LedgerApp.near,
+        Chain.ton => LedgerApp.ton,
       };
 
   /// Resolve a persisted chain id, or `null` for pseudo-chains
@@ -113,7 +144,9 @@ enum LedgerApp {
   solana(ledgerName: 'Solana', version: '1.7.0'),
   bitcoin(ledgerName: 'Bitcoin', version: '2.1.0'),
   tron(ledgerName: 'Tron', version: '0.5.0'),
-  sui(ledgerName: 'Sui', version: '0.1.0');
+  sui(ledgerName: 'Sui', version: '0.1.0'),
+  near(ledgerName: 'NEAR', version: '2.0.0'),
+  ton(ledgerName: 'TON', version: '1.0.0');
 
   const LedgerApp({required this.ledgerName, required this.version});
 
