@@ -30,9 +30,13 @@ Signing approval, rejection, timeout, locked-state handling and per-vault histor
 
 Crypto FFI uses null-terminated encoded strings and matching Rust allocation/free contracts. Clear cached seed/session material when provider/passphrase changes. Wrap fallible FFI calls from gesture callbacks with explicit error handling. Maintain independent crypto test vectors.
 
+Anything the UI claims about a derivation (match counts, validation, previews) must come from the same Rust function that derives it — never re-implement tokenisation, wordlists or index encoding in Dart or TypeScript. Verify a new export exists in the built artifact (`nm -D libopen_ledger_crypto.so | grep <symbol>`) before wiring it up. Dart bridges degrade instead of throwing when a symbol is missing (`flutter test` runs without Rust): return `null` and let the dependent UI hide itself.
+
+Secret-phrase derivation parameters are frozen (see the workspace ADR-019): changing the tokenisation, the u16 big-endian index encoding, `MAX_INDICES`, `MAX_ENIGMA_CAP` or the fixed English output silently re-derives a different wallet for phrases that cross the changed bound. Treat such a change as a new mode with a migration path, never an in-place constant tweak.
+
 ## UI and protocol conventions
 
-Use `ColorTokens` and `R` from `ui/theme/`; no hardcoded theme colors/radii. Localize user-visible strings. Every new interactive widget needs a stable `ValueKey`. Do not stack a bottom sheet on another bottom sheet; switch views within one modal.
+Use `ColorTokens` and `R` from `ui/theme/`; no hardcoded theme colors/radii. Localize user-visible strings. Every new interactive widget needs a stable `ValueKey`. Do not stack a bottom sheet on another bottom sheet; switch views within one modal. When a derivation consumes a capped or filtered input (secret-phrase tokens, imported word counts), show the effective size next to the input — the Secret Phrase screen surfaces its BIP-39 match count, and zero contribution warns instead of silently deriving.
 
 Light mode speaks a neobrutalist chrome (per neobrutalism.dev): a hard `Neo.edge`-px black outline, flat fills and a blur-free `Neo.lift`-px offset shadow. It is opt-in per surface and light-only: gate every neo branch on `ColorTokens.neobrutalism` so dark keeps the flat grouped-list chrome. Reuse the shared `NeoCard` / `NeoButton` / `NeoCodeBlock` (`lib/ui/widgets/common/neo_*.dart`), the `Neo` metrics and the `ColorTokens.neo*` tokens (`lib/ui/theme/color_tokens.dart`) — never hardcode the black edge, shadow or lime fill. New screens render neo in light mode and fall back to the legacy chrome in dark (shared widgets expose an explicit `neo` flag, e.g. `TxDetailsCard`). How the mechanism is wired is documented in [docs/reference/ui-neobrutalism.md](docs/reference/ui-neobrutalism.md).
 
@@ -42,7 +46,9 @@ The native Android application ID is `app.openledger.mobile`. Use the existing r
 
 ## Checks
 
-Commands and host prerequisites are in [BUILDING.md](BUILDING.md). Use `--no-version-check --suppress-analytics` with Flutter. Mock only core interfaces; unit tests must not require Rust or a real device. Test files follow the existing `test/` structure.
+Commands and host prerequisites are in [BUILDING.md](BUILDING.md). Use `--no-version-check --suppress-analytics` with Flutter. Mock only core interfaces; unit tests must not require Rust or a real device. Test files follow the existing `test/` structure — a `*_test.dart` under `lib/` is never collected by `flutter test` and rots silently, so move or delete it instead of leaving it there.
+
+When the worktree carries someone else's unfinished work, commit only your own change: stage per hunk (`git diff -- <file>` → keep your hunks → `git apply --cached`) and grep the staged diff for the other feature's identifiers before committing. Generated outputs (ARB-derived `lib/generated/l10n/*`, lockfiles) are rewritten wholesale and cannot be split — stage your keys' hunks, accept the temporary index/worktree skew, and say so in the commit body.
 
 Every changed user-visible flow or BLE/APDU behavior requires a real-device E2E case in `tool/e2e/tests/` as well as relevant unit coverage. State unavailable device coverage candidly. Gallery is web-only and may not import `dart:ffi`, native BLE or FFI implementations.
 
