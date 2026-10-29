@@ -34,6 +34,9 @@ class EnigmaTab extends StatelessWidget {
   final bool obscureSecret;
   final Bip39WordlistLanguage language;
 
+  /// Live BIP-39 match count for the riddle (null hides the hint).
+  final int? matchCount;
+
   /// Clears a previous failure as soon as the user edits the inputs.
   final VoidCallback onFieldChanged;
   final VoidCallback onObscureToggled;
@@ -54,6 +57,7 @@ class EnigmaTab extends StatelessWidget {
     required this.error,
     required this.obscureSecret,
     required this.language,
+    required this.matchCount,
     required this.onFieldChanged,
     required this.onObscureToggled,
     required this.onLanguageChanged,
@@ -119,6 +123,20 @@ class EnigmaTab extends StatelessWidget {
                     hint: l10n.enterMemorablePhrase,
                     maxLines: 3,
                   ),
+                  if (riddleController.text.trim().isNotEmpty &&
+                      matchCount != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      matchCount! > 0
+                          ? l10n.enigmaMatchCount(matchCount!)
+                          : l10n.enigmaNoMatch,
+                      style: TextStyle(
+                        color: matchCount! > 0 ? secondary : c.error,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   _fieldLabel(c, l10n.mnemonicLanguage),
                   const SizedBox(height: 8),

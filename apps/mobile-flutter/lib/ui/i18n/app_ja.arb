@@ -146,6 +146,8 @@
   "copiedToClipboard": "クリップボードにコピーしました！",
   "enigmaTitle": "合言葉ウォレット",
   "enigmaDescription": "記憶に残るフレーズと秘密鍵から決定論的ウォレットを生成します。",
+  "enigmaMatchCount": "BIP-39 の単語に {count} 個一致しました",
+  "enigmaNoMatch": "BIP-39 の単語が見つかりません。このフレーズはエントロピーに寄与せず、ウォレットは秘密鍵のみに依存します。",
   "enterRiddle": "合言葉を入力",
   "enterSecretKey": "秘密鍵を入力",
   "generateWallet": "ウォレットを生成",

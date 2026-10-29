@@ -269,3 +269,31 @@ fn max_indices_caps_at_1024() {
         hex::encode(derive_entropy(&capped, "1234", Language::SimplifiedChinese))
     );
 }
+
+// ── 命中数（供 UI 提示，不参与派生）───────────────────────────────
+
+#[test]
+fn match_count_counts_only_wordlist_hits() {
+    assert_eq!(match_count("abandon ability about", Bip39Language::English), 3);
+    assert_eq!(match_count("abandon zzz about", Bip39Language::English), 2);
+    assert_eq!(match_count("zzz qqq", Bip39Language::English), 0);
+}
+
+#[test]
+fn match_count_is_case_insensitive_for_english() {
+    assert_eq!(match_count("Abandon ABILITY", Bip39Language::English), 2);
+}
+
+#[test]
+fn match_count_splits_cjk_per_character() {
+    // 简体中文词表按字切分：三个常见字都能命中
+    assert_eq!(match_count("的一是", Bip39Language::ChineseSimplified), 3);
+    // 同一串汉字在英文词表里按空白切分，整体查不到
+    assert_eq!(match_count("的一是", Bip39Language::English), 0);
+}
+
+#[test]
+fn match_count_stops_at_the_derivation_cap() {
+    let riddle = "的".repeat(MAX_ENIGMA_CAP + 10);
+    assert_eq!(match_count(&riddle, Bip39Language::ChineseSimplified), MAX_INDICES);
+}

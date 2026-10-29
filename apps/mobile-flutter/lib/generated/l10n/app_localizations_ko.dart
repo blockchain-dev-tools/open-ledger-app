@@ -464,6 +464,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get enigmaDescription => '기억하기 쉬운 문구와 비밀 키로 결정적 지갑을 생성합니다.';
 
   @override
+  String enigmaMatchCount(int count) {
+    return 'BIP-39 단어 $count개가 일치했습니다';
+  }
+
+  @override
+  String get enigmaNoMatch =>
+      '일치하는 BIP-39 단어가 없습니다. 이 문구는 엔트로피에 기여하지 않으며 지갑은 비밀 키에만 의존합니다.';
+
+  @override
   String get enterRiddle => '비밀 문구 입력';
 
   @override

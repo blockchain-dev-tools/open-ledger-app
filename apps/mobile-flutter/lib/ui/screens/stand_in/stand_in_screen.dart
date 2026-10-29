@@ -7,6 +7,7 @@ import '../../../core/models/vault.dart';
 import '../../../data/bip39_english.dart';
 import '../../../data/bip39_wordlist.dart';
 import '../../../generated/l10n/app_localizations.dart';
+import '../../../utils/enigma.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
@@ -120,6 +121,10 @@ class _StandInScreenState extends State<StandInScreen> {
   bool _enigmaWordsConfirmed = false;
   bool _enigmaGenerating = false;
   String? _enigmaError;
+
+  /// Live BIP-39 match count for the riddle (null when the native bridge is
+  /// unavailable, in which case the hint stays hidden).
+  int? _enigmaMatchCount;
 
   // ── PIN entry state (shared across every credential prompt) ─────────
 
@@ -414,6 +419,7 @@ class _StandInScreenState extends State<StandInScreen> {
     _enigmaWordsConfirmed = false;
     _enigmaGenerating = false;
     _enigmaError = null;
+    _enigmaMatchCount = null;
     _pendingMode = null;
   }
 
@@ -617,6 +623,17 @@ class _StandInScreenState extends State<StandInScreen> {
 
   // ── Enigma tab ──────────────────────────────────────────────────────
 
+  /// Recomputes the riddle's BIP-39 match count for the live hint.
+  ///
+  /// Callers wrap this in `setState`; the lookup is cheap (one wordlist probe
+  /// per token, capped at 1024 tokens).
+  void _refreshEnigmaMatchCount() {
+    final riddle = _riddleController.text.trim();
+    _enigmaMatchCount = riddle.isEmpty
+        ? 0
+        : enigmaMatchCount(riddle, language: _enigmaLanguage);
+  }
+
   /// Derives the 24-word phrase from the riddle + secret, then shows the
   /// word grid for confirmation. Failures are surfaced in place (never throws
   /// into the gesture callback).
@@ -809,10 +826,17 @@ class _StandInScreenState extends State<StandInScreen> {
         error: _enigmaError,
         obscureSecret: _obscureSecret,
         language: _enigmaLanguage,
-        onFieldChanged: () => setState(() => _enigmaError = null),
+        matchCount: _enigmaMatchCount,
+        onFieldChanged: () => setState(() {
+          _enigmaError = null;
+          _refreshEnigmaMatchCount();
+        }),
         onObscureToggled: () =>
             setState(() => _obscureSecret = !_obscureSecret),
-        onLanguageChanged: (value) => setState(() => _enigmaLanguage = value),
+        onLanguageChanged: (value) => setState(() {
+          _enigmaLanguage = value;
+          _refreshEnigmaMatchCount();
+        }),
         onToggleConfirmed: () =>
             setState(() => _enigmaWordsConfirmed = !_enigmaWordsConfirmed),
         onGenerate: _onEnigmaGenerate,

@@ -146,6 +146,8 @@
   "copiedToClipboard": "已复制到剪贴板！",
   "enigmaTitle": "暗语钱包",
   "enigmaDescription": "通过难忘的短语和密钥确定性生成钱包。",
+  "enigmaMatchCount": "匹配到 {count} 个 BIP-39 词汇",
+  "enigmaNoMatch": "未匹配到 BIP-39 词汇，这个暗语不会增加熵，钱包只由密钥决定。",
   "enterRiddle": "输入暗语",
   "enterSecretKey": "输入密钥",
   "generateWallet": "生成钱包",

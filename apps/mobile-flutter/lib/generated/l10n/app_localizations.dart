@@ -978,6 +978,18 @@ abstract class AppLocalizations {
   /// **'Generate a deterministic wallet from a memorable phrase and secret key.'**
   String get enigmaDescription;
 
+  /// No description provided for @enigmaMatchCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched {count} BIP-39 words'**
+  String enigmaMatchCount(int count);
+
+  /// No description provided for @enigmaNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No BIP-39 words matched — this phrase adds no entropy, so the wallet depends on the secret key alone.'**
+  String get enigmaNoMatch;
+
   /// No description provided for @enterRiddle.
   ///
   /// In en, this message translates to:

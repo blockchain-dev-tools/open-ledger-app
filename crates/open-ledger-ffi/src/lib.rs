@@ -115,6 +115,17 @@ pub unsafe extern "C" fn enigma_entropy_hex(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn enigma_match_count(
+    riddle_ptr: *const c_char, language: u32,
+) -> *mut FfiResult {
+    let riddle = match cstr_to_str(riddle_ptr) { Some(s) => s, None => return null_err() };
+    let lang = match open_ledger_biz::mnemonic::Bip39Language::from_u32(language) {
+        Some(l) => l, None => return FfiResult::err(99, "invalid language code".into()).into_ptr(),
+    };
+    FfiResult::ok(open_ledger_biz::enigma::match_count(riddle, lang).to_string()).into_ptr()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn mnemonic_from_entropy(entropy_hex_ptr: *const c_char, language: u32) -> *mut FfiResult {
     let entropy = match cstr_to_str(entropy_hex_ptr) { Some(s) => s, None => return null_err() };
     let lang = match open_ledger_biz::mnemonic::Bip39Language::from_u32(language) {

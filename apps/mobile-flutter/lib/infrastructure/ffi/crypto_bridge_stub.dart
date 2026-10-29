@@ -52,6 +52,8 @@ class CryptoBridge {
   static String? enigmaEntropyHex(String riddle, String secret, int language) =>
       null;
 
+  static int? enigmaMatchCount(String riddle, int language) => null;
+
   static String? mnemonicFromEntropy(String entropyHex, int language) => null;
 
   // ── HD Key Derivation ───────────────────────────────────────────────

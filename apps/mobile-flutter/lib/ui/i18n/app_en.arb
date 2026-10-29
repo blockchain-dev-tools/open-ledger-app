@@ -152,6 +152,13 @@
   "copiedToClipboard": "Copied to clipboard!",
   "enigmaTitle": "Secret Phrase Wallet",
   "enigmaDescription": "Generate a deterministic wallet from a memorable phrase and secret key.",
+  "enigmaMatchCount": "Matched {count} BIP-39 words",
+  "@enigmaMatchCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "enigmaNoMatch": "No BIP-39 words matched — this phrase adds no entropy, so the wallet depends on the secret key alone.",
   "enterRiddle": "Enter your secret phrase",
   "enterSecretKey": "Enter your secret key",
   "generateWallet": "Generate Wallet",

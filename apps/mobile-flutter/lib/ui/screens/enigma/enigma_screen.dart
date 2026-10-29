@@ -36,11 +36,26 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
   bool _isGenerating = false;
   Bip39WordlistLanguage _selectedLanguage = Bip39WordlistLanguage.english;
 
+  /// Live count of BIP-39 words the riddle matches (null when the native
+  /// bridge is unavailable, in which case the hint stays hidden).
+  int? _matchCount;
+
   @override
   void dispose() {
     _riddleController.dispose();
     _secretController.dispose();
     super.dispose();
+  }
+
+  /// Recomputes [_matchCount] from the current riddle and wordlist.
+  ///
+  /// Callers wrap this in `setState`; derivation itself is cheap (one
+  /// wordlist lookup per token, capped at 1024 tokens).
+  void _refreshMatchCount() {
+    final riddle = _riddleController.text.trim();
+    _matchCount = riddle.isEmpty
+        ? 0
+        : enigmaMatchCount(riddle, language: _selectedLanguage);
   }
 
   /// Whether both input fields have content.
@@ -213,8 +228,10 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   const SizedBox(height: 8),
                   MnemonicLanguageTrigger(
                     language: _selectedLanguage,
-                    onChanged: (lang) =>
-                        setState(() => _selectedLanguage = lang),
+                    onChanged: (lang) => setState(() {
+                      _selectedLanguage = lang;
+                      _refreshMatchCount();
+                    }),
                   ),
 
                   const SizedBox(height: 20),
@@ -235,7 +252,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                       controller: _riddleController,
                       maxLines: 3,
                       style: TextStyle(color: c.text, fontSize: 15),
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (_) => setState(_refreshMatchCount),
                       decoration: _fieldDecoration(
                         c,
                         hintText:
@@ -243,6 +260,25 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                       ),
                     ),
                   ),
+
+                  // ── Match count hint ────────────────────────────────
+                  if (_riddleController.text.trim().isNotEmpty &&
+                      _matchCount != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _matchCount! > 0
+                          ? AppLocalizations.of(context)!
+                              .enigmaMatchCount(_matchCount!)
+                          : AppLocalizations.of(context)!.enigmaNoMatch,
+                      style: TextStyle(
+                        color: _matchCount! > 0
+                            ? c.mutedText(160)
+                            : c.error,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 20),
 

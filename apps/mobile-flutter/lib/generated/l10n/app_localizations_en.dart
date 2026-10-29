@@ -476,6 +476,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Generate a deterministic wallet from a memorable phrase and secret key.';
 
   @override
+  String enigmaMatchCount(int count) {
+    return 'Matched $count BIP-39 words';
+  }
+
+  @override
+  String get enigmaNoMatch =>
+      'No BIP-39 words matched — this phrase adds no entropy, so the wallet depends on the secret key alone.';
+
+  @override
   String get enterRiddle => 'Enter your secret phrase';
 
   @override

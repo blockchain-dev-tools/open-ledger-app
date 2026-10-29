@@ -463,6 +463,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get enigmaDescription => '記憶に残るフレーズと秘密鍵から決定論的ウォレットを生成します。';
 
   @override
+  String enigmaMatchCount(int count) {
+    return 'BIP-39 の単語に $count 個一致しました';
+  }
+
+  @override
+  String get enigmaNoMatch =>
+      'BIP-39 の単語が見つかりません。このフレーズはエントロピーに寄与せず、ウォレットは秘密鍵のみに依存します。';
+
+  @override
   String get enterRiddle => '合言葉を入力';
 
   @override

@@ -61,6 +61,10 @@ typedef _EnigmaDeriveDart = Pointer<FfiResult> Function(Pointer<Utf8>, Pointer<U
 typedef _MnemonicFromEntropyC = Pointer<FfiResult> Function(Pointer<Utf8>, Uint32);
 typedef _MnemonicFromEntropyDart = Pointer<FfiResult> Function(Pointer<Utf8>, int);
 
+// -- fn(*const c_char, u32) -> FfiResult (count as a decimal string)
+typedef _EnigmaCountC = Pointer<FfiResult> Function(Pointer<Utf8>, Uint32);
+typedef _EnigmaCountDart = Pointer<FfiResult> Function(Pointer<Utf8>, int);
+
 // -- fn(*const c_char, *const c_char, u32) -> FfiResult
 typedef _Pbkdf2C = Pointer<FfiResult> Function(Pointer<Utf8>, Pointer<Utf8>, Uint32);
 typedef _Pbkdf2Dart = Pointer<FfiResult> Function(Pointer<Utf8>, Pointer<Utf8>, int);
@@ -182,6 +186,9 @@ class CryptoBridge {
 
   static final _EnigmaDeriveDart _enigmaEntropyHex = _lib
       .lookupFunction<_EnigmaDeriveC, _EnigmaDeriveDart>('enigma_entropy_hex');
+
+  static final _EnigmaCountDart _enigmaMatchCount = _lib
+      .lookupFunction<_EnigmaCountC, _EnigmaCountDart>('enigma_match_count');
 
   static final _MnemonicFromEntropyDart _mnemonicFromEntropy = _lib
       .lookupFunction<_MnemonicFromEntropyC, _MnemonicFromEntropyDart>('mnemonic_from_entropy');
@@ -334,6 +341,21 @@ class CryptoBridge {
     } finally {
       calloc.free(r);
       calloc.free(s);
+    }
+  }
+
+  /// Number of BIP-39 words matched by [riddle] in [language].
+  ///
+  /// Applies the same tokenisation and derivation cap as
+  /// [enigmaDeriveMnemonic], so the count always reflects what actually feeds
+  /// the entropy. Returns null on failure.
+  static int? enigmaMatchCount(String riddle, int language) {
+    final r = _str(riddle);
+    try {
+      final raw = _resultToOptionalStr(_enigmaMatchCount(r, language));
+      return raw == null ? null : int.tryParse(raw);
+    } finally {
+      calloc.free(r);
     }
   }
 

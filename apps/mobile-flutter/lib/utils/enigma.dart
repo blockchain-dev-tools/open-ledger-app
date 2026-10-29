@@ -38,6 +38,27 @@ import '../infrastructure/ffi/crypto_bridge_stub.dart'
   return (words: phrase.split(' '), entropyHex: entropyHex);
 }
 
+/// Number of BIP-39 words [riddle] matches in the selected wordlist.
+///
+/// Uses the same tokenisation and derivation cap as [generateEnigmaMnemonic],
+/// so the count reflects exactly what feeds the entropy. Returns null when the
+/// native bridge is unavailable (web, or a test host without the Rust symbols),
+/// in which case the UI simply hides the hint.
+int? enigmaMatchCount(
+  String riddle, {
+  Bip39WordlistLanguage language = Bip39WordlistLanguage.english,
+}) {
+  if (riddle.isEmpty) return 0;
+  try {
+    return bridge.CryptoBridge.enigmaMatchCount(
+      riddle,
+      bip39LanguageCode(language),
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Generate a 24-word BIP-39 mnemonic from pre-computed entropy hex.
 ///
 /// Use this to display the same Enigma wallet in different BIP-39 wordlists

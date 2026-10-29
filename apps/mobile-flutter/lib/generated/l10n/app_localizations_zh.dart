@@ -458,6 +458,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get enigmaDescription => '通过难忘的短语和密钥确定性生成钱包。';
 
   @override
+  String enigmaMatchCount(int count) {
+    return '匹配到 $count 个 BIP-39 词汇';
+  }
+
+  @override
+  String get enigmaNoMatch => '未匹配到 BIP-39 词汇，这个暗语不会增加熵，钱包只由密钥决定。';
+
+  @override
   String get enterRiddle => '输入暗语';
 
   @override

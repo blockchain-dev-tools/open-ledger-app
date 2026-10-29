@@ -64,6 +64,14 @@ fn match_tokens(riddle: &str, lang: Language) -> Vec<String> {
     matched
 }
 
+/// 统计谜语在给定词表中命中的 token 数（仅用于 UI 提示，不参与派生）。
+///
+/// 计数规则与 [`match_tokens`] 完全一致：谜语先截断到 [`MAX_ENIGMA_CAP`]
+/// 字符，CJK 逐字切分、其他语言按空白切分，最多 [`MAX_INDICES`] 个命中。
+pub fn match_count(riddle: &str, language: Bip39Language) -> usize {
+    match_tokens(riddle, language.to_bip39_language()).len()
+}
+
 /// 步骤 2：词数组 → u16 索引数组（查词表，未命中的 token 跳过）。
 fn tokens_to_indices(tokens: &[String], lang: Language) -> Vec<u16> {
     let mut indices = Vec::with_capacity(MAX_INDICES);
