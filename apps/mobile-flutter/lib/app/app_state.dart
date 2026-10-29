@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/interfaces/wallet_service.dart';
@@ -10,12 +10,14 @@ import '../core/interfaces/screen_security.dart';
 import '../core/interfaces/ble_peripheral.dart';
 import '../core/interfaces/chain_host_service.dart';
 import '../core/interfaces/history_repository.dart';
+import '../core/interfaces/ur_codec.dart';
 import '../core/models/apdu_message.dart';
 import '../core/models/ble_types.dart';
 import '../core/models/chain.dart';
 import '../core/models/signature_record.dart';
 import '../infrastructure/ffi/chain_host_bridge.dart';
 import '../infrastructure/ffi/crypto_service_adapter.dart';
+import '../infrastructure/ffi/ur_bridge.dart';
 import '../infrastructure/platform/screen_security_channel.dart';
 import '../biz/apdu_handler.dart';
 import '../biz/ble_session.dart';
@@ -239,6 +241,18 @@ class AppState extends ChangeNotifier {
   /// [BleSession] keeps the same Rust-side session and seed.
   final ChainHostBridge _chainHostBridge = ChainHostBridge();
   IChainHostService get chainHost => _chainHostBridge;
+
+  // ── Keystone QR (T-026 prototype, debug-only) ──────────────────────
+
+  /// BC-UR codec backed by the native `ur_*` exports.
+  final UrBridge _urBridge = UrBridge();
+  IUrCodec get urCodec => _urBridge;
+
+  /// Seed handed to the QR prototype pages — the **unlocked vault seed**, so
+  /// the accounts a host derives match this wallet. `null` outside debug
+  /// builds or while the vault is locked, so release never exposes the
+  /// QRs-screen entry points and a locked vault cannot export.
+  String? get qrPrototypeSeedHex => kDebugMode ? _walletService?.seedHex : null;
 
   set blePeripheral(IBlePeripheral? bp) {
     _blePeripheral = bp;

@@ -380,5 +380,83 @@
         "example": "Calculator"
       }
     }
-  }
+  },
+
+  "keystoneTitle": "Keystone QR",
+  "keystoneEntryExport": "Connect as a host",
+  "keystoneEntryScan": "Scan to sign",
+  "keystoneExportTitle": "Export account",
+  "keystoneExportHint": "Scan this code in the host wallet to import the accounts it carries",
+  "keystoneExportFormatMetaMask": "MetaMask (5 addresses)",
+  "keystoneExportFormatKeystone": "OKX / Keystone (sync code)",
+  "keystoneExportAccountRange": "Accounts {start}–{end}",
+  "@keystoneExportAccountRange": {
+    "placeholders": {
+      "start": {
+        "type": "int",
+        "example": "0"
+      },
+      "end": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "keystoneExportPageAddresses": "Addresses in this code",
+  "keystoneExportPath": "Path",
+  "keystoneExportPrev": "Previous page",
+  "keystoneExportNext": "Next page",
+  "keystoneExportTestAccount": "Demo account — derived from a public test phrase with no funds. Never send real assets here.",
+  "keystoneScanTitle": "Scan the signing request",
+  "keystoneScanHint": "Point the camera at the QR code shown by MetaMask",
+  "keystoneScanProgress": "Collecting frames {received}/{total}",
+  "@keystoneScanProgress": {
+    "placeholders": {
+      "received": {
+        "type": "int",
+        "example": "3"
+      },
+      "total": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "keystoneReviewTitle": "Review request",
+  "keystoneReviewDataType": "Type",
+  "keystoneReviewChain": "Chain ID",
+  "keystoneReviewOrigin": "Origin",
+  "keystoneReviewPath": "Derivation path",
+  "keystoneReviewAddress": "Address",
+  "keystoneReviewDataHash": "Signing hash",
+  "keystoneReviewDataSize": "Payload",
+  "keystoneReviewTo": "To",
+  "keystoneReviewAmount": "Amount",
+  "keystoneReviewMessage": "Message",
+  "keystoneReviewCalldata": "Calldata",
+  "keystoneReviewUnknownMethod": "unknown method",
+  "keystoneReviewWarning": "Only approve when the origin and the address match what MetaMask is asking for.",
+  "keystoneDataTypeTransaction": "Transaction",
+  "keystoneDataTypePersonalMessage": "Personal message",
+  "keystoneDataTypeTypedTransaction": "Typed transaction",
+  "keystoneDataTypeUnsupported": "Unsupported ({type})",
+  "@keystoneDataTypeUnsupported": {
+    "placeholders": {
+      "type": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "keystoneApprove": "Sign",
+  "keystoneReject": "Reject",
+  "keystoneSignatureTitle": "Signature",
+  "keystoneSignatureHint": "Scan this code back into MetaMask",
+  "keystoneDone": "Done",
+  "keystoneRetry": "Retry",
+  "keystoneErrorTimeout": "Timed out waiting for the request frames.",
+  "keystoneErrorUnexpectedQr": "That QR code is not a Keystone signing request.",
+  "keystoneErrorInvalidRequest": "This signing request could not be parsed.",
+  "keystoneErrorCodecUnavailable": "QR support is unavailable in this build.",
+  "keystoneErrorSigning": "Signing failed. Nothing was sent to the host."
 }

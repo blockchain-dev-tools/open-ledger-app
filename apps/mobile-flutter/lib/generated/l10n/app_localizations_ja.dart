@@ -947,4 +947,148 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get disguiseConfirmButton => '変更';
+
+  @override
+  String get keystoneTitle => 'Keystone QR';
+
+  @override
+  String get keystoneEntryExport => 'ホストとして接続';
+
+  @override
+  String get keystoneEntryScan => 'スキャンして署名';
+
+  @override
+  String get keystoneExportTitle => 'アカウントをエクスポート';
+
+  @override
+  String get keystoneExportHint => 'ホストウォレットでこのコードをスキャンして、含まれるアカウントをインポートします';
+
+  @override
+  String get keystoneExportFormatMetaMask => 'MetaMask（5 アドレス）';
+
+  @override
+  String get keystoneExportFormatKeystone => 'OKX / Keystone（同期コード）';
+
+  @override
+  String keystoneExportAccountRange(int start, int end) {
+    return 'アカウント $start–$end';
+  }
+
+  @override
+  String get keystoneExportPageAddresses => 'このコードに含まれるアドレス';
+
+  @override
+  String get keystoneExportPath => 'パス';
+
+  @override
+  String get keystoneExportPrev => '前のページ';
+
+  @override
+  String get keystoneExportNext => '次のページ';
+
+  @override
+  String get keystoneExportTestAccount =>
+      'デモ用アカウント — 公開テストフレーズから派生したもので、資産はありません。実際の資産を送らないでください。';
+
+  @override
+  String get keystoneScanTitle => '署名リクエストをスキャン';
+
+  @override
+  String get keystoneScanHint => 'MetaMask に表示された QR コードにカメラを向けてください';
+
+  @override
+  String keystoneScanProgress(int received, int total) {
+    return 'フレームを収集中 $received/$total';
+  }
+
+  @override
+  String get keystoneReviewTitle => 'リクエストを確認';
+
+  @override
+  String get keystoneReviewDataType => '種類';
+
+  @override
+  String get keystoneReviewChain => 'チェーン ID';
+
+  @override
+  String get keystoneReviewOrigin => 'オリジン';
+
+  @override
+  String get keystoneReviewPath => '導出パス';
+
+  @override
+  String get keystoneReviewAddress => 'アドレス';
+
+  @override
+  String get keystoneReviewDataHash => '署名対象ハッシュ';
+
+  @override
+  String get keystoneReviewDataSize => 'データ長';
+
+  @override
+  String get keystoneReviewTo => '送金先';
+
+  @override
+  String get keystoneReviewAmount => '金額';
+
+  @override
+  String get keystoneReviewMessage => 'メッセージ';
+
+  @override
+  String get keystoneReviewCalldata => 'コールデータ';
+
+  @override
+  String get keystoneReviewUnknownMethod => '不明なメソッド';
+
+  @override
+  String get keystoneReviewWarning =>
+      'オリジンとアドレスが MetaMask の表示と一致する場合のみ承認してください。';
+
+  @override
+  String get keystoneDataTypeTransaction => 'トランザクション';
+
+  @override
+  String get keystoneDataTypePersonalMessage => 'パーソナルメッセージ';
+
+  @override
+  String get keystoneDataTypeTypedTransaction => 'エンコード済みトランザクション';
+
+  @override
+  String keystoneDataTypeUnsupported(int type) {
+    return '非対応（$type）';
+  }
+
+  @override
+  String get keystoneApprove => '署名';
+
+  @override
+  String get keystoneReject => '拒否';
+
+  @override
+  String get keystoneSignatureTitle => '署名結果';
+
+  @override
+  String get keystoneSignatureHint => 'このコードを MetaMask でスキャンして完了します';
+
+  @override
+  String get keystoneDone => '完了';
+
+  @override
+  String get keystoneRetry => '再試行';
+
+  @override
+  String get keystoneErrorTimeout => 'リクエストのフレーム待ちがタイムアウトしました。';
+
+  @override
+  String get keystoneErrorUnexpectedQr =>
+      'この QR コードは Keystone の署名リクエストではありません。';
+
+  @override
+  String get keystoneErrorInvalidRequest => 'この署名リクエストを解析できませんでした。';
+
+  @override
+  String get keystoneErrorCodecUnavailable => 'このビルドでは QR を利用できません。';
+
+  @override
+  String get keystoneErrorSigning => '署名に失敗しました。ホストには何も送信していません。';
 }

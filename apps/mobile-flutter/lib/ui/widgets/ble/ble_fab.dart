@@ -20,7 +20,16 @@ class BleFab extends StatefulWidget {
   final IChainBleControl control;
   final VoidCallback onTap;
 
-  const BleFab({super.key, required this.control, required this.onTap});
+  /// 外部禁用（例如 Keystone 扫码会话进行中）。与 `control.isSignPending`
+  /// 取或：任何一个理由成立都锁定按钮。
+  final bool enabled;
+
+  const BleFab({
+    super.key,
+    required this.control,
+    required this.onTap,
+    this.enabled = true,
+  });
 
   @override
   State<BleFab> createState() => _BleFabState();
@@ -61,7 +70,7 @@ class _BleFabState extends State<BleFab> with SingleTickerProviderStateMixin {
         final broadcasting = state == BleState.broadcasting;
         final connected = state == BleState.connected;
         final error = state == BleState.error;
-        final disabled = widget.control.isSignPending;
+        final disabled = widget.control.isSignPending || !widget.enabled;
         // "On" = the radio is live. It drives the solid brand fill.
         final on = broadcasting || connected;
         _syncPulse(broadcasting, disabled);

@@ -933,4 +933,146 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get disguiseConfirmButton => '更换';
+
+  @override
+  String get keystoneTitle => 'Keystone 扫码';
+
+  @override
+  String get keystoneEntryExport => '连接主机';
+
+  @override
+  String get keystoneEntryScan => '扫码签名';
+
+  @override
+  String get keystoneExportTitle => '导出账户';
+
+  @override
+  String get keystoneExportHint => '用主机钱包扫这个码，导入其中携带的账户';
+
+  @override
+  String get keystoneExportFormatMetaMask => 'MetaMask（5 个地址）';
+
+  @override
+  String get keystoneExportFormatKeystone => 'OKX / Keystone（同步码）';
+
+  @override
+  String keystoneExportAccountRange(int start, int end) {
+    return '账户 $start–$end';
+  }
+
+  @override
+  String get keystoneExportPageAddresses => '这个码里的地址';
+
+  @override
+  String get keystoneExportPath => '路径';
+
+  @override
+  String get keystoneExportPrev => '上一页账户';
+
+  @override
+  String get keystoneExportNext => '下一页账户';
+
+  @override
+  String get keystoneExportTestAccount =>
+      '演示账户——由公开测试助记词派生，无任何资产。请勿向此地址转入真实资产。';
+
+  @override
+  String get keystoneScanTitle => '扫描签名请求';
+
+  @override
+  String get keystoneScanHint => '把镜头对准 MetaMask 上的二维码';
+
+  @override
+  String keystoneScanProgress(int received, int total) {
+    return '已收集 $received/$total 帧';
+  }
+
+  @override
+  String get keystoneReviewTitle => '核对请求';
+
+  @override
+  String get keystoneReviewDataType => '类型';
+
+  @override
+  String get keystoneReviewChain => '链 ID';
+
+  @override
+  String get keystoneReviewOrigin => '来源';
+
+  @override
+  String get keystoneReviewPath => '派生路径';
+
+  @override
+  String get keystoneReviewAddress => '地址';
+
+  @override
+  String get keystoneReviewDataHash => '待签哈希';
+
+  @override
+  String get keystoneReviewDataSize => '数据长度';
+
+  @override
+  String get keystoneReviewTo => '收款地址';
+
+  @override
+  String get keystoneReviewAmount => '金额';
+
+  @override
+  String get keystoneReviewMessage => '消息内容';
+
+  @override
+  String get keystoneReviewCalldata => '调用数据';
+
+  @override
+  String get keystoneReviewUnknownMethod => '未知方法';
+
+  @override
+  String get keystoneReviewWarning => '只有在来源与地址都和 MetaMask 上一致时才批准。';
+
+  @override
+  String get keystoneDataTypeTransaction => '交易';
+
+  @override
+  String get keystoneDataTypePersonalMessage => '个人消息';
+
+  @override
+  String get keystoneDataTypeTypedTransaction => '已编码交易';
+
+  @override
+  String keystoneDataTypeUnsupported(int type) {
+    return '不支持（$type）';
+  }
+
+  @override
+  String get keystoneApprove => '签名';
+
+  @override
+  String get keystoneReject => '拒绝';
+
+  @override
+  String get keystoneSignatureTitle => '签名结果';
+
+  @override
+  String get keystoneSignatureHint => '用 MetaMask 扫这个码完成签名';
+
+  @override
+  String get keystoneDone => '完成';
+
+  @override
+  String get keystoneRetry => '重试';
+
+  @override
+  String get keystoneErrorTimeout => '等待请求二维码超时。';
+
+  @override
+  String get keystoneErrorUnexpectedQr => '这个二维码不是 Keystone 签名请求。';
+
+  @override
+  String get keystoneErrorInvalidRequest => '无法解析这个签名请求。';
+
+  @override
+  String get keystoneErrorCodecUnavailable => '当前构建不支持二维码。';
+
+  @override
+  String get keystoneErrorSigning => '签名失败，未向主机发送任何内容。';
 }

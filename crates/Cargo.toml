@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "open-ledger-crypto",
     "open-ledger-biz",
+    "open-ledger-ur",
     "open-ledger-ffi",
     "chain-app-api",
     "chain-app-runtime",

@@ -1,13 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../app/chain_ble_control_adapter.dart';
 import '../../core/interfaces/ble_peripheral.dart';
 import '../../core/interfaces/chain_ble_control.dart';
+import '../../core/interfaces/ur_codec.dart';
 import '../../core/interfaces/wallet_service.dart';
 import '../../core/models/signature_record.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../../services/settings_service.dart';
+import '../qr/keystone_account_page.dart';
+import '../qr/keystone_entry_sheet.dart';
+import '../qr/keystone_fab.dart';
+import '../qr/keystone_scan_page.dart';
 import '../theme/color_tokens.dart';
 import '../widgets/ble/ble_control_sheet.dart';
 import '../widgets/ble/ble_fab.dart';
@@ -53,6 +59,16 @@ class MainScreen extends StatefulWidget {
   /// Settings service for previews that have no [appState] (gallery).
   final SettingsService? settingsService;
 
+  /// Keystone QR codec (BC-UR). Null in gallery and when the native library
+  /// lacks the `ur_*` exports — the QR floating button is then hidden.
+  final IUrCodec? urCodec;
+
+  /// Seed (hex) used by the QR prototype to export accounts and sign.
+  ///
+  /// Debug-only: the unlocked vault seed (null while locked), so the accounts
+  /// a host derives from the QR match this wallet.
+  final String? qrSeedHex;
+
   /// Initial bottom-nav tab (0 = Vault, 1 = History, 2 = Settings).
   final int initialTabIndex;
 
@@ -74,6 +90,8 @@ class MainScreen extends StatefulWidget {
     this.previewBle,
     this.previewHistory,
     this.settingsService,
+    this.urCodec,
+    this.qrSeedHex,
     this.initialTabIndex = 0,
     this.autoOpenLogs = false,
     this.autoOpenBleControl = false,
@@ -89,6 +107,15 @@ class _MainScreenState extends State<MainScreen> {
   IChainBleControl? _chainBleControl;
   bool _ownsChainBleControl = false;
   BleLogController? _bleLogs;
+
+  /// True while a QR (account export / scan-and-sign) page is on top. The
+  /// two channels are mutually exclusive: BLE greys out during a QR session.
+  bool _qrSessionActive = false;
+
+  /// The QR entry only exists in debug builds with a native codec and the
+  /// public test seed — release builds never register it.
+  bool get _keystoneAvailable =>
+      kDebugMode && widget.urCodec?.isAvailable == true && widget.qrSeedHex != null;
 
   @override
   void initState() {
@@ -150,6 +177,75 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  /// Open the Keystone entry drawer, then push the chosen full-screen page.
+  ///
+  /// The sheet is dismissed before navigating (never sheet-on-navigation),
+  /// and [_qrSessionActive] stays set for as long as that page is on top so
+  /// the BLE button greys out for the whole QR session.
+  Future<void> _openKeystoneSheet() async {
+    final codec = widget.urCodec;
+    // Read the seed live: the route-time copy goes stale if the vault was
+    // re-unlocked, and a locked vault (null) must not export.
+    final seed = widget.appState == null
+        ? widget.qrSeedHex
+        : widget.appState!.walletService?.seedHex;
+    if (codec == null || seed == null) return;
+
+    final entry = await showKeystoneEntrySheet(context);
+    if (!mounted || entry == null) return;
+
+    setState(() => _qrSessionActive = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => entry == KeystoneEntry.exportAccount
+              ? KeystoneAccountPage(codec: codec, seedHex: seed)
+              : KeystoneScanPage(codec: codec, seedHex: seed),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _qrSessionActive = false);
+    }
+  }
+
+  /// Vault-tab floating buttons: Keystone above BLE, 12px apart.
+  ///
+  /// Keystone is hidden when unavailable (gallery / release) and greys out
+  /// while a BLE signature waits for approval; BLE greys out during a QR
+  /// session — the two channels never run at once.
+  Widget? _buildFloatingButtons() {
+    final bleControl = _currentIndex == 0 ? _chainBleControl : null;
+    if (bleControl == null) return null;
+
+    final showKeystone = _currentIndex == 0 && _keystoneAvailable;
+
+    return ListenableBuilder(
+      listenable: bleControl,
+      builder: (context, _) {
+        final keystoneEnabled =
+            showKeystone && !_qrSessionActive && !bleControl.isSignPending;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (showKeystone)
+              KeystoneFab(
+                onTap: keystoneEnabled ? _openKeystoneSheet : null,
+                busy: _qrSessionActive,
+              ),
+            if (showKeystone) const SizedBox(height: 12),
+            BleFab(
+              control: bleControl,
+              onTap: _openBleSheet,
+              enabled: !_qrSessionActive,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -184,11 +280,9 @@ class _MainScreenState extends State<MainScreen> {
       body: GridBackground(
         child: IndexedStack(index: _currentIndex, children: _buildTabs()),
       ),
-      // BLE is controlled from the Vault screen via a single floating
-      // button (chain picker / stop / switch in its bottom sheet).
-      floatingActionButton: _currentIndex == 0 && _chainBleControl != null
-          ? BleFab(control: _chainBleControl!, onTap: _openBleSheet)
-          : null,
+      // BLE and the Keystone QR channel are controlled from the Vault screen
+      // by a stacked pair of floating buttons.
+      floatingActionButton: _buildFloatingButtons(),
       // A top-edge shadow lifts the tab bar off the page. In light mode
       // `surface` and `bg` are both white, so without it the bar melts into
       // the body; in dark mode `shadow` is transparent and the surface/bg

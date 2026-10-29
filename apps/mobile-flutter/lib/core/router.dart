@@ -127,6 +127,8 @@ GoRouter createRouter({required bool initialHasWallet, AppState? appState}) {
         builder: (context, state) => MainScreen(
           walletService: appState?.walletService,
           appState: appState,
+          urCodec: appState?.urCodec,
+          qrSeedHex: appState?.qrPrototypeSeedHex,
         ),
       ),
 

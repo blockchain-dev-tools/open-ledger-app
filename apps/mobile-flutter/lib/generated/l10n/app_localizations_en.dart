@@ -981,4 +981,154 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get disguiseConfirmButton => 'Switch';
+
+  @override
+  String get keystoneTitle => 'Keystone QR';
+
+  @override
+  String get keystoneEntryExport => 'Connect as a host';
+
+  @override
+  String get keystoneEntryScan => 'Scan to sign';
+
+  @override
+  String get keystoneExportTitle => 'Export account';
+
+  @override
+  String get keystoneExportHint =>
+      'Scan this code in the host wallet to import the accounts it carries';
+
+  @override
+  String get keystoneExportFormatMetaMask => 'MetaMask (5 addresses)';
+
+  @override
+  String get keystoneExportFormatKeystone => 'OKX / Keystone (sync code)';
+
+  @override
+  String keystoneExportAccountRange(int start, int end) {
+    return 'Accounts $start–$end';
+  }
+
+  @override
+  String get keystoneExportPageAddresses => 'Addresses in this code';
+
+  @override
+  String get keystoneExportPath => 'Path';
+
+  @override
+  String get keystoneExportPrev => 'Previous page';
+
+  @override
+  String get keystoneExportNext => 'Next page';
+
+  @override
+  String get keystoneExportTestAccount =>
+      'Demo account — derived from a public test phrase with no funds. Never send real assets here.';
+
+  @override
+  String get keystoneScanTitle => 'Scan the signing request';
+
+  @override
+  String get keystoneScanHint =>
+      'Point the camera at the QR code shown by MetaMask';
+
+  @override
+  String keystoneScanProgress(int received, int total) {
+    return 'Collecting frames $received/$total';
+  }
+
+  @override
+  String get keystoneReviewTitle => 'Review request';
+
+  @override
+  String get keystoneReviewDataType => 'Type';
+
+  @override
+  String get keystoneReviewChain => 'Chain ID';
+
+  @override
+  String get keystoneReviewOrigin => 'Origin';
+
+  @override
+  String get keystoneReviewPath => 'Derivation path';
+
+  @override
+  String get keystoneReviewAddress => 'Address';
+
+  @override
+  String get keystoneReviewDataHash => 'Signing hash';
+
+  @override
+  String get keystoneReviewDataSize => 'Payload';
+
+  @override
+  String get keystoneReviewTo => 'To';
+
+  @override
+  String get keystoneReviewAmount => 'Amount';
+
+  @override
+  String get keystoneReviewMessage => 'Message';
+
+  @override
+  String get keystoneReviewCalldata => 'Calldata';
+
+  @override
+  String get keystoneReviewUnknownMethod => 'unknown method';
+
+  @override
+  String get keystoneReviewWarning =>
+      'Only approve when the origin and the address match what MetaMask is asking for.';
+
+  @override
+  String get keystoneDataTypeTransaction => 'Transaction';
+
+  @override
+  String get keystoneDataTypePersonalMessage => 'Personal message';
+
+  @override
+  String get keystoneDataTypeTypedTransaction => 'Typed transaction';
+
+  @override
+  String keystoneDataTypeUnsupported(int type) {
+    return 'Unsupported ($type)';
+  }
+
+  @override
+  String get keystoneApprove => 'Sign';
+
+  @override
+  String get keystoneReject => 'Reject';
+
+  @override
+  String get keystoneSignatureTitle => 'Signature';
+
+  @override
+  String get keystoneSignatureHint => 'Scan this code back into MetaMask';
+
+  @override
+  String get keystoneDone => 'Done';
+
+  @override
+  String get keystoneRetry => 'Retry';
+
+  @override
+  String get keystoneErrorTimeout =>
+      'Timed out waiting for the request frames.';
+
+  @override
+  String get keystoneErrorUnexpectedQr =>
+      'That QR code is not a Keystone signing request.';
+
+  @override
+  String get keystoneErrorInvalidRequest =>
+      'This signing request could not be parsed.';
+
+  @override
+  String get keystoneErrorCodecUnavailable =>
+      'QR support is unavailable in this build.';
+
+  @override
+  String get keystoneErrorSigning =>
+      'Signing failed. Nothing was sent to the host.';
 }

@@ -950,4 +950,146 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get disguiseConfirmButton => '변경';
+
+  @override
+  String get keystoneTitle => 'Keystone QR';
+
+  @override
+  String get keystoneEntryExport => '호스트로 연결';
+
+  @override
+  String get keystoneEntryScan => '스캔하여 서명';
+
+  @override
+  String get keystoneExportTitle => '계정 내보내기';
+
+  @override
+  String get keystoneExportHint => '호스트 지갑으로 이 코드를 스캔해 담긴 계정을 가져오세요';
+
+  @override
+  String get keystoneExportFormatMetaMask => 'MetaMask(주소 5개)';
+
+  @override
+  String get keystoneExportFormatKeystone => 'OKX / Keystone(동기화 코드)';
+
+  @override
+  String keystoneExportAccountRange(int start, int end) {
+    return '계정 $start–$end';
+  }
+
+  @override
+  String get keystoneExportPageAddresses => '이 코드에 담긴 주소';
+
+  @override
+  String get keystoneExportPath => '경로';
+
+  @override
+  String get keystoneExportPrev => '이전 페이지';
+
+  @override
+  String get keystoneExportNext => '다음 페이지';
+
+  @override
+  String get keystoneExportTestAccount =>
+      '데모 계정 — 공개 테스트 문구에서 파생되었으며 자산이 없습니다. 실제 자산을 보내지 마세요.';
+
+  @override
+  String get keystoneScanTitle => '서명 요청 스캔';
+
+  @override
+  String get keystoneScanHint => 'MetaMask에 표시된 QR 코드에 카메라를 맞추세요';
+
+  @override
+  String keystoneScanProgress(int received, int total) {
+    return '프레임 수집 중 $received/$total';
+  }
+
+  @override
+  String get keystoneReviewTitle => '요청 검토';
+
+  @override
+  String get keystoneReviewDataType => '유형';
+
+  @override
+  String get keystoneReviewChain => '체인 ID';
+
+  @override
+  String get keystoneReviewOrigin => '출처';
+
+  @override
+  String get keystoneReviewPath => '파생 경로';
+
+  @override
+  String get keystoneReviewAddress => '주소';
+
+  @override
+  String get keystoneReviewDataHash => '서명 해시';
+
+  @override
+  String get keystoneReviewDataSize => '데이터 길이';
+
+  @override
+  String get keystoneReviewTo => '받는 주소';
+
+  @override
+  String get keystoneReviewAmount => '금액';
+
+  @override
+  String get keystoneReviewMessage => '메시지';
+
+  @override
+  String get keystoneReviewCalldata => '호출 데이터';
+
+  @override
+  String get keystoneReviewUnknownMethod => '알 수 없는 메서드';
+
+  @override
+  String get keystoneReviewWarning => '출처와 주소가 MetaMask에 표시된 내용과 일치할 때만 승인하세요.';
+
+  @override
+  String get keystoneDataTypeTransaction => '트랜잭션';
+
+  @override
+  String get keystoneDataTypePersonalMessage => '개인 메시지';
+
+  @override
+  String get keystoneDataTypeTypedTransaction => '인코딩된 트랜잭션';
+
+  @override
+  String keystoneDataTypeUnsupported(int type) {
+    return '지원되지 않음($type)';
+  }
+
+  @override
+  String get keystoneApprove => '서명';
+
+  @override
+  String get keystoneReject => '거부';
+
+  @override
+  String get keystoneSignatureTitle => '서명 결과';
+
+  @override
+  String get keystoneSignatureHint => '이 코드를 MetaMask로 스캔해 완료하세요';
+
+  @override
+  String get keystoneDone => '완료';
+
+  @override
+  String get keystoneRetry => '다시 시도';
+
+  @override
+  String get keystoneErrorTimeout => '요청 프레임 대기 시간이 초과되었습니다.';
+
+  @override
+  String get keystoneErrorUnexpectedQr => '이 QR 코드는 Keystone 서명 요청이 아닙니다.';
+
+  @override
+  String get keystoneErrorInvalidRequest => '이 서명 요청을 해석할 수 없습니다.';
+
+  @override
+  String get keystoneErrorCodecUnavailable => '이 빌드에서는 QR을 사용할 수 없습니다.';
+
+  @override
+  String get keystoneErrorSigning => '서명에 실패했습니다. 호스트로 아무것도 전송하지 않았습니다.';
 }

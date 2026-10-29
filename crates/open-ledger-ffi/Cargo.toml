@@ -12,6 +12,7 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 open-ledger-crypto = { path = "../open-ledger-crypto" }
 open-ledger-biz = { path = "../open-ledger-biz" }
+open-ledger-ur = { path = "../open-ledger-ur" }
 chain-app-api = { path = "../chain-app-api" }
 chain-app-runtime = { path = "../chain-app-runtime" }
 chain-app-ethereum = { path = "../chain-app-ethereum" }

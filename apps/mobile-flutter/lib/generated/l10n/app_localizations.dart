@@ -1901,6 +1901,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Switch'**
   String get disguiseConfirmButton;
+
+  /// No description provided for @keystoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keystone QR'**
+  String get keystoneTitle;
+
+  /// No description provided for @keystoneEntryExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect as a host'**
+  String get keystoneEntryExport;
+
+  /// No description provided for @keystoneEntryScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan to sign'**
+  String get keystoneEntryScan;
+
+  /// No description provided for @keystoneExportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export account'**
+  String get keystoneExportTitle;
+
+  /// No description provided for @keystoneExportHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan this code in the host wallet to import the accounts it carries'**
+  String get keystoneExportHint;
+
+  /// No description provided for @keystoneExportFormatMetaMask.
+  ///
+  /// In en, this message translates to:
+  /// **'MetaMask (5 addresses)'**
+  String get keystoneExportFormatMetaMask;
+
+  /// No description provided for @keystoneExportFormatKeystone.
+  ///
+  /// In en, this message translates to:
+  /// **'OKX / Keystone (sync code)'**
+  String get keystoneExportFormatKeystone;
+
+  /// No description provided for @keystoneExportAccountRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts {start}–{end}'**
+  String keystoneExportAccountRange(int start, int end);
+
+  /// No description provided for @keystoneExportPageAddresses.
+  ///
+  /// In en, this message translates to:
+  /// **'Addresses in this code'**
+  String get keystoneExportPageAddresses;
+
+  /// No description provided for @keystoneExportPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get keystoneExportPath;
+
+  /// No description provided for @keystoneExportPrev.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous page'**
+  String get keystoneExportPrev;
+
+  /// No description provided for @keystoneExportNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next page'**
+  String get keystoneExportNext;
+
+  /// No description provided for @keystoneExportTestAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo account — derived from a public test phrase with no funds. Never send real assets here.'**
+  String get keystoneExportTestAccount;
+
+  /// No description provided for @keystoneScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the signing request'**
+  String get keystoneScanTitle;
+
+  /// No description provided for @keystoneScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the QR code shown by MetaMask'**
+  String get keystoneScanHint;
+
+  /// No description provided for @keystoneScanProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Collecting frames {received}/{total}'**
+  String keystoneScanProgress(int received, int total);
+
+  /// No description provided for @keystoneReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review request'**
+  String get keystoneReviewTitle;
+
+  /// No description provided for @keystoneReviewDataType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get keystoneReviewDataType;
+
+  /// No description provided for @keystoneReviewChain.
+  ///
+  /// In en, this message translates to:
+  /// **'Chain ID'**
+  String get keystoneReviewChain;
+
+  /// No description provided for @keystoneReviewOrigin.
+  ///
+  /// In en, this message translates to:
+  /// **'Origin'**
+  String get keystoneReviewOrigin;
+
+  /// No description provided for @keystoneReviewPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Derivation path'**
+  String get keystoneReviewPath;
+
+  /// No description provided for @keystoneReviewAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get keystoneReviewAddress;
+
+  /// No description provided for @keystoneReviewDataHash.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing hash'**
+  String get keystoneReviewDataHash;
+
+  /// No description provided for @keystoneReviewDataSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Payload'**
+  String get keystoneReviewDataSize;
+
+  /// No description provided for @keystoneReviewTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get keystoneReviewTo;
+
+  /// No description provided for @keystoneReviewAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get keystoneReviewAmount;
+
+  /// No description provided for @keystoneReviewMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get keystoneReviewMessage;
+
+  /// No description provided for @keystoneReviewCalldata.
+  ///
+  /// In en, this message translates to:
+  /// **'Calldata'**
+  String get keystoneReviewCalldata;
+
+  /// No description provided for @keystoneReviewUnknownMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'unknown method'**
+  String get keystoneReviewUnknownMethod;
+
+  /// No description provided for @keystoneReviewWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Only approve when the origin and the address match what MetaMask is asking for.'**
+  String get keystoneReviewWarning;
+
+  /// No description provided for @keystoneDataTypeTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction'**
+  String get keystoneDataTypeTransaction;
+
+  /// No description provided for @keystoneDataTypePersonalMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal message'**
+  String get keystoneDataTypePersonalMessage;
+
+  /// No description provided for @keystoneDataTypeTypedTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Typed transaction'**
+  String get keystoneDataTypeTypedTransaction;
+
+  /// No description provided for @keystoneDataTypeUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported ({type})'**
+  String keystoneDataTypeUnsupported(int type);
+
+  /// No description provided for @keystoneApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign'**
+  String get keystoneApprove;
+
+  /// No description provided for @keystoneReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get keystoneReject;
+
+  /// No description provided for @keystoneSignatureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Signature'**
+  String get keystoneSignatureTitle;
+
+  /// No description provided for @keystoneSignatureHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan this code back into MetaMask'**
+  String get keystoneSignatureHint;
+
+  /// No description provided for @keystoneDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get keystoneDone;
+
+  /// No description provided for @keystoneRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get keystoneRetry;
+
+  /// No description provided for @keystoneErrorTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed out waiting for the request frames.'**
+  String get keystoneErrorTimeout;
+
+  /// No description provided for @keystoneErrorUnexpectedQr.
+  ///
+  /// In en, this message translates to:
+  /// **'That QR code is not a Keystone signing request.'**
+  String get keystoneErrorUnexpectedQr;
+
+  /// No description provided for @keystoneErrorInvalidRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'This signing request could not be parsed.'**
+  String get keystoneErrorInvalidRequest;
+
+  /// No description provided for @keystoneErrorCodecUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'QR support is unavailable in this build.'**
+  String get keystoneErrorCodecUnavailable;
+
+  /// No description provided for @keystoneErrorSigning.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing failed. Nothing was sent to the host.'**
+  String get keystoneErrorSigning;
 }
 
 class _AppLocalizationsDelegate

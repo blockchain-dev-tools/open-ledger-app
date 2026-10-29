@@ -4,6 +4,9 @@
 
 pub mod chain_host;
 pub mod types;
+/// Keystone QR 通道（BC-UR）。一期只承载 ETH，故跟 `eth` feature 一起开关。
+#[cfg(feature = "eth")]
+pub mod ur;
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
