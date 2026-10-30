@@ -437,10 +437,11 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
 
   /// The mode switch above the panes (new-vault flow only).
   Widget _modeTabs(ColorTokens c, AppLocalizations l10n) => Padding(
-    // Neo tabs carry an offset shadow, so light leaves room below the row.
-    padding: EdgeInsets.fromLTRB(24, 12, 24, c.neobrutalism ? 6 : 0),
-    child: Row(
-      children: [
+    // [TabStrip] reserves the ledge for its shadow, so no extra bottom gap.
+    padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+    child: TabStrip(
+      c: c,
+      tabs: [
         TabButton(
           key: const Key('add-vault-tab-import'),
           c: c,
@@ -448,7 +449,6 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
           selected: _mode == 0,
           onTap: () => _switchMode(0),
         ),
-        const SizedBox(width: 8),
         TabButton(
           key: const Key('add-vault-tab-secret'),
           c: c,

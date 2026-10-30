@@ -39,6 +39,11 @@ Shared primitives live in `apps/mobile-flutter/lib/ui/widgets/common/`:
   `Neo.gridStep` reference grid; also light-only.
 - [neoAppBar](../../apps/mobile-flutter/lib/ui/widgets/common/neo_app_bar.dart) — the title bar (see
   below); every neo surface with an AppBar goes through it.
+- [TabStrip / TabButton](../../apps/mobile-flutter/lib/ui/widgets/common/tab_button.dart) — the in-page tab
+  switch, ported from the `tabs` component on neobrutalism.dev: `TabStrip` is the single outlined, offset-shadow
+  box with 4px inner padding, and `TabButton` is a trigger that stays borderless until selected, when it fills
+  `actionFill` inside a `Neo.edge` outline. A `TabButton` is an `Expanded`, so triggers share equal width;
+  dark keeps the separated pills.
 
 ## Where it is applied
 
