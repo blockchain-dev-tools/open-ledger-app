@@ -596,3 +596,132 @@ fn unknown_ins_is_rejected() {
         vec![0x6D, 0x00]
     );
 }
+
+// ── 网络：P2 高 4 位 ──────────────────────────────────────────────────
+
+/// 高 4 位网络 / 低 4 位地址格式，见 ADR-020 的落地修订。
+const NET_MAINNET: u8 = 0x00;
+const NET_TESTNET: u8 = 0x10;
+const NET_REGTEST: u8 = 0x20;
+
+fn address_for_network(p2: u8, path: &[u8]) -> String {
+    let mut fixture = setup();
+    address_of(&expect_emit(submit(
+        &mut fixture,
+        apdu_flags(0x40, 0, p2, path),
+    )))
+}
+
+/// 同一把密钥、同一条路径，只换网络位：三段 bech32 的 witness program 必须一致。
+#[test]
+fn network_nibble_only_changes_the_bech32_hrp() {
+    let mainnet = address_for_network(NET_MAINNET | P2_BECH32, &bip84_path());
+    let testnet = address_for_network(NET_TESTNET | P2_BECH32, &bip84_path());
+    let regtest = address_for_network(NET_REGTEST | P2_BECH32, &bip84_path());
+
+    assert!(mainnet.starts_with("bc1q"), "{mainnet}");
+    assert!(testnet.starts_with("tb1q"), "{testnet}");
+    assert!(regtest.starts_with("bcrt1q"), "{regtest}");
+
+    // 去掉 hrp 与 6 字符校验和（校验和本身依赖 hrp），剩下的 witness program 必须一致。
+    let program = |address: &str| {
+        let start = address.find('1').unwrap() + 1;
+        address[start..address.len() - 6].to_string()
+    };
+    assert_eq!(program(&mainnet), program(&testnet));
+    assert_eq!(program(&mainnet), program(&regtest));
+}
+
+#[test]
+fn network_nibble_changes_the_base58_prefixes_too() {
+    let mainnet = address_for_network(NET_MAINNET | P2_LEGACY, &bip84_path());
+    let testnet = address_for_network(NET_TESTNET | P2_LEGACY, &bip84_path());
+    assert!(mainnet.starts_with('1'), "{mainnet}");
+    assert!(
+        testnet.starts_with('m') || testnet.starts_with('n'),
+        "{testnet}"
+    );
+
+    let mainnet_nested = address_for_network(NET_MAINNET | P2_P2SH, &bip84_path());
+    let testnet_nested = address_for_network(NET_TESTNET | P2_P2SH, &bip84_path());
+    assert!(mainnet_nested.starts_with('3'), "{mainnet_nested}");
+    assert!(testnet_nested.starts_with('2'), "{testnet_nested}");
+}
+
+#[test]
+fn default_path_uses_the_network_coin_type() {
+    // 空数据 + regtest 必须落在 m/84'/1'/0'/0/0，而不是主网的 0'。
+    let mut implicit = setup();
+    let implicit = address_of(&expect_emit(submit(
+        &mut implicit,
+        apdu_flags(0x40, 0, NET_REGTEST | P2_BECH32, &[]),
+    )));
+    let mut explicit = setup();
+    let mut path = vec![5u8];
+    for component in [0x8000_0054u32, 0x8000_0001, 0x8000_0000, 0, 0] {
+        path.extend_from_slice(&component.to_be_bytes());
+    }
+    let explicit = address_of(&expect_emit(submit(
+        &mut explicit,
+        apdu_flags(0x40, 0, NET_REGTEST | P2_BECH32, &path),
+    )));
+    assert_eq!(implicit, explicit);
+}
+
+#[test]
+fn unknown_network_bits_are_rejected() {
+    let mut fixture = setup();
+    assert_eq!(
+        expect_emit(submit(
+            &mut fixture,
+            apdu_flags(0x40, 0, 0x42, &bip84_path())
+        )),
+        vec![0x6A, 0x86]
+    );
+}
+
+#[test]
+fn sign_accepts_the_network_nibble_but_no_format_bits() {
+    // P2=0x20：网络位合法、格式位为 0 → 进入审阅。
+    let mut fixture = setup();
+    let mut data = bip84_path();
+    data.push(1);
+    data.extend_from_slice(&[0x11u8; 32]);
+    let review_id = expect_review(submit(
+        &mut fixture,
+        apdu_flags(0x44, 0, NET_REGTEST, &data),
+    ));
+    let payload = approve(&mut fixture, review_id);
+    assert_eq!(payload.len(), 67);
+
+    // P2=0x22：签名指令不接受地址格式位。
+    let mut fixture = setup();
+    let mut data = bip84_path();
+    data.push(1);
+    data.extend_from_slice(&[0x11u8; 32]);
+    assert_eq!(
+        expect_emit(submit(
+            &mut fixture,
+            apdu_flags(0x44, 0, NET_REGTEST | P2_BECH32, &data)
+        )),
+        vec![0x6A, 0x86]
+    );
+}
+
+#[test]
+fn review_document_names_the_selected_network() {
+    let mut fixture = setup();
+    let reply = submit(
+        &mut fixture,
+        apdu_flags(0x40, 1, NET_REGTEST | P2_BECH32, &bip84_path()),
+    );
+    let document = match reply {
+        RuntimeReply::Review { document, .. } => document,
+        other => panic!("expected review, got {other:?}"),
+    };
+    assert_eq!(document.network.name, "Bitcoin Regtest");
+    match &document.sections[0].fields[0].value {
+        FieldValue::Address { network, .. } => assert_eq!(network, "Bitcoin Regtest"),
+        other => panic!("expected address field, got {other:?}"),
+    }
+}

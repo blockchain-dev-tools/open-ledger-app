@@ -40,8 +40,17 @@ def _run(payload: dict) -> dict:
     return json.loads(proc.stdout)
 
 
-def address(mnemonic: str, path: str, p2_format: int) -> tuple[str, bytes]:
-    """独立派生 (地址, 33B 压缩公钥)。`p2_format` 是官方 P2 枚举。"""
+def address(
+    mnemonic: str,
+    path: str,
+    p2_format: int,
+    *,
+    hrp: str = "bc",
+) -> tuple[str, bytes]:
+    """独立派生 (地址, 33B 压缩公钥)。`p2_format` 是官方 P2 枚举。
+
+    `hrp` 跟随网络：主网 `bc` / testnet、signet `tb` / regtest `bcrt`。
+    """
     address_type = _TYPES.get(p2_format)
     if address_type is None:
         raise ValueError(f"unsupported address format {p2_format}")
@@ -51,7 +60,7 @@ def address(mnemonic: str, path: str, p2_format: int) -> tuple[str, bytes]:
     encoding = out["encoding"]
     if "witnessVersion" in encoding:
         encoded = btcaddr.encode_segwit(
-            "bc",
+            hrp,
             encoding["witnessVersion"],
             bytes.fromhex(encoding["program"]),
         )

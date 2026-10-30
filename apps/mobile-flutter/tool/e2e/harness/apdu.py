@@ -104,23 +104,31 @@ def sign_eip712(domain_hash: bytes, struct_hash: bytes, path: str = ETH_PATH) ->
                 encode_path(path) + domain_hash + struct_hash)
 
 
+# `P2` 高 4 位 = 网络（ADR-020 的落地修订），低 4 位 = 官方地址格式。
+BTC_NET_MAINNET = 0x00
+BTC_NET_TESTNET = 0x10
+BTC_NET_REGTEST = 0x20
+BTC_NET_SIGNET = 0x30
+
+
 def btc_get_public_key(
     path: str = BTC_PATH,
     *,
     display: bool = False,
     address_format: int = 0x02,
+    network: int = BTC_NET_MAINNET,
 ) -> bytes:
     """BTC GET_WALLET_PUBLIC_KEY。
 
-    P1 = 是否在设备上确认地址（0/1），P2 = 官方 app-bitcoin 的地址格式：
-    0 legacy / 1 p2sh / 2 bech32 / 4 bech32m（cashaddr 0x03 不支持）。
-    返回该格式的地址（ASCII）。
+    P1 = 是否在设备上确认地址（0/1），P2 = 网络（高 4 位）+ 地址格式（低 4 位）。
+    地址格式沿用官方 app-bitcoin：0 legacy / 1 p2sh / 2 bech32 / 4 bech32m
+    （cashaddr 0x03 不支持）。返回该网络与格式下的地址（ASCII）。
     """
     return apdu(
         CLA_BTC,
         INS_BTC_GET_PUBLIC_KEY,
         0x01 if display else 0x00,
-        address_format,
+        network | address_format,
         encode_path(path),
     )
 
@@ -130,11 +138,12 @@ def btc_sign(
     path: str = BTC_PATH,
     *,
     hash_type: int = 0,
+    network: int = BTC_NET_MAINNET,
 ) -> bytes:
     """多输入签名：`[path][count][sighash(32)]*count`，P1 = sighash type。
 
-    Taproot 路径（`m/86'`）把 P1 当作 BIP-341 hash_type；非 0 时设备签名
-    的消息是 `sighash || hash_type`。
+    P2 只允许携带网络位（低 4 位必须为 0）。Taproot 路径（`m/86'`）把 P1 当作
+    BIP-341 hash_type；非 0 时设备签的消息是 `sighash || hash_type`。
     """
     if not sighashes or len(sighashes) > 16:
         raise ValueError("sighashes 数量必须在 1..=16")
@@ -142,7 +151,7 @@ def btc_sign(
         if len(sighash) != 32:
             raise ValueError("每个 sighash 必须是 32 字节")
     data = encode_path(path) + bytes([len(sighashes)]) + b"".join(sighashes)
-    return apdu(CLA_BTC, INS_BTC_SIGN_TX, hash_type, 0x00, data)
+    return apdu(CLA_BTC, INS_BTC_SIGN_TX, hash_type, network, data)
 
 
 def parse_response(resp: bytes) -> tuple[bytes, int]:

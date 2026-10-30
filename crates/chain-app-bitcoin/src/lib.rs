@@ -38,11 +38,83 @@ const CLA_BTC: u8 = 0xE1;
 const INS_GET_PUBLIC_KEY: u8 = 0x40;
 const INS_SIGN_TX: u8 = 0x44;
 
-/// `m/84'/0'/0'/0/0`（BIP-84 P2WPKH，也是历史默认账户）。
-const DEFAULT_PATH: [u32; 5] = [0x8000_0054, 0x8000_0000, 0x8000_0000, 0, 0];
-
 /// 一笔交易最多接受的输入数；超过即拒，避免一次审批绑过多签名。
 const MAX_INPUTS: usize = 16;
+
+/// Bitcoin 网络。只影响地址编码、默认 coin type 与审阅文案，不改变密钥。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Network {
+    Mainnet,
+    Testnet,
+    Regtest,
+    Signet,
+}
+
+impl Network {
+    /// `P2` 高 4 位：0 主网 / 1 testnet / 2 regtest / 3 signet。
+    fn from_code(code: u8) -> Option<Self> {
+        match code {
+            0x00 => Some(Network::Mainnet),
+            0x01 => Some(Network::Testnet),
+            0x02 => Some(Network::Regtest),
+            0x03 => Some(Network::Signet),
+            _ => None,
+        }
+    }
+
+    fn hrp(self) -> &'static str {
+        match self {
+            Network::Mainnet => "bc",
+            Network::Testnet | Network::Signet => "tb",
+            Network::Regtest => "bcrt",
+        }
+    }
+
+    /// BIP-44 coin type：主网 `0'`，其余测试网络 `1'`。
+    fn coin_type(self) -> u32 {
+        match self {
+            Network::Mainnet => 0,
+            Network::Testnet | Network::Regtest | Network::Signet => 1,
+        }
+    }
+
+    /// P2PKH 版本字节：主网 `0x00`，测试网络 `0x6F`。
+    fn p2pkh_version(self) -> u8 {
+        match self {
+            Network::Mainnet => 0x00,
+            _ => 0x6F,
+        }
+    }
+
+    /// P2SH 版本字节：主网 `0x05`，测试网络 `0xC4`。
+    fn p2sh_version(self) -> u8 {
+        match self {
+            Network::Mainnet => 0x05,
+            _ => 0xC4,
+        }
+    }
+
+    /// 审阅页里展示的网络名。
+    fn display_name(self) -> &'static str {
+        match self {
+            Network::Mainnet => "Bitcoin",
+            Network::Testnet => "Bitcoin Testnet",
+            Network::Regtest => "Bitcoin Regtest",
+            Network::Signet => "Bitcoin Signet",
+        }
+    }
+}
+
+/// 解析 `P2`：高 4 位是网络，低 4 位是地址格式。
+///
+/// 低 4 位沿用官方 app-bitcoin 的 `P2_ADDR_FORMAT_*`，所以真实主机（发 `P2=0`
+/// 或 `0x02`）的行为与主网逐字节一致；网络位只有我们自己使用
+/// （见 ADR-020 的落地修订）。
+fn parse_p2(p2: u8) -> Result<(Network, AddressType), u16> {
+    let network = Network::from_code(p2 >> 4).ok_or(sw::WRONG_P1_P2)?;
+    let address_type = AddressType::from_p2(p2 & 0x0F).ok_or(sw::WRONG_DATA)?;
+    Ok((network, address_type))
+}
 
 /// 本机账户页可选的地址类型，按 `account_profile_index` 索引。
 ///
@@ -114,15 +186,15 @@ impl AddressType {
         Self::from_purpose(purpose - 0x8000_0000)
     }
 
-    /// 33 字节压缩公钥 → 地址。
-    fn encode(self, compressed_pubkey: &[u8]) -> Option<String> {
+    /// 33 字节压缩公钥 → 地址。网络只换前缀，不换密钥。
+    fn encode(self, compressed_pubkey: &[u8], network: Network) -> Option<String> {
         if compressed_pubkey.len() != 33 {
             return None;
         }
         Some(match self {
             AddressType::Legacy => {
                 let mut payload = Vec::with_capacity(21);
-                payload.push(0x00);
+                payload.push(network.p2pkh_version());
                 payload.extend_from_slice(&hash160::hash(compressed_pubkey));
                 base58::encode_check(&payload)
             }
@@ -132,14 +204,14 @@ impl AddressType {
                 script.push(0x14);
                 script.extend_from_slice(&hash160::hash(compressed_pubkey));
                 let mut payload = Vec::with_capacity(21);
-                payload.push(0x05);
+                payload.push(network.p2sh_version());
                 payload.extend_from_slice(&hash160::hash(&script));
                 base58::encode_check(&payload)
             }
-            AddressType::NativeSegwit => bech32::encode("bc", 0, &hash160::hash(compressed_pubkey)),
+            AddressType::NativeSegwit => bech32::encode(network.hrp(), 0, &hash160::hash(compressed_pubkey)),
             AddressType::Taproot => {
                 let output_key = secp256k1::taproot_output_key(&compressed_pubkey[1..]).ok()?;
-                bech32::encode_segwit("bc", 1, &output_key)
+                bech32::encode_segwit(network.hrp(), 1, &output_key)
             }
         })
     }
@@ -188,6 +260,7 @@ struct Pending {
     path: Vec<u32>,
     address: String,
     address_type: AddressType,
+    network: Network,
     /// 待签摘要；`None` 表示这是地址查询。
     sighashes: Option<Vec<[u8; 32]>>,
     /// 地址查询时是否要用户确认（P1 = 1）。
@@ -245,7 +318,7 @@ impl BitcoinModule {
         }
     }
 
-    /// `P1` = 是否在设备上确认地址，`P2` = 地址格式。
+    /// `P1` = 是否在设备上确认地址，`P2` = 网络（高 4 位）+ 地址格式（低 4 位）。
     fn handle_get_public_key(
         &mut self,
         exchange_id: ExchangeId,
@@ -256,10 +329,11 @@ impl BitcoinModule {
         if p1 > 1 {
             return Ok(self.emit(exchange_id, status(sw::WRONG_P1_P2)));
         }
-        let Some(address_type) = AddressType::from_p2(p2) else {
-            return Ok(self.emit(exchange_id, status(sw::WRONG_DATA)));
+        let (network, address_type) = match parse_p2(p2) {
+            Ok(parsed) => parsed,
+            Err(code) => return Ok(self.emit(exchange_id, status(code))),
         };
-        let (path, rest) = match split_path(data) {
+        let (path, rest) = match split_path(data, network) {
             Some(split) => split,
             None => return Ok(self.emit(exchange_id, status(sw::WRONG_DATA))),
         };
@@ -271,6 +345,7 @@ impl BitcoinModule {
             path: path.clone(),
             address: String::new(),
             address_type,
+            network,
             sighashes: None,
             display: p1 == 1,
             hash_type: 0,
@@ -288,6 +363,7 @@ impl BitcoinModule {
         })
     }
 
+    /// `P1` = sighash type（Taproot 用），`P2` 只允许携带网络位（低 4 位必须为 0）。
     fn handle_sign(
         &mut self,
         exchange_id: ExchangeId,
@@ -295,10 +371,13 @@ impl BitcoinModule {
         p2: u8,
         data: &[u8],
     ) -> Result<Effect, AppError> {
-        if p2 != 0 {
+        let Some(network) = Network::from_code(p2 >> 4) else {
+            return Ok(self.emit(exchange_id, status(sw::WRONG_P1_P2)));
+        };
+        if p2 & 0x0F != 0 {
             return Ok(self.emit(exchange_id, status(sw::WRONG_P1_P2)));
         }
-        let (path, rest) = match split_path(data) {
+        let (path, rest) = match split_path(data, network) {
             Some(split) => split,
             None => return Ok(self.emit(exchange_id, status(sw::WRONG_DATA))),
         };
@@ -324,6 +403,7 @@ impl BitcoinModule {
             path: path.clone(),
             address: String::new(),
             address_type,
+            network,
             sighashes: Some(sighashes),
             display: false,
             hash_type: p1,
@@ -380,19 +460,21 @@ impl BitcoinModule {
     }
 
     fn handle_service_result(&mut self, result: ServiceResult) -> Result<Effect, AppError> {
-        // 本机账户派生：结果直接回给 UI，不涉及 APDU。
+        // 本机账户派生：结果直接回给 UI，不涉及 APDU。账户页固定主网。
         if let Some((request_id, address_type)) = self.local.take() {
             self.stage = Stage::Idle;
             let payload = match result {
-                ServiceResult::PublicKey(key) => match address_type.encode(&key.bytes) {
-                    Some(address) => format!(
-                        "{{\"address\":\"{address}\",\"public_key\":\"{}\",\"address_type\":\"{}\"}}",
-                        hex::encode(&key.bytes),
-                        address_type.as_str()
-                    )
-                    .into_bytes(),
-                    None => Vec::new(),
-                },
+                ServiceResult::PublicKey(key) => {
+                    match address_type.encode(&key.bytes, Network::Mainnet) {
+                        Some(address) => format!(
+                            "{{\"address\":\"{address}\",\"public_key\":\"{}\",\"address_type\":\"{}\"}}",
+                            hex::encode(&key.bytes),
+                            address_type.as_str()
+                        )
+                        .into_bytes(),
+                        None => Vec::new(),
+                    }
+                }
                 _ => Vec::new(),
             };
             return Ok(Effect::LocalReply {
@@ -411,11 +493,9 @@ impl BitcoinModule {
                 return Err(AppError::InvalidEvent("unexpected storage result".into()))
             }
         };
-        let address = match self
-            .pending
-            .as_ref()
-            .and_then(|pending| pending.address_type.encode(&key.bytes))
-        {
+        let address = match self.pending.as_ref().and_then(|pending| {
+            pending.address_type.encode(&key.bytes, pending.network)
+        }) {
             Some(address) => address,
             None => {
                 let exchange_id = self.pending.take().map(|p| p.exchange_id).unwrap_or(1);
@@ -424,7 +504,7 @@ impl BitcoinModule {
             }
         };
 
-        let (exchange_id, path, sighashes, display, hash_type) = {
+        let (exchange_id, path, sighashes, display, hash_type, network_name) = {
             let pending = self
                 .pending
                 .as_mut()
@@ -436,6 +516,7 @@ impl BitcoinModule {
                 pending.sighashes.clone(),
                 pending.display,
                 pending.hash_type,
+                pending.network.display_name(),
             )
         };
 
@@ -456,7 +537,7 @@ impl BitcoinModule {
                     document: ReviewDocument {
                         operation: OperationKind::AddressConfirmation,
                         network: NetworkId {
-                            name: "Bitcoin".into(),
+                            name: network_name.into(),
                             chain_id: None,
                         },
                         account: Some(address.clone()),
@@ -466,7 +547,7 @@ impl BitcoinModule {
                                 label_key: "review.field.address".into(),
                                 value: FieldValue::Address {
                                     value: address,
-                                    network: "Bitcoin".into(),
+                                    network: network_name.into(),
                                     role: "account".into(),
                                 },
                             }],
@@ -511,7 +592,7 @@ impl BitcoinModule {
                 document: ReviewDocument {
                     operation: OperationKind::Transaction,
                     network: NetworkId {
-                        name: "Bitcoin".into(),
+                        name: network_name.into(),
                         chain_id: None,
                     },
                     account: Some(address.clone()),
@@ -522,7 +603,7 @@ impl BitcoinModule {
                                 label_key: "review.field.address".into(),
                                 value: FieldValue::Address {
                                     value: address,
-                                    network: "Bitcoin".into(),
+                                    network: network_name.into(),
                                     role: "account".into(),
                                 },
                             },
@@ -672,10 +753,21 @@ fn path_is_taproot(path: &[u32]) -> bool {
     matches!(AddressType::from_path(path), Some(AddressType::Taproot))
 }
 
-/// `[count][u32 BE]*` → 路径；空数据用默认 `m/84'/0'/0'/0/0`。
-fn split_path(data: &[u8]) -> Option<(Vec<u32>, &[u8])> {
+/// 默认路径 `m/84'/{coin}'/0'/0/0`：主网 `0'`，testnet/regtest/signet `1'`。
+fn default_path(network: Network) -> Vec<u32> {
+    vec![
+        0x8000_0000 + 84,
+        0x8000_0000 + network.coin_type(),
+        0x8000_0000,
+        0,
+        0,
+    ]
+}
+
+/// `[count][u32 BE]*` → 路径；空数据用该网络的默认 BIP-84 路径。
+fn split_path(data: &[u8], network: Network) -> Option<(Vec<u32>, &[u8])> {
     if data.is_empty() {
-        return Some((DEFAULT_PATH.to_vec(), &[]));
+        return Some((default_path(network), &[]));
     }
     let count = data[0] as usize;
     let end = 1 + count.checked_mul(4)?;
