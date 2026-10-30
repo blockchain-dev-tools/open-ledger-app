@@ -140,10 +140,11 @@ def btc_sign(
     hash_type: int = 0,
     network: int = BTC_NET_MAINNET,
 ) -> bytes:
-    """多输入签名：`[path][count][sighash(32)]*count`，P1 = sighash type。
+    """自有扩展 `SIGN_DIGEST`：`[path][count][sighash(32)]*count`，P1 = sighash type。
 
-    P2 只允许携带网络位（低 4 位必须为 0）。Taproot 路径（`m/86'`）把 P1 当作
-    BIP-341 hash_type；非 0 时设备签的消息是 `sighash || hash_type`。
+    这**不是** Ledger 协议：官方现行 app 的 `E1 04` 是 `SIGN_PSBT`，legacy app 的
+    `0x44` 是 `HASH_INPUT_START`（摘要由设备算）。设备据此声明 `blind-signing`。
+    P2 只允许携带网络位（低 4 位必须为 0）。
     """
     if not sighashes or len(sighashes) > 16:
         raise ValueError("sighashes 数量必须在 1..=16")

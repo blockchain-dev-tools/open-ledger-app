@@ -725,3 +725,45 @@ fn review_document_names_the_selected_network() {
         other => panic!("expected address field, got {other:?}"),
     }
 }
+
+// ── 协议口径：非标准实现必须是「显式的非标准」 ────────────────────────
+
+/// 官方现行 app（`LedgerHQ/app-bitcoin` 2.1.0+，CLA `0xE1`）的命令编号：
+/// `0x00` GET_EXTENDED_PUBKEY、`0x02` REGISTER_WALLET、`0x03` GET_WALLET_ADDRESS、
+/// `0x04` SIGN_PSBT、`0x05` GET_MASTER_FINGERPRINT、`0x10` SIGN_MESSAGE。
+///
+/// 这些编号**不得**被赋予别的语义。等真正实现 SIGN_PSBT 时，这条测试会失败，
+/// 提醒把它从「必须拒绝」的名单里移走 —— 这就是防协议漂移的闸门。
+#[test]
+fn official_bitcoin_commands_are_not_silently_reinterpreted() {
+    for ins in [0x00u8, 0x02, 0x03, 0x04, 0x05, 0x10] {
+        let mut fixture = setup();
+        assert_eq!(
+            expect_emit(submit(&mut fixture, apdu(ins, &[]))),
+            vec![0x6D, 0x00],
+            "INS 0x{ins:02X} 属于官方 2.1.0+ 协议，不能被我们的实现接管"
+        );
+    }
+}
+
+/// legacy app 的 `0x44` 是 `HASH_INPUT_START`（开始累积输入脚本），而我们的
+/// `0x44` 是「主机交摘要」。既然语义不同，确认页就必须声明这是盲签。
+#[test]
+fn sign_digest_declares_blind_signing() {
+    let mut fixture = setup();
+    let mut data = bip84_path();
+    data.push(1);
+    data.extend_from_slice(&[0x11u8; 32]);
+    let document = match submit(&mut fixture, apdu_flags(0x44, 0, 0, &data)) {
+        RuntimeReply::Review { document, .. } => document,
+        other => panic!("expected review, got {other:?}"),
+    };
+    assert_eq!(document.parse_status, ParseStatus::Partial);
+    let risk = document
+        .risks
+        .iter()
+        .find(|risk| risk.code == "blind-signing")
+        .expect("盲签必须带 blind-signing 风险");
+    assert_eq!(risk.severity, RiskLevel::Critical);
+    assert_eq!(risk.source, RiskSource::Module);
+}

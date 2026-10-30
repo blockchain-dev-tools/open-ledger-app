@@ -4,9 +4,9 @@
 library;
 
 /// CLA byte mapping:
-///   0xe0 — OS commands / Solana / Ethereum / Tron
-///   0xe1 — Bitcoin (legacy)
-///   0xf8 — Bitcoin (extended)
+///   0xe0 — OS commands / Solana / Ethereum / Tron / legacy Bitcoin app
+///   0xe1 — Bitcoin (current app, protocol 2.1.0+)
+///   0xf8 — Bitcoin framework (`F8 01 CONTINUE` only)
 ///   0x07 — Sui
 
 import 'dart:typed_data';

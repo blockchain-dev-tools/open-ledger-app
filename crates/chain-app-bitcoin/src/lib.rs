@@ -1,12 +1,33 @@
 //! Bitcoin 链 App（阶段 3）。
 //!
-//! 迁移范围与现有 Dart 实现保持一致，但把「多输入」做成一等能力：
+//! 协议实现状态：**非标准实现，真实主机不可用**。
 //!
-//! - `E1 40 GET_WALLET_PUBLIC_KEY`：P1 = 是否在设备上确认地址（0/1），
-//!   P2 = 地址格式（0 legacy / 1 p2sh / 2 bech32 / 4 bech32m），按路径派生公钥后
-//!   编码成对应类型。P2 与路径 purpose 不一致时仍按 P2 编码 —— 与官方
-//!   app-bitcoin 的行为一致（主机总是发送与路径匹配的格式）。
-//! - `E1 44 SIGN_TRANSACTION`：`[path][input_count][sighash(32)]*count`，
+//! Ledger 官方有两套 Bitcoin APDU 协议，本模块的编号组合与两者都不匹配：
+//!
+//! - legacy app（`LedgerHQ/app-bitcoin-legacy`）：`CLA 0xE0`，
+//!   `0x40 GET_WALLET_PUBLIC_KEY` / `0x44 HASH_INPUT_START` /
+//!   `0x48 HASH_INPUT_FINALIZE_FULL` / `0x4A HASH_SIGN`，摘要由设备自己算。
+//! - 现行 app（`LedgerHQ/app-bitcoin`，协议 2.1.0+）：`CLA 0xE1`，
+//!   `0x00 GET_EXTENDED_PUBKEY` / `0x03 GET_WALLET_ADDRESS` / `0x04 SIGN_PSBT`，
+//!   `P1` 必须为 0、`P2` 是协议版本；`SIGN_PSBT` 是 Merkleized 交互协议，
+//!   设备会反向请求 `GET_PREIMAGE` / `GET_MERKLE_LEAF_PROOF`。
+//!
+//! 本模块使用 `CLA 0xE1`（现行 app 的 CLA）+ legacy 编号，且 `0x44` 的负载是
+//! 我们自己定义的「主机算好 32 字节摘要，设备直接签」。两套官方协议都不会发出
+//! 这个组合，所以真实主机拿到的是 `6D00`，只有本仓的参考主机能用。
+//!
+//! 由此带来的约束：
+//!
+//! - 签名是**盲签**：确认页必须显式声明 `blind-signing` 风险，`parse_status`
+//!   只能是 `Partial`（见 `handle_sign`）；
+//! - 与标准对齐的工作见 T-028（`SIGN_PSBT` 或 legacy `HASH_INPUT` 流程）；
+//! - **不得再占用官方编号并赋予不同语义**：扩展必须换编号并在本文档首行标明。
+//!
+//! 具体命令：
+//!
+//! - `E1 40`：P1 = 是否在设备上确认地址（0/1），P2 = 地址格式（0 legacy /
+//!   1 p2sh / 2 bech32 / 4 bech32m），按路径派生公钥后编码成对应类型。
+//! - `E1 44`（自有扩展 `SIGN_DIGEST`）：`[path][input_count][sighash(32)]*count`，
 //!   一次审批为多个输入产出签名，按输入顺序拼接返回。P1 是 sighash type：
 //!   Taproot（`m/86'`）把它作为 BIP-341 hash_type 传给宿主（非 0 时签名消息
 //!   多一个字节），其余类型沿用 65 字节紧凑 ECDSA 输出。
@@ -17,8 +38,8 @@ use chain_app_api::{
     AppDescriptor, AppError, ChainApp, Curve, DerivationRule, DerivationScheme, Effect, Event,
     ExchangeId, Field, FieldValue, FinishStatus, KeyOutput, NetworkId, OperationKind,
     ParseStatus, PublicKeyRequest, ReviewAction, ReviewDocument, ReviewOutcome, ReviewRequest,
-    ReviewSection, ServiceResult, SessionConfig, SignOperation, SignPlan, SignScheme, Wire,
-    API_VERSION,
+    ReviewSection, Risk, RiskLevel, RiskSource, ServiceResult, SessionConfig, SignOperation,
+    SignPlan, SignScheme, Wire, API_VERSION,
 };
 use open_ledger_crypto::{base58, bech32, hash160, secp256k1};
 
@@ -35,8 +56,11 @@ pub mod sw {
 pub const MODULE_ID: &str = "openledger.bitcoin";
 
 const CLA_BTC: u8 = 0xE1;
+/// `0x40` 沿用 legacy 编号，但在官方现行 app 里 `0x40` 未分配（见模块文档）。
 const INS_GET_PUBLIC_KEY: u8 = 0x40;
-const INS_SIGN_TX: u8 = 0x44;
+/// 自有扩展：主机交摘要、设备直接签。官方现行 app 的 `0x04` 是 `SIGN_PSBT`，
+/// legacy 的 `0x44` 是 `HASH_INPUT_START` —— 两者语义都不是本命令。
+const INS_SIGN_DIGEST: u8 = 0x44;
 
 /// 一笔交易最多接受的输入数；超过即拒，避免一次审批绑过多签名。
 const MAX_INPUTS: usize = 16;
@@ -313,7 +337,7 @@ impl BitcoinModule {
                 apdu.p2,
                 &apdu.data,
             ),
-            INS_SIGN_TX => self.handle_sign(exchange_id, apdu.p1, apdu.p2, &apdu.data),
+            INS_SIGN_DIGEST => self.handle_sign(exchange_id, apdu.p1, apdu.p2, &apdu.data),
             _ => Ok(self.emit(exchange_id, status(sw::UNKNOWN_INS))),
         }
     }
@@ -621,8 +645,18 @@ impl BitcoinModule {
                             },
                         ],
                     }],
-                    risks: vec![],
-                    parse_status: ParseStatus::Complete,
+                    // 设备只拿到摘要，没有任何可解析的交易内容：这是盲签，
+                    // 必须显式声明，不能伪装成「已审阅的交易」。
+                    risks: vec![Risk {
+                        code: "blind-signing".into(),
+                        severity: RiskLevel::Critical,
+                        parameters: vec![(
+                            "reason".into(),
+                            "host supplied digests; transaction not parsed".into(),
+                        )],
+                        source: RiskSource::Module,
+                    }],
+                    parse_status: ParseStatus::Partial,
                 },
                 action: ReviewAction::Sign(SignPlan { operations }),
             }),
@@ -793,12 +827,13 @@ pub fn descriptor() -> AppDescriptor {
             version: "2.4.0".into(),
             wire: Wire::LedgerApdu,
             supported: vec![
-                "E1 40 GET_WALLET_PUBLIC_KEY (p2pkh / p2sh-p2wpkh / p2wpkh / p2tr)".into(),
-                "E1 44 SIGN_TRANSACTION (multi-input, ECDSA + taproot schnorr)".into(),
+                "E1 40 GET_WALLET_PUBLIC_KEY (legacy numbering on the current app's CLA; non-standard)".into(),
+                "E1 44 SIGN_DIGEST (own extension: host supplies digests; blind signing)".into(),
             ],
             unsupported: vec![
                 "cashaddr (BCH)".into(),
-                "PSBT multi-round signing".into(),
+                "E1 03 GET_WALLET_ADDRESS / E1 04 SIGN_PSBT (official 2.1.0+ protocol)".into(),
+                "legacy HASH_INPUT_START / HASH_INPUT_FINALIZE_FULL / HASH_SIGN flow".into(),
             ],
             vector_sources: vec![
                 "tool/e2e/tests/btc_sign.py".into(),

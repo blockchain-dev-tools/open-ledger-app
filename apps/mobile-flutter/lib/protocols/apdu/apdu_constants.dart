@@ -4,10 +4,15 @@
 ///
 /// CLA byte mapping (per AGENTS.md and mono constants):
 ///   0xb0 — Ethereum (app-specific)
-///   0xe0 — OS commands / Ethereum / Solana / Tron
-///   0xe1 — Bitcoin (legacy)
-///   0xf8 — Bitcoin (extended)
+///   0xe0 — OS commands / Ethereum / Solana / Tron / legacy Bitcoin app
+///   0xe1 — Bitcoin (current app, protocol 2.1.0+)
+///   0xf8 — Bitcoin (framework: CONTINUE for interrupted commands)
 ///   0x07 — Sui
+///
+/// NOTE: the legacy Bitcoin app uses CLA 0xe0, the current one 0xe1. Our own
+/// Bitcoin extension (host-supplied digests) lives on 0xe1 with legacy-style
+/// INS numbers and is **not** something a real Ledger host will ever send; see
+/// `crates/chain-app-bitcoin/src/lib.rs` for the exact status.
 ///
 /// NOTE on Tron: the real Ledger Tron app (@ledgerhq/hw-app-trx in
 /// LedgerHQ/ledger-live) speaks **CLA 0xE0**, the same CLA as the Ethereum
@@ -28,10 +33,11 @@ class Cla {
   /// Global / OS-level commands (GET_APP_AND_VERSION etc.).
   static const int global = 0xb0;
 
-  /// Bitcoin (legacy).
+  /// Bitcoin (current app, protocol 2.1.0+). The legacy app used 0xe0.
   static const int bitcoin = 0xe1;
 
-  /// Bitcoin (extended protocol).
+  /// Bitcoin framework channel: only `F8 01 CONTINUE` (answering an
+  /// interrupted command). Not an app command namespace.
   static const int bitcoinExt = 0xf8;
 
   /// Sui.
