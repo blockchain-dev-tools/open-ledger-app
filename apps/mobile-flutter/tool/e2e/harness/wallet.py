@@ -44,7 +44,11 @@ async def create_wallet(
     adb(dev.serial, "shell", "input", "keyevent", "111")
     await app.settle(0.8)
 
-    await app.tap_type("PrimaryButton")  # Import（已校验通过才可用）
+    # Import（已校验通过才可用）。按稳定 ValueKey 点：按钮由 ImportButton 自绘，
+    # runtimeType 不是 PrimaryButton，`tap_type("PrimaryButton")` 会 NOT_FOUND。
+    hit = await app.tap_key("import-mnemonic-submit")
+    if not hit.startswith("TAPPED"):
+        raise RuntimeError(f"未点到 Import：{hit}")
     await app.wait_for_screen({"SetPinScreen"}, timeout=8)
     await app.settle(0.8)
 
