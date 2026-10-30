@@ -5,7 +5,8 @@
 暗语（Enigma）流程，验证暗语派生的钱包被**追加**为第二个金库，而不是
 覆盖主钱包：
 
-  1. Manage Vaults → New Vault → ImportMnemonicScreen（按钮 "Use a secret phrase"）；
+  1. Manage Vaults → New Vault → ImportMnemonicScreen（标题栏 "New Vault"，
+     顶部模式 tab：Import phrase / Secret phrase）；
   2. 暗语 + 密钥 → Generate → 24 词语 → Continue → SetPinScreen；
   3. 单相位 PIN 复用会话凭据 → 回到 Accounts，切换器里出现 "Vault 2"。
 
@@ -72,7 +73,7 @@ async def run() -> int:
             if not await app.has_text("New Vault"):
                 print("[FAIL] 新金库流程没有显示 New Vault 标题")
                 return 1
-            await _tap(app, "use-secret-phrase", "Use a secret phrase")
+            await _tap(app, "add-vault-tab-secret", "Secret phrase tab")
             screens = await app.wait_for_screen({"EnigmaScreen"}, timeout=8)
             if "EnigmaScreen" not in screens:
                 print(f"[FAIL] 未进入暗语屏：{screens}")

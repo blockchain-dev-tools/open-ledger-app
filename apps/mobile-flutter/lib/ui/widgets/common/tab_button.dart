@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../theme/color_tokens.dart';
-import '../../../widgets/common/neo_card.dart';
+import '../../theme/color_tokens.dart';
+import 'neo_card.dart';
 
-/// A pill-shaped tab selector for the mnemonic step.
+/// A pill-shaped tab selector for a wide two- or three-way mode switch.
 ///
 /// In neo (light) each tab is a [NeoCard]; the selected tab fills with the
 /// brand lime and carries the offset shadow so it reads as the raised key,
 /// while the rest sit flat. Dark keeps the original pill.
+///
+/// Shared by the stand-in wizard's mnemonic step and the vault manager's
+/// "New Vault" mode tabs, so the selector cannot drift between them.
 class TabButton extends StatelessWidget {
   final ColorTokens c;
   final String label;

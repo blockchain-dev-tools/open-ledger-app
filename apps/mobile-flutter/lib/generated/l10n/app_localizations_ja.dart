@@ -180,7 +180,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newVault => '新しい金庫';
 
   @override
-  String get addVaultSecretPhrase => '合言葉を使う';
+  String get newVaultImportTab => 'フレーズをインポート';
+
+  @override
+  String get newVaultSecretTab => '合言葉';
 
   @override
   String get vaultLimitReached => '金庫の上限に達しました。先に一つ削除してください。';

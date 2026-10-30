@@ -432,11 +432,17 @@ abstract class AppLocalizations {
   /// **'New Vault'**
   String get newVault;
 
-  /// No description provided for @addVaultSecretPhrase.
+  /// No description provided for @newVaultImportTab.
   ///
   /// In en, this message translates to:
-  /// **'Use a secret phrase'**
-  String get addVaultSecretPhrase;
+  /// **'Import phrase'**
+  String get newVaultImportTab;
+
+  /// No description provided for @newVaultSecretTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret phrase'**
+  String get newVaultSecretTab;
 
   /// No description provided for @vaultLimitReached.
   ///

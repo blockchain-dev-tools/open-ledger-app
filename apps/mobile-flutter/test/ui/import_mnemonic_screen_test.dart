@@ -209,30 +209,38 @@ void main() {
     expect(find.text('Invalid recovery phrase'), findsNothing);
   });
 
-  testWidgets('first-run import offers no secret-phrase entry', (tester) async {
+  testWidgets('first-run import offers no secret-phrase tab', (tester) async {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
     expect(find.text('Import Wallet'), findsOneWidget);
-    expect(find.byKey(const Key('use-secret-phrase')), findsNothing);
+    expect(find.byKey(const Key('add-vault-tab-secret')), findsNothing);
+    expect(find.byKey(const Key('add-vault-tab-import')), findsNothing);
   });
 
-  testWidgets('new-vault mode titles the screen and offers a secret phrase',
+  testWidgets('new-vault mode tabs the mode at the top and titles the bar',
       (tester) async {
     await tester.pumpWidget(_app(addVault: true));
     await tester.pumpAndSettle();
 
-    expect(find.text('New Vault'), findsOneWidget);
-    expect(find.text('Use a secret phrase'), findsOneWidget);
-    expect(find.byKey(const Key('use-secret-phrase')), findsOneWidget);
+    // "New Vault" lives in the app bar, not in the scrollable body.
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('New Vault')),
+      findsOneWidget,
+    );
+    expect(find.text('Import Wallet'), findsNothing);
+
+    expect(find.byKey(const Key('add-vault-tab-import')), findsOneWidget);
+    expect(find.byKey(const Key('add-vault-tab-secret')), findsOneWidget);
+    expect(find.text('Import phrase'), findsOneWidget);
+    expect(find.text('Secret phrase'), findsOneWidget);
   });
 
-  testWidgets('the secret-phrase entry opens the Enigma flow', (tester) async {
+  testWidgets('the secret-phrase tab opens the Enigma flow', (tester) async {
     await tester.pumpWidget(_routerApp());
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const Key('use-secret-phrase')));
-    await tester.tap(find.byKey(const Key('use-secret-phrase')));
+    await tester.tap(find.byKey(const Key('add-vault-tab-secret')));
     await tester.pumpAndSettle();
 
     expect(find.text('Enigma Screen'), findsOneWidget);

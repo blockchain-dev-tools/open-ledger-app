@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../theme/color_tokens.dart';
-import '../components/tab_button.dart';
+import '../../../widgets/common/tab_button.dart';
 
 /// The mnemonic step: a three-way Import / Generate / Enigma tab bar over the
 /// currently selected [body].

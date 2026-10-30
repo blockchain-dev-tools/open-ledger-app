@@ -180,7 +180,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newVault => '新建金库';
 
   @override
-  String get addVaultSecretPhrase => '使用暗语';
+  String get newVaultImportTab => '导入助记词';
+
+  @override
+  String get newVaultSecretTab => '暗语';
 
   @override
   String get vaultLimitReached => '已达金库上限，请先移除一个。';

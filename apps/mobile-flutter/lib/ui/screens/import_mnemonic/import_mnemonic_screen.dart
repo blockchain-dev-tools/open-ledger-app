@@ -6,10 +6,10 @@ import '../../../data/bip39_english.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../services/mnemonic_service.dart';
 import '../../theme/color_tokens.dart';
-import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_back_button.dart';
+import '../../widgets/common/tab_button.dart';
 import 'components/import_button.dart';
 import 'components/mnemonic_input_field.dart';
 import 'components/mnemonic_status_row.dart';
@@ -177,8 +177,9 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     context.go(widget.addVault ? '/' : '/welcome');
   }
 
-  /// Opens the Secret Phrase (Enigma) flow, which derives the vault's mnemonic
-  /// from a riddle + secret instead of importing an existing phrase.
+  /// The secret-phrase mode tab: hands the new-vault flow to the Enigma screens,
+  /// which derive the vault's mnemonic from a riddle + secret instead of
+  /// importing an existing phrase.
   void _openSecretPhrase() {
     context.push('/enigma', extra: const {'addVault': true});
   }
@@ -222,6 +223,14 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
         backgroundColor: c.groupedBg,
         appBar: neoAppBar(
           c: c,
+          // A new vault names itself in the title bar; a first-run import keeps
+          // the in-body "Import Wallet" title.
+          title: widget.addVault
+              ? Text(
+                  l10n.newVault,
+                  style: TextStyle(color: c.text, fontWeight: FontWeight.w600),
+                )
+              : null,
           leading: neoBackButton(c, onPressed: _back),
           darkBackground: c.bg,
         ),
@@ -229,135 +238,162 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
           child: SafeArea(
             // 整页可滚动：键盘弹出时视口被压缩，固定高度的内容放不下会溢出，
             // 导致 Import 按钮被顶出屏幕。改成可滚动后用户可以滑到按钮。
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
+            child: Column(
+              children: [
+                // ── Mode tabs (new vault only) ──────────────────────────
+                // Pinned above the scroll area: importing a phrase and the
+                // secret-phrase flow are the two ways to fill a new vault.
+                if (widget.addVault) _modeTabs(c, l10n),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 8),
 
-                    // ── Title ───────────────────────────────────────────
-                    Text(
-                      widget.addVault
-                          ? l10n.newVault
-                          : l10n.importMnemonicTitle,
-                      style: TextStyle(
-                        color: c.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                          // ── Title (first-run import only) ───────────────
+                          if (!widget.addVault) ...[
+                            Text(
+                              l10n.importMnemonicTitle,
+                              style: TextStyle(
+                                color: c.text,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+
+                          // ── Subtitle ────────────────────────────────────
+                          Text(
+                            l10n.importMnemonicHint,
+                            style: TextStyle(
+                              color: c.mutedText(150),
+                              fontSize: 14,
+                            ),
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // ── Paste / scan actions ────────────────────────────
+                          Row(
+                            children: [
+                              Expanded(
+                                child: PasteButton(
+                                  onPressed: _pasteFromClipboard,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: QrScanButton(onPressed: _scanQr)),
+                            ],
+                          ),
+
+                          // Light gives the neo button's offset shadow room to clear.
+                          SizedBox(height: c.neobrutalism ? 22 : 18),
+
+                          // ── Text input field ─────────────────────────────────
+                          MnemonicInputField(
+                            controller: _controller,
+                            onChanged: _onTextChanged,
+                            onClear: _clear,
+                            hasChecked: _hasChecked,
+                            isValid: _isValid,
+                          ),
+
+                          // ── BIP-39 prefix suggestions ────────────────────────
+                          if (_suggestions.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            MnemonicSuggestions(
+                              suggestions: _suggestions,
+                              onTap: _applySuggestion,
+                            ),
+                          ],
+
+                          SizedBox(height: c.neobrutalism ? 18 : 14),
+
+                          // ── Passphrase field ──────────────────────────────
+                          PassphraseField(
+                            controller: _passphraseController,
+                            obscurePassphrase: _obscurePassphrase,
+                            onToggleObscure: () {
+                              setState(() {
+                                _obscurePassphrase = !_obscurePassphrase;
+                              });
+                            },
+                          ),
+
+                          SizedBox(height: c.neobrutalism ? 12 : 8),
+
+                          // ── Passphrase info text ──────────────────────────
+                          Text(
+                            'A passphrase creates a completely different set of wallets. '
+                            'Leave empty to use the standard BIP-39 seed.',
+                            style: TextStyle(
+                              color: c.mutedText(100),
+                              fontSize: 11,
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // ── Status row: word count + validation ──────────────
+                          MnemonicStatusRow(
+                            wordCount: _wordCount,
+                            targetWordCount: _targetWordCount,
+                            hasChecked: _hasChecked,
+                            isValid: _isValid,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // ── Import button ────────────────────────────────────
+                          ImportButton(
+                            key: const Key('import-mnemonic-submit'),
+                            isValid: _isValid,
+                            onTap: _import,
+                          ),
+
+                          const SizedBox(height: 24),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 10),
-
-                    // ── Subtitle ────────────────────────────────────────
-                    Text(
-                      l10n.importMnemonicHint,
-                      style: TextStyle(
-                        color: c.mutedText(150),
-                        fontSize: 14,
-                      ),
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // ── Paste / scan actions ────────────────────────────
-                    Row(
-                      children: [
-                        Expanded(child: PasteButton(onPressed: _pasteFromClipboard)),
-                        const SizedBox(width: 12),
-                        Expanded(child: QrScanButton(onPressed: _scanQr)),
-                      ],
-                    ),
-
-                    // Light gives the neo button's offset shadow room to clear.
-                    SizedBox(height: c.neobrutalism ? 22 : 18),
-
-                    // ── Text input field ─────────────────────────────────
-                    MnemonicInputField(
-                      controller: _controller,
-                      onChanged: _onTextChanged,
-                      onClear: _clear,
-                      hasChecked: _hasChecked,
-                      isValid: _isValid,
-                    ),
-
-                    // ── BIP-39 prefix suggestions ────────────────────────
-                    if (_suggestions.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      MnemonicSuggestions(
-                        suggestions: _suggestions,
-                        onTap: _applySuggestion,
-                      ),
-                    ],
-
-                    SizedBox(height: c.neobrutalism ? 18 : 14),
-
-                    // ── Passphrase field ──────────────────────────────
-                    PassphraseField(
-                      controller: _passphraseController,
-                      obscurePassphrase: _obscurePassphrase,
-                      onToggleObscure: () {
-                        setState(() {
-                          _obscurePassphrase = !_obscurePassphrase;
-                        });
-                      },
-                    ),
-
-                    SizedBox(height: c.neobrutalism ? 12 : 8),
-
-                    // ── Passphrase info text ──────────────────────────
-                    Text(
-                      'A passphrase creates a completely different set of wallets. '
-                      'Leave empty to use the standard BIP-39 seed.',
-                      style: TextStyle(
-                        color: c.mutedText(100),
-                        fontSize: 11,
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // ── Status row: word count + validation ──────────────
-                    MnemonicStatusRow(
-                      wordCount: _wordCount,
-                      targetWordCount: _targetWordCount,
-                      hasChecked: _hasChecked,
-                      isValid: _isValid,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ── Import button ────────────────────────────────────
-                    ImportButton(
-                      key: const Key('import-mnemonic-submit'),
-                      isValid: _isValid,
-                      onTap: _import,
-                    ),
-
-                    // ── Secret Phrase alternative (new vault only) ───────
-                    // A first-run import must stay phrase-only: creating the
-                    // primary wallet has its own Enigma entry on Welcome.
-                    if (widget.addVault) ...[
-                      const SizedBox(height: 20),
-                      AdaptiveActionButton(
-                        key: const Key('use-secret-phrase'),
-                        label: l10n.addVaultSecretPhrase,
-                        quiet: true,
-                        legacyOutline: true,
-                        icon: Icons.lock_outline,
-                        onTap: _openSecretPhrase,
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+
+  /// The mode switch above the import form (new-vault flow only).
+  ///
+  /// Import is the tab this screen *is*; the secret-phrase tab hands off to
+  /// the existing Enigma flow, so the tapped tab reads as a mode switch while
+  /// the derivation form itself stays on its own screen.
+  Widget _modeTabs(ColorTokens c, AppLocalizations l10n) => Padding(
+    // Neo tabs carry an offset shadow, so light leaves room below the row.
+    padding: EdgeInsets.fromLTRB(24, 12, 24, c.neobrutalism ? 6 : 0),
+    child: Row(
+      children: [
+        TabButton(
+          key: const Key('add-vault-tab-import'),
+          c: c,
+          label: l10n.newVaultImportTab,
+          selected: true,
+          onTap: () {},
+        ),
+        const SizedBox(width: 8),
+        TabButton(
+          key: const Key('add-vault-tab-secret'),
+          c: c,
+          label: l10n.newVaultSecretTab,
+          selected: false,
+          onTap: _openSecretPhrase,
+        ),
+      ],
+    ),
+  );
 }
