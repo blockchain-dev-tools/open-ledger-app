@@ -502,6 +502,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addAccount => '添加账户';
 
   @override
+  String get btcAddressTypeTitle => '比特币地址类型';
+
+  @override
+  String get btcAddressTypeHint => '四种类型是四条不同派生路径上的独立账户。按交易所或钱包支持的格式选择。';
+
+  @override
+  String get btcAddressTypeLegacy => 'Legacy（传统）';
+
+  @override
+  String get btcAddressTypeNestedSegwit => 'Nested SegWit（兼容隔离见证）';
+
+  @override
+  String get btcAddressTypeNativeSegwit => 'Native SegWit（原生隔离见证）';
+
+  @override
+  String get btcAddressTypeTaproot => 'Taproot';
+
+  @override
   String get startBle => '启动 BLE';
 
   @override

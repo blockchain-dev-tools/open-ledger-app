@@ -12,6 +12,8 @@ import hashlib
 
 _CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 _GENERATOR = (0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3)
+_BECH32_CONST = 1
+_BECH32M_CONST = 0x2BC830A3
 
 
 def _polymod(values: list[int]) -> int:
@@ -29,9 +31,9 @@ def _hrp_expand(hrp: str) -> list[int]:
     return [ord(c) >> 5 for c in hrp] + [0] + [ord(c) & 31 for c in hrp]
 
 
-def _create_checksum(hrp: str, data: list[int]) -> list[int]:
+def _create_checksum(hrp: str, data: list[int], const: int = _BECH32_CONST) -> list[int]:
     values = _hrp_expand(hrp) + data
-    polymod = _polymod(values + [0, 0, 0, 0, 0, 0]) ^ 1
+    polymod = _polymod(values + [0, 0, 0, 0, 0, 0]) ^ const
     return [(polymod >> 5 * (5 - index)) & 31 for index in range(6)]
 
 
@@ -54,6 +56,14 @@ def _convertbits(data: bytes, from_bits: int, to_bits: int) -> list[int]:
 def bech32_encode(hrp: str, witness_version: int, program: bytes) -> str:
     data = [witness_version] + _convertbits(program, 8, 5)
     combined = data + _create_checksum(hrp, data)
+    return hrp + "1" + "".join(_CHARSET[value] for value in combined)
+
+
+def encode_segwit(hrp: str, witness_version: int, program: bytes) -> str:
+    """BIP-350：v0 用 bech32，v1+ 用 bech32m（Taproot 的 `bc1p…`）。"""
+    const = _BECH32_CONST if witness_version == 0 else _BECH32M_CONST
+    data = [witness_version] + _convertbits(program, 8, 5)
+    combined = data + _create_checksum(hrp, data, const)
     return hrp + "1" + "".join(_CHARSET[value] for value in combined)
 
 

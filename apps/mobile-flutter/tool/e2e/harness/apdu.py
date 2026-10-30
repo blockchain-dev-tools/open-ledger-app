@@ -104,20 +104,45 @@ def sign_eip712(domain_hash: bytes, struct_hash: bytes, path: str = ETH_PATH) ->
                 encode_path(path) + domain_hash + struct_hash)
 
 
-def btc_get_public_key(path: str = BTC_PATH) -> bytes:
-    """BTC GET_WALLET_PUBLIC_KEY：返回 P2WPKH 地址（ASCII）。"""
-    return apdu(CLA_BTC, INS_BTC_GET_PUBLIC_KEY, 0x00, 0x00, encode_path(path))
+def btc_get_public_key(
+    path: str = BTC_PATH,
+    *,
+    display: bool = False,
+    address_format: int = 0x02,
+) -> bytes:
+    """BTC GET_WALLET_PUBLIC_KEY。
+
+    P1 = 是否在设备上确认地址（0/1），P2 = 官方 app-bitcoin 的地址格式：
+    0 legacy / 1 p2sh / 2 bech32 / 4 bech32m（cashaddr 0x03 不支持）。
+    返回该格式的地址（ASCII）。
+    """
+    return apdu(
+        CLA_BTC,
+        INS_BTC_GET_PUBLIC_KEY,
+        0x01 if display else 0x00,
+        address_format,
+        encode_path(path),
+    )
 
 
-def btc_sign(sighashes: list[bytes], path: str = BTC_PATH) -> bytes:
-    """多输入签名：`[path][count][sighash(32)]*count`。"""
+def btc_sign(
+    sighashes: list[bytes],
+    path: str = BTC_PATH,
+    *,
+    hash_type: int = 0,
+) -> bytes:
+    """多输入签名：`[path][count][sighash(32)]*count`，P1 = sighash type。
+
+    Taproot 路径（`m/86'`）把 P1 当作 BIP-341 hash_type；非 0 时设备签名
+    的消息是 `sighash || hash_type`。
+    """
     if not sighashes or len(sighashes) > 16:
         raise ValueError("sighashes 数量必须在 1..=16")
     for sighash in sighashes:
         if len(sighash) != 32:
             raise ValueError("每个 sighash 必须是 32 字节")
     data = encode_path(path) + bytes([len(sighashes)]) + b"".join(sighashes)
-    return apdu(CLA_BTC, INS_BTC_SIGN_TX, 0x00, 0x00, data)
+    return apdu(CLA_BTC, INS_BTC_SIGN_TX, hash_type, 0x00, data)
 
 
 def parse_response(resp: bytes) -> tuple[bytes, int]:

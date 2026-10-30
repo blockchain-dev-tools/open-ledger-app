@@ -169,6 +169,37 @@ impl KeyService for HostKeyService {
                     recovery_id: Some(signature[0]),
                 })
             }
+            SignScheme::SchnorrTaprootKeyPath { hash_type } => {
+                if operation.curve != Curve::Secp256k1 {
+                    return Err(HostError::Denied(
+                        "taproot signing requires secp256k1/BIP-32".into(),
+                    ));
+                }
+                if operation.input.len() != 32 {
+                    return Err(HostError::Denied(
+                        "taproot signing expects a 32-byte sighash".into(),
+                    ));
+                }
+                let (private_key, _chain_code) =
+                    open_ledger_biz::hdkey::derive_secp256k1_extended(&seed, &path)
+                        .map_err(|e| HostError::Unavailable(e.to_string()))?;
+                let private_key = zeroize::Zeroizing::new(private_key);
+                // BIP-341：hash_type 非默认值时必须把 1 字节 hash_type 拼在 sighash 后面。
+                let mut message = operation.input.clone();
+                if hash_type != 0 {
+                    message.push(hash_type);
+                }
+                let bytes = open_ledger_crypto::secp256k1::schnorr_sign_taproot(
+                    private_key.as_slice(),
+                    &message,
+                )
+                .map_err(|e| HostError::Unavailable(e.to_string()))?;
+                Ok(Signature {
+                    operation_id: operation.operation_id,
+                    bytes,
+                    recovery_id: None,
+                })
+            }
             SignScheme::Ed25519Message => {
                 if operation.curve != Curve::Ed25519 {
                     return Err(HostError::Denied("ed25519 scheme requires ed25519".into()));
@@ -1071,23 +1102,9 @@ mod tests {
         assert!(!host.is_null());
         set_seed(host, &seed_hex());
 
-        let module = CString::new(BTC_MODULE_ID).unwrap();
-        unsafe {
-            let result = chain_host_open_app(host, module.as_ptr());
-            let result_ref = &*result;
-            assert_eq!(result_ref.error_code, 0, "{}", error_msg(result_ref));
-            crate::types::free_ffi_result(result);
-        }
+        open_module(host, BTC_MODULE_ID);
 
-        // E1 40，data = m/84'/0'/0'/0/0
-        let mut data = vec![5u8];
-        for component in [0x8000_0054u32, 0x8000_0000, 0x8000_0000, 0, 0] {
-            data.extend_from_slice(&component.to_be_bytes());
-        }
-        let mut request = vec![0xE1, 0x40, 0x00, 0x00, data.len() as u8];
-        request.extend_from_slice(&data);
-
-        let payload = emit_payload(&call(host, &request));
+        let payload = emit_payload(&call(host, &bitcoin_address_request()));
         assert_eq!(&payload[payload.len() - 2..], &[0x90, 0x00]);
         let address = std::str::from_utf8(&payload[..payload.len() - 2]).unwrap();
 
@@ -1095,6 +1112,81 @@ mod tests {
         let expected = open_ledger_biz::btc::derive_address(&seed, "m/84'/0'/0'/0/0").unwrap();
         assert_eq!(address, expected);
         assert!(address.starts_with("bc1q"), "{address}");
+
+        unsafe { chain_host_free(host) };
+    }
+
+    /// 四种地址格式各走一遍宿主：确保 P2 映射与官方 app 一致。
+    #[test]
+    fn bitcoin_host_answers_all_four_address_formats() {
+        let host = chain_host_new();
+        assert!(!host.is_null());
+        set_seed(host, &seed_hex());
+        open_module(host, BTC_MODULE_ID);
+        let seed = hex::decode(seed_hex()).unwrap();
+
+        let cases: [(u8, &str); 4] = [
+            (0x00, "m/44'/0'/0'/0/0"),
+            (0x01, "m/49'/0'/0'/0/0"),
+            (0x02, "m/84'/0'/0'/0/0"),
+            (0x04, "m/86'/0'/0'/0/0"),
+        ];
+        for (p2, path) in cases {
+            let mut data = vec![5u8];
+            let purpose: u32 = path[2..4].parse().unwrap();
+            for component in [0x8000_0000 + purpose, 0x8000_0000, 0x8000_0000, 0, 0] {
+                data.extend_from_slice(&component.to_be_bytes());
+            }
+            let mut request = vec![0xE1, 0x40, 0x00, p2, data.len() as u8];
+            request.extend_from_slice(&data);
+            let payload = emit_payload(&call(host, &request));
+            let address = std::str::from_utf8(&payload[..payload.len() - 2]).unwrap();
+            assert_eq!(
+                address,
+                open_ledger_biz::btc::derive_address(&seed, path).unwrap(),
+                "path {path}"
+            );
+        }
+
+        unsafe { chain_host_free(host) };
+    }
+
+    /// 宿主必须自己完成 taproot tweak 与 Schnorr 签名。
+    #[test]
+    fn bitcoin_host_signs_taproot_with_a_bip340_signature() {
+        let host = chain_host_new();
+        set_seed(host, &seed_hex());
+        open_module(host, BTC_MODULE_ID);
+
+        let mut data = vec![5u8];
+        for component in [0x8000_0056u32, 0x8000_0000, 0x8000_0000, 0, 0] {
+            data.extend_from_slice(&component.to_be_bytes());
+        }
+        data.push(1);
+        data.extend_from_slice(&[0x55u8; 32]);
+
+        let json = call(host, &apdu(0xE1, 0x44, &data));
+        assert!(json.contains("\"kind\":\"review\""), "{json}");
+        let id = review_id(&json);
+        let rendered = resolve_review(host, id, true);
+        let signature = emit_payload(&rendered);
+
+        assert_eq!(signature.len(), 66);
+        assert_eq!(&signature[64..], &[0x90, 0x00]);
+
+        let seed = hex::decode(seed_hex()).unwrap();
+        let private_key =
+            open_ledger_biz::hdkey::derive_secp256k1_private_key(&seed, "m/86'/0'/0'/0/0").unwrap();
+        let expected =
+            open_ledger_crypto::secp256k1::schnorr_sign_taproot(&private_key, &[0x55u8; 32]).unwrap();
+        assert_eq!(&signature[..64], expected.as_slice());
+
+        // 独立验签：Taproot 输出公钥（x-only）验证通过。
+        let output_key =
+            open_ledger_crypto::secp256k1::taproot_output_key_from_private(&private_key).unwrap();
+        let verifying = k256::schnorr::VerifyingKey::from_bytes(&output_key).unwrap();
+        let parsed = k256::schnorr::Signature::try_from(&signature[..64]).unwrap();
+        verifying.verify_raw(&[0x55u8; 32], &parsed).unwrap();
 
         unsafe { chain_host_free(host) };
     }
@@ -1457,12 +1549,15 @@ mod tests {
         }
     }
 
+    /// `E1 40`，P1=0（不确认地址），P2=2（bech32），data = m/84'/0'/0'/0/0。
     fn bitcoin_address_request() -> Vec<u8> {
         let mut data = vec![5u8];
         for component in [0x8000_0054u32, 0x8000_0000, 0x8000_0000, 0, 0] {
             data.extend_from_slice(&component.to_be_bytes());
         }
-        apdu(0xE1, 0x40, &data)
+        let mut out = vec![0xE1, 0x40, 0x00, 0x02, data.len() as u8];
+        out.extend_from_slice(&data);
+        out
     }
 
     fn solana_sign_request() -> Vec<u8> {

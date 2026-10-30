@@ -170,6 +170,10 @@ fn encode_scheme(enc: &mut Encoder, scheme: &SignScheme) {
             enc.u64(u64::from(*low_s));
         }
         SignScheme::Ed25519Message => enc.tag("ed25519-message"),
+        SignScheme::SchnorrTaprootKeyPath { hash_type } => {
+            enc.tag("schnorr-taproot-key-path");
+            enc.u64(u64::from(*hash_type));
+        }
     }
 }
 

@@ -64,6 +64,12 @@ pub struct EcdhRequest {
 pub enum SignScheme {
     EcdsaPrehash { digest_len: u8, low_s: bool },
     Ed25519Message,
+    /// Bitcoin Taproot key-path 签名（BIP-341 + BIP-340）。
+    ///
+    /// `input` 是主机算好的 32 字节 BIP-341 sighash；`hash_type != 0` 时宿主先
+    /// 追加 1 字节 hash_type 再签（BIP-341 的 SIGHASH_DEFAULT 为 0，不追加）。
+    /// 宿主负责 taproot tweak，模块永远拿不到调整后的私钥。
+    SchnorrTaprootKeyPath { hash_type: u8 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

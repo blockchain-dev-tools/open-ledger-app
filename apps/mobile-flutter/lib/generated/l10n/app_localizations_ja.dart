@@ -509,6 +509,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addAccount => 'アカウント追加';
 
   @override
+  String get btcAddressTypeTitle => 'ビットコインのアドレスタイプ';
+
+  @override
+  String get btcAddressTypeHint =>
+      '4つのタイプはそれぞれ別の派生パスの独立したアカウントです。取引所やウォレットが対応する形式を選んでください。';
+
+  @override
+  String get btcAddressTypeLegacy => 'Legacy';
+
+  @override
+  String get btcAddressTypeNestedSegwit => 'Nested SegWit';
+
+  @override
+  String get btcAddressTypeNativeSegwit => 'Native SegWit';
+
+  @override
+  String get btcAddressTypeTaproot => 'Taproot';
+
+  @override
   String get startBle => 'BLE開始';
 
   @override

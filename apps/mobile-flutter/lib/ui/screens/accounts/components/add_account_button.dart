@@ -27,6 +27,10 @@ class AddAccountButton extends StatelessWidget {
           label: AppLocalizations.of(context)!.addAccount,
           icon: Icons.add,
           expanded: true,
+          // 日间模式用白色块 + 黑色字：只靠黑边和硬阴影表达「可点」，
+          // 不用 lime / 深绿填充，避免和链分组本身的颜色抢注意力。
+          fill: c.surface,
+          labelColor: c.brandInk,
           onTap: onTap,
         ),
       );

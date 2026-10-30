@@ -214,6 +214,7 @@ dependencies = [
  "chain-app-api",
  "chain-app-runtime",
  "hex",
+ "k256",
  "open-ledger-biz",
  "open-ledger-crypto",
 ]
@@ -858,6 +859,7 @@ dependencies = [
  "chain-app-tron",
  "ed25519-dalek",
  "hex",
+ "k256",
  "open-ledger-biz",
  "open-ledger-crypto",
  "open-ledger-ur",

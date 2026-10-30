@@ -626,6 +626,14 @@ impl Runtime {
                     return Err("ed25519 scheme requires ed25519 curve".into());
                 }
             }
+            chain_app_api::SignScheme::SchnorrTaprootKeyPath { .. } => {
+                if operation.curve != chain_app_api::Curve::Secp256k1 {
+                    return Err("schnorr requires secp256k1".into());
+                }
+                if operation.input.len() != 32 {
+                    return Err("taproot sighash must be 32 bytes".into());
+                }
+            }
         }
         Ok(())
     }

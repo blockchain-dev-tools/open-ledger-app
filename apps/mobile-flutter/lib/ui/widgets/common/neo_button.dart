@@ -15,6 +15,11 @@ import 'neo_card.dart';
 /// - quiet (`quiet: true`) — [ColorTokens.bg] fill, [ColorTokens.text] label,
 ///   [ColorTokens.neoEdge] outline.
 ///
+/// [fill] / [labelColor] override the brand fill for a single action (the Vault
+/// "Add Account" button is a white block with brand-ink text, so it reads as an
+/// action without competing with the chain card's colour). The outline stays
+/// [ColorTokens.brandInk].
+///
 /// ```dart
 /// NeoButton(label: 'Add Account', icon: Icons.add, expanded: true, onTap: _add)
 /// NeoButton(label: 'Copy', quiet: true, onTap: _copy)
@@ -38,6 +43,14 @@ class NeoButton extends StatelessWidget {
   /// Secondary tone: neutral fill with text-coloured label.
   final bool quiet;
 
+  /// Optional fill override for the brand tone; defaults to
+  /// [ColorTokens.actionFill]. Ignored while [quiet] is true.
+  final Color? fill;
+
+  /// Label/icon colour paired with [fill]; defaults to
+  /// [ColorTokens.brandInk]. Ignored while [quiet] is true.
+  final Color? labelColor;
+
   const NeoButton({
     super.key,
     required this.label,
@@ -46,14 +59,16 @@ class NeoButton extends StatelessWidget {
     this.trailingIcon,
     this.expanded = false,
     this.quiet = false,
+    this.fill,
+    this.labelColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
-    final background = quiet ? c.bg : c.actionFill;
-    final foreground = quiet ? c.text : c.brandInk;
+    final background = quiet ? c.bg : (fill ?? c.actionFill);
+    final foreground = quiet ? c.text : (labelColor ?? c.brandInk);
     final edge = quiet ? c.neoEdge : c.brandInk;
 
     return _NeoPress(

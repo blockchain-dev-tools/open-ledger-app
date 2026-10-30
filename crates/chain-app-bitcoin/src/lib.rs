@@ -2,9 +2,14 @@
 //!
 //! 迁移范围与现有 Dart 实现保持一致，但把「多输入」做成一等能力：
 //!
-//! - `E1 40 GET_WALLET_PUBLIC_KEY`：按路径返回 P2WPKH 地址（bech32）。
+//! - `E1 40 GET_WALLET_PUBLIC_KEY`：P1 = 是否在设备上确认地址（0/1），
+//!   P2 = 地址格式（0 legacy / 1 p2sh / 2 bech32 / 4 bech32m），按路径派生公钥后
+//!   编码成对应类型。P2 与路径 purpose 不一致时仍按 P2 编码 —— 与官方
+//!   app-bitcoin 的行为一致（主机总是发送与路径匹配的格式）。
 //! - `E1 44 SIGN_TRANSACTION`：`[path][input_count][sighash(32)]*count`，
-//!   一次审批为多个输入产出签名，按输入顺序拼接返回。
+//!   一次审批为多个输入产出签名，按输入顺序拼接返回。P1 是 sighash type：
+//!   Taproot（`m/86'`）把它作为 BIP-341 hash_type 传给宿主（非 0 时签名消息
+//!   多一个字节），其余类型沿用 65 字节紧凑 ECDSA 输出。
 //!
 //! 与 ETH 一样，模块不接触 seed：公钥向宿主请求，签名由宿主在批准后执行。
 
@@ -15,7 +20,7 @@ use chain_app_api::{
     ReviewSection, ServiceResult, SessionConfig, SignOperation, SignPlan, SignScheme, Wire,
     API_VERSION,
 };
-use open_ledger_crypto::{bech32, hash160};
+use open_ledger_crypto::{base58, bech32, hash160, secp256k1};
 
 pub mod sw {
     pub const OK: u16 = 0x9000;
@@ -33,11 +38,112 @@ const CLA_BTC: u8 = 0xE1;
 const INS_GET_PUBLIC_KEY: u8 = 0x40;
 const INS_SIGN_TX: u8 = 0x44;
 
-/// `m/84'/0'/0'/0/0`（BIP-84 P2WPKH）。
+/// `m/84'/0'/0'/0/0`（BIP-84 P2WPKH，也是历史默认账户）。
 const DEFAULT_PATH: [u32; 5] = [0x8000_0054, 0x8000_0000, 0x8000_0000, 0, 0];
 
 /// 一笔交易最多接受的输入数；超过即拒，避免一次审批绑过多签名。
 const MAX_INPUTS: usize = 16;
+
+/// 本机账户页可选的地址类型，按 `account_profile_index` 索引。
+///
+/// 下标 0 必须保持 P2WPKH：升级前创建的 BTC 账户就是它，换掉等于换地址。
+const ACCOUNT_PROFILES: [AddressType; 4] = [
+    AddressType::NativeSegwit,
+    AddressType::Legacy,
+    AddressType::NestedSegwit,
+    AddressType::Taproot,
+];
+
+/// Bitcoin 的四种单签地址类型。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AddressType {
+    Legacy,
+    NestedSegwit,
+    NativeSegwit,
+    Taproot,
+}
+
+impl AddressType {
+    /// BIP-43 purpose，决定派生路径。
+    fn purpose(self) -> u32 {
+        match self {
+            AddressType::Legacy => 44,
+            AddressType::NestedSegwit => 49,
+            AddressType::NativeSegwit => 84,
+            AddressType::Taproot => 86,
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            AddressType::Legacy => "p2pkh",
+            AddressType::NestedSegwit => "p2sh-p2wpkh",
+            AddressType::NativeSegwit => "p2wpkh",
+            AddressType::Taproot => "p2tr",
+        }
+    }
+
+    fn from_purpose(purpose: u32) -> Option<Self> {
+        match purpose {
+            44 => Some(AddressType::Legacy),
+            49 => Some(AddressType::NestedSegwit),
+            84 => Some(AddressType::NativeSegwit),
+            86 => Some(AddressType::Taproot),
+            _ => None,
+        }
+    }
+
+    /// 官方 app-bitcoin 的 `P2_ADDR_FORMAT_*`：0 legacy / 1 p2sh / 2 bech32 /
+    /// 3 cashaddr / 4 bech32m。cashaddr（BCH）不支持，返回 `None`。
+    fn from_p2(p2: u8) -> Option<Self> {
+        match p2 {
+            0x00 => Some(AddressType::Legacy),
+            0x01 => Some(AddressType::NestedSegwit),
+            0x02 => Some(AddressType::NativeSegwit),
+            0x04 => Some(AddressType::Taproot),
+            _ => None,
+        }
+    }
+
+    /// 路径 purpose；认不出时返回 `None`（不能默认成某种格式，否则会返回错误地址）。
+    fn from_path(path: &[u32]) -> Option<Self> {
+        let purpose = path.first()?;
+        if *purpose < 0x8000_0000 {
+            return None;
+        }
+        Self::from_purpose(purpose - 0x8000_0000)
+    }
+
+    /// 33 字节压缩公钥 → 地址。
+    fn encode(self, compressed_pubkey: &[u8]) -> Option<String> {
+        if compressed_pubkey.len() != 33 {
+            return None;
+        }
+        Some(match self {
+            AddressType::Legacy => {
+                let mut payload = Vec::with_capacity(21);
+                payload.push(0x00);
+                payload.extend_from_slice(&hash160::hash(compressed_pubkey));
+                base58::encode_check(&payload)
+            }
+            AddressType::NestedSegwit => {
+                let mut script = Vec::with_capacity(22);
+                script.push(0x00);
+                script.push(0x14);
+                script.extend_from_slice(&hash160::hash(compressed_pubkey));
+                let mut payload = Vec::with_capacity(21);
+                payload.push(0x05);
+                payload.extend_from_slice(&hash160::hash(&script));
+                base58::encode_check(&payload)
+            }
+            AddressType::NativeSegwit => bech32::encode("bc", 0, &hash160::hash(compressed_pubkey)),
+            AddressType::Taproot => {
+                let output_key = secp256k1::taproot_output_key(&compressed_pubkey[1..]).ok()?;
+                bech32::encode_segwit("bc", 1, &output_key)
+            }
+        })
+    }
+}
 
 struct Apdu {
     cla: u8,
@@ -81,15 +187,20 @@ struct Pending {
     exchange_id: ExchangeId,
     path: Vec<u32>,
     address: String,
+    address_type: AddressType,
     /// 待签摘要；`None` 表示这是地址查询。
     sighashes: Option<Vec<[u8; 32]>>,
+    /// 地址查询时是否要用户确认（P1 = 1）。
+    display: bool,
+    /// Taproot 的 BIP-341 hash_type；由 P1 携带。
+    hash_type: u8,
 }
 
 pub struct BitcoinModule {
     stage: Stage,
     pending: Option<Pending>,
-    /// 本机账户请求的 `request_id`（`LocalCommand::DeriveAccount`）。
-    local: Option<u64>,
+    /// 本机账户请求的 `request_id` 与所选地址类型（`LocalCommand::DeriveAccount`）。
+    local: Option<(u64, AddressType)>,
 }
 
 impl Default for BitcoinModule {
@@ -122,21 +233,32 @@ impl BitcoinModule {
         if apdu.cla != CLA_BTC {
             return Ok(self.emit(exchange_id, status(sw::CLA_NOT_SUPPORTED)));
         }
-        if apdu.p1 != 0x00 || apdu.p2 != 0x00 {
-            return Ok(self.emit(exchange_id, status(sw::WRONG_P1_P2)));
-        }
         match apdu.ins {
-            INS_GET_PUBLIC_KEY => self.handle_get_public_key(exchange_id, &apdu.data),
-            INS_SIGN_TX => self.handle_sign(exchange_id, &apdu.data),
+            INS_GET_PUBLIC_KEY => self.handle_get_public_key(
+                exchange_id,
+                apdu.p1,
+                apdu.p2,
+                &apdu.data,
+            ),
+            INS_SIGN_TX => self.handle_sign(exchange_id, apdu.p1, apdu.p2, &apdu.data),
             _ => Ok(self.emit(exchange_id, status(sw::UNKNOWN_INS))),
         }
     }
 
+    /// `P1` = 是否在设备上确认地址，`P2` = 地址格式。
     fn handle_get_public_key(
         &mut self,
         exchange_id: ExchangeId,
+        p1: u8,
+        p2: u8,
         data: &[u8],
     ) -> Result<Effect, AppError> {
+        if p1 > 1 {
+            return Ok(self.emit(exchange_id, status(sw::WRONG_P1_P2)));
+        }
+        let Some(address_type) = AddressType::from_p2(p2) else {
+            return Ok(self.emit(exchange_id, status(sw::WRONG_DATA)));
+        };
         let (path, rest) = match split_path(data) {
             Some(split) => split,
             None => return Ok(self.emit(exchange_id, status(sw::WRONG_DATA))),
@@ -148,7 +270,10 @@ impl BitcoinModule {
             exchange_id,
             path: path.clone(),
             address: String::new(),
+            address_type,
             sighashes: None,
+            display: p1 == 1,
+            hash_type: 0,
         });
         self.stage = Stage::AwaitKey;
         Ok(Effect::NeedPublicKey {
@@ -166,8 +291,13 @@ impl BitcoinModule {
     fn handle_sign(
         &mut self,
         exchange_id: ExchangeId,
+        p1: u8,
+        p2: u8,
         data: &[u8],
     ) -> Result<Effect, AppError> {
+        if p2 != 0 {
+            return Ok(self.emit(exchange_id, status(sw::WRONG_P1_P2)));
+        }
         let (path, rest) = match split_path(data) {
             Some(split) => split,
             None => return Ok(self.emit(exchange_id, status(sw::WRONG_DATA))),
@@ -180,6 +310,10 @@ impl BitcoinModule {
         if count == 0 || count > MAX_INPUTS || digests.len() != count * 32 {
             return Ok(self.emit(exchange_id, status(sw::WRONG_DATA)));
         }
+        // 签名类型只能由路径 purpose 决定：拿 m/84 的密钥做 Schnorr 签不出有效签名。
+        let Some(address_type) = AddressType::from_path(&path) else {
+            return Ok(self.emit(exchange_id, status(sw::WRONG_DATA)));
+        };
         let mut sighashes = Vec::with_capacity(count);
         for chunk in digests.as_chunks::<32>().0 {
             sighashes.push(*chunk);
@@ -189,7 +323,10 @@ impl BitcoinModule {
             exchange_id,
             path: path.clone(),
             address: String::new(),
+            address_type,
             sighashes: Some(sighashes),
+            display: false,
+            hash_type: p1,
         });
         self.stage = Stage::AwaitKey;
         Ok(Effect::NeedPublicKey {
@@ -211,17 +348,25 @@ impl BitcoinModule {
     ) -> Result<Effect, AppError> {
         match command {
             chain_app_api::LocalCommand::DeriveAccount {
-                account_profile_index: 0,
+                account_profile_index,
                 address_index,
             } if address_index <= 1000 => {
-                self.local = Some(request_id);
+                let Some(address_type) =
+                    ACCOUNT_PROFILES.get(usize::from(account_profile_index)).copied()
+                else {
+                    return Ok(Effect::LocalReply {
+                        request_id,
+                        payload: Vec::new(),
+                    });
+                };
+                self.local = Some((request_id, address_type));
                 self.stage = Stage::AwaitKey;
                 Ok(Effect::NeedPublicKey {
                     service_id: 9,
                     request: PublicKeyRequest {
                         derivation_scheme: DerivationScheme::Bip32Secp256k1,
                         curve: Curve::Secp256k1,
-                        path: account_path(address_index),
+                        path: account_path(address_type, address_index),
                         output: KeyOutput::CompressedSecp256k1,
                         include_chain_code: false,
                     },
@@ -236,13 +381,14 @@ impl BitcoinModule {
 
     fn handle_service_result(&mut self, result: ServiceResult) -> Result<Effect, AppError> {
         // 本机账户派生：结果直接回给 UI，不涉及 APDU。
-        if let Some(request_id) = self.local.take() {
+        if let Some((request_id, address_type)) = self.local.take() {
             self.stage = Stage::Idle;
             let payload = match result {
-                ServiceResult::PublicKey(key) => match p2wpkh_address(&key.bytes) {
+                ServiceResult::PublicKey(key) => match address_type.encode(&key.bytes) {
                     Some(address) => format!(
-                        "{{\"address\":\"{address}\",\"public_key\":\"{}\"}}",
-                        hex::encode(&key.bytes)
+                        "{{\"address\":\"{address}\",\"public_key\":\"{}\",\"address_type\":\"{}\"}}",
+                        hex::encode(&key.bytes),
+                        address_type.as_str()
                     )
                     .into_bytes(),
                     None => Vec::new(),
@@ -265,7 +411,11 @@ impl BitcoinModule {
                 return Err(AppError::InvalidEvent("unexpected storage result".into()))
             }
         };
-        let address = match p2wpkh_address(&key.bytes) {
+        let address = match self
+            .pending
+            .as_ref()
+            .and_then(|pending| pending.address_type.encode(&key.bytes))
+        {
             Some(address) => address,
             None => {
                 let exchange_id = self.pending.take().map(|p| p.exchange_id).unwrap_or(1);
@@ -274,7 +424,7 @@ impl BitcoinModule {
             }
         };
 
-        let (exchange_id, path, sighashes) = {
+        let (exchange_id, path, sighashes, display, hash_type) = {
             let pending = self
                 .pending
                 .as_mut()
@@ -284,16 +434,53 @@ impl BitcoinModule {
                 pending.exchange_id,
                 pending.path.clone(),
                 pending.sighashes.clone(),
+                pending.display,
+                pending.hash_type,
             )
         };
 
         let Some(sighashes) = sighashes else {
-            // 地址查询：ASCII 地址 + 9000（与迁移前的线格式一致）。
-            let mut payload = address.into_bytes();
-            payload.extend_from_slice(&status(sw::OK));
-            self.pending = None;
-            self.stage = Stage::Idle;
-            return Ok(self.emit(exchange_id, payload));
+            if !display {
+                // 地址查询：ASCII 地址 + 9000（与迁移前的线格式一致）。
+                let mut payload = address.into_bytes();
+                payload.extend_from_slice(&status(sw::OK));
+                self.pending = None;
+                self.stage = Stage::Idle;
+                return Ok(self.emit(exchange_id, payload));
+            }
+            // P1 = 1：与官方 app 一样，先在设备上显示地址让用户核对。
+            self.stage = Stage::AwaitReview;
+            return Ok(Effect::NeedReview {
+                service_id: 4,
+                request: Box::new(ReviewRequest {
+                    document: ReviewDocument {
+                        operation: OperationKind::AddressConfirmation,
+                        network: NetworkId {
+                            name: "Bitcoin".into(),
+                            chain_id: None,
+                        },
+                        account: Some(address.clone()),
+                        sections: vec![ReviewSection {
+                            title_key: "review.section.bitcoin".into(),
+                            fields: vec![Field {
+                                label_key: "review.field.address".into(),
+                                value: FieldValue::Address {
+                                    value: address,
+                                    network: "Bitcoin".into(),
+                                    role: "account".into(),
+                                },
+                            }],
+                        }],
+                        risks: vec![],
+                        parse_status: ParseStatus::Complete,
+                    },
+                    action: ReviewAction::DisplayAddress {
+                        derivation_scheme: DerivationScheme::Bip32Secp256k1,
+                        curve: Curve::Secp256k1,
+                        path,
+                    },
+                }),
+            });
         };
 
         let operations: Vec<SignOperation> = sighashes
@@ -304,9 +491,13 @@ impl BitcoinModule {
                 derivation_scheme: DerivationScheme::Bip32Secp256k1,
                 curve: Curve::Secp256k1,
                 path: path.clone(),
-                scheme: SignScheme::EcdsaPrehash {
-                    digest_len: 32,
-                    low_s: true,
+                scheme: if path_is_taproot(&path) {
+                    SignScheme::SchnorrTaprootKeyPath { hash_type }
+                } else {
+                    SignScheme::EcdsaPrehash {
+                        digest_len: 32,
+                        low_s: true,
+                    }
                 },
                 input: digest.to_vec(),
                 public_parameters: Vec::new(),
@@ -363,20 +554,40 @@ impl BitcoinModule {
             .take()
             .ok_or_else(|| AppError::InvalidEvent("no pending review".into()))?;
         self.stage = Stage::Idle;
-        let expected = pending
-            .sighashes
-            .as_ref()
-            .map(Vec::len)
-            .ok_or_else(|| AppError::InvalidEvent("review without sighashes".into()))?;
+
+        // 地址确认：批准后把地址回给主机，拒绝/超时回 6985。
+        let Some(sighashes) = pending.sighashes.as_ref() else {
+            let payload = match outcome {
+                ReviewOutcome::Approved { .. } => {
+                    let mut out = pending.address.into_bytes();
+                    out.extend_from_slice(&status(sw::OK));
+                    out
+                }
+                ReviewOutcome::Rejected | ReviewOutcome::TimedOut => status(sw::DENIED),
+                ReviewOutcome::Failed(_) => status(sw::UNKNOWN),
+            };
+            return Ok(self.emit(pending.exchange_id, payload));
+        };
+
+        let expected = sighashes.len();
+        let signature_len = if path_is_taproot(&pending.path) { 64 } else { 65 };
 
         let payload = match outcome {
             ReviewOutcome::Approved { signatures } => {
                 if signatures.len() != expected {
                     status(sw::UNKNOWN)
                 } else {
-                    let mut out = Vec::with_capacity(expected * 65 + 2);
+                    let mut out = Vec::with_capacity(expected * signature_len + 2);
                     let mut complete = true;
                     for signature in &signatures {
+                        if path_is_taproot(&pending.path) {
+                            if signature.bytes.len() != 64 {
+                                complete = false;
+                                break;
+                            }
+                            out.extend_from_slice(&signature.bytes);
+                            continue;
+                        }
                         match (&signature.bytes[..], signature.recovery_id) {
                             (bytes, Some(recovery)) if bytes.len() == 64 => {
                                 out.push(27 + recovery);
@@ -425,6 +636,7 @@ impl ChainApp for BitcoinModule {
             }),
             Event::Cancel { .. } => {
                 self.pending = None;
+                self.local = None;
                 self.stage = Stage::Idle;
                 Ok(Effect::Finished {
                     status: FinishStatus::Cancelled,
@@ -444,20 +656,20 @@ impl ChainApp for BitcoinModule {
     }
 }
 
-/// 账户路径：BTC 的账户号在最后一段（`m/84'/0'/0'/0/{account}`）。
-fn account_path(index: u32) -> Vec<u32> {
-    let mut path = DEFAULT_PATH;
-    path[4] = index;
-    path.to_vec()
+/// 账户路径：`m/{44|49|84|86}'/0'/0'/0/{address_index}`。
+fn account_path(address_type: AddressType, index: u32) -> Vec<u32> {
+    vec![
+        0x8000_0000 + address_type.purpose(),
+        0x8000_0000,
+        0x8000_0000,
+        0,
+        index,
+    ]
 }
 
-/// P2WPKH 地址：`bech32("bc", 0, hash160(pubkey))`。
-fn p2wpkh_address(compressed_pubkey: &[u8]) -> Option<String> {
-    if compressed_pubkey.len() != 33 {
-        return None;
-    }
-    let hash = hash160::hash(compressed_pubkey);
-    Some(bech32::encode("bc", 0, &hash))
+/// 路径是否派生出 Taproot 账户（`m/86'/…`）。
+fn path_is_taproot(path: &[u32]) -> bool {
+    matches!(AddressType::from_path(path), Some(AddressType::Taproot))
 }
 
 /// `[count][u32 BE]*` → 路径；空数据用默认 `m/84'/0'/0'/0/0`。
@@ -480,7 +692,7 @@ fn split_path(data: &[u8]) -> Option<(Vec<u32>, &[u8])> {
 pub fn descriptor() -> AppDescriptor {
     AppDescriptor {
         module_id: MODULE_ID.into(),
-        module_version: "0.1.0".into(),
+        module_version: "0.2.0".into(),
         api_version: API_VERSION,
         review_schema_version: 1,
         storage_schema_version: 1,
@@ -489,19 +701,28 @@ pub fn descriptor() -> AppDescriptor {
             version: "2.4.0".into(),
             wire: Wire::LedgerApdu,
             supported: vec![
-                "E1 40 GET_WALLET_PUBLIC_KEY (P2WPKH)".into(),
-                "E1 44 SIGN_TRANSACTION (multi-input)".into(),
+                "E1 40 GET_WALLET_PUBLIC_KEY (p2pkh / p2sh-p2wpkh / p2wpkh / p2tr)".into(),
+                "E1 44 SIGN_TRANSACTION (multi-input, ECDSA + taproot schnorr)".into(),
             ],
-            unsupported: vec![],
-            vector_sources: vec!["tool/e2e/tests/btc_sign.py".into()],
+            unsupported: vec![
+                "cashaddr (BCH)".into(),
+                "PSBT multi-round signing".into(),
+            ],
+            vector_sources: vec![
+                "tool/e2e/tests/btc_sign.py".into(),
+                "BIP-44/49/84/86 test vectors".into(),
+            ],
         }],
-        account_profiles: vec![chain_app_api::AccountProfile {
-            network: "Bitcoin".into(),
-            account_type: "p2wpkh".into(),
-            default_path: "m/84'/0'/0'/0/0".into(),
-            derivation_scheme: DerivationScheme::Bip32Secp256k1,
-            curve: Curve::Secp256k1,
-        }],
+        account_profiles: ACCOUNT_PROFILES
+            .iter()
+            .map(|address_type| chain_app_api::AccountProfile {
+                network: "Bitcoin".into(),
+                account_type: address_type.as_str().into(),
+                default_path: format!("m/{}'/0'/0'/0/0", address_type.purpose()),
+                derivation_scheme: DerivationScheme::Bip32Secp256k1,
+                curve: Curve::Secp256k1,
+            })
+            .collect(),
         requested_capabilities: chain_app_api::CapabilitySet {
             derivation_rules: vec![DerivationRule {
                 derivation_scheme: DerivationScheme::Bip32Secp256k1,

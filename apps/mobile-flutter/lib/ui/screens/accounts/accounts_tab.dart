@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/interfaces/wallet_service.dart';
+import '../../../core/models/bitcoin_address_type.dart';
 import '../../../core/models/chain.dart';
 import '../../../core/models/wallet_accounts.dart';
 import '../../../generated/l10n/app_localizations.dart';
@@ -10,6 +11,7 @@ import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/neo_button.dart';
 import '../../widgets/common/neo_sheet.dart';
+import 'components/btc_address_type_sheet.dart';
 import 'components/chain_section.dart';
 import 'components/empty_vault.dart';
 import 'components/manage_chains_sheet.dart';
@@ -119,13 +121,63 @@ class _AccountsTabState extends State<AccountsTab> {
     return c.accountPathForIndex(maxIdx + 1);
   }
 
+  /// The next free index **within one Bitcoin address type**: each type is its
+  /// own account family on its own path, so `m/86'/…/0` and `m/84'/…/0` may
+  /// both exist and must not push each other's counter.
+  int _nextBtcIndexForType(
+    BitcoinAddressType type,
+    List<ChainAccount> accounts,
+  ) {
+    var maxIdx = -1;
+    for (final acct in accounts) {
+      if (acct.chain != Chain.bitcoin.id) continue;
+      if (BitcoinAddressType.fromPath(acct.derivationPath) != type) continue;
+      final idx = Chain.bitcoin.accountIndexFromPath(acct.derivationPath);
+      if (idx > maxIdx) maxIdx = idx;
+    }
+    return maxIdx + 1;
+  }
+
+  /// The concrete path every Bitcoin type would create next — shown in the
+  /// picker so the chosen option and the derived account can never disagree.
+  Map<BitcoinAddressType, String> _nextBtcPaths(List<ChainAccount> accounts) => {
+        for (final type in BitcoinAddressType.values)
+          type: type.pathForIndex(_nextBtcIndexForType(type, accounts)),
+      };
+
+  /// Asks which Bitcoin address type the new account should use.
+  Future<BitcoinAddressType?> _pickBtcAddressType(
+    Map<BitcoinAddressType, String> paths,
+  ) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    return showModalBottomSheet<BitcoinAddressType>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: c.surface,
+      shape: neoSheetShape(c),
+      builder: (_) => BtcAddressTypeSheet(paths: paths),
+    );
+  }
+
   Future<void> _addAccount(String chain) async {
     final ws = widget.walletService;
     if (ws == null) return;
 
     final grouped = _accounts != null ? _groupByChain(_accounts!) : {};
     final chainAccounts = grouped[chain] ?? [];
-    final nextPath = _nextPathForChain(chain, chainAccounts);
+
+    String nextPath;
+    if (chain == Chain.bitcoin.id) {
+      // Bitcoin's four types are separate accounts, so the type is chosen
+      // before the path exists.
+      final paths = _nextBtcPaths(chainAccounts);
+      final type = await _pickBtcAddressType(paths);
+      if (type == null || !mounted) return;
+      nextPath = paths[type]!;
+    } else {
+      nextPath = _nextPathForChain(chain, chainAccounts);
+    }
 
     try {
       await ws.addAccount(chain, nextPath);

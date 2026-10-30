@@ -1,9 +1,120 @@
-//! secp256k1 椭圆曲线算法（ECDSA 签名 + 公钥推导）。
+//! secp256k1 椭圆曲线算法（ECDSA / Schnorr 签名 + 公钥推导）。
 //!
 //! 封装 k256 crate，供 ETH/BTC/TRX 共用。
 
 use crate::errors::{CryptoError, Result};
 use k256::ecdsa::SigningKey;
+use k256::elliptic_curve::sec1::ToEncodedPoint;
+use k256::elliptic_curve::PrimeField;
+use k256::{AffinePoint, ProjectivePoint, Scalar};
+
+/// BIP-340 的 tagged hash：`SHA256(SHA256(tag) ‖ SHA256(tag) ‖ parts…)`。
+pub fn tagged_hash(tag: &str, parts: &[&[u8]]) -> [u8; 32] {
+    let tag_hash = crate::sha256::hash(tag.as_bytes());
+    let mut data = Vec::with_capacity(64 + parts.iter().map(|p| p.len()).sum::<usize>());
+    data.extend_from_slice(&tag_hash);
+    data.extend_from_slice(&tag_hash);
+    for part in parts {
+        data.extend_from_slice(part);
+    }
+    crate::sha256::hash(&data)
+}
+
+/// 32 字节大端标量；越界或为零时返回错误。
+fn scalar_from_bytes(bytes: &[u8]) -> Result<Scalar> {
+    let mut repr = k256::FieldBytes::default();
+    if bytes.len() != 32 {
+        return Err(CryptoError::InvalidKey(format!(
+            "scalar must be 32 bytes, got {}",
+            bytes.len()
+        )));
+    }
+    repr.copy_from_slice(bytes);
+    Option::from(Scalar::from_repr(repr))
+        .ok_or_else(|| CryptoError::InvalidKey("scalar out of range".into()))
+}
+
+/// 压缩点编码里的 32 字节 x 坐标。
+fn x_bytes(point: &k256::EncodedPoint) -> Result<Vec<u8>> {
+    point
+        .x()
+        .map(|x| x.to_vec())
+        .ok_or_else(|| CryptoError::InvalidKey("point at infinity".into()))
+}
+
+/// 私钥对应的 x-only 公钥（32 字节，BIP-340）。
+pub fn xonly_public_key(private_key: &[u8]) -> Result<Vec<u8>> {
+    let signing_key = SigningKey::from_slice(private_key)
+        .map_err(|e| CryptoError::InvalidKey(e.to_string()))?;
+    x_bytes(&signing_key.verifying_key().to_encoded_point(true))
+}
+
+/// BIP-341 的 TapTweak 摘要（无脚本树的 key-path only）。
+fn tap_tweak(xonly: &[u8]) -> Result<Scalar> {
+    if xonly.len() != 32 {
+        return Err(CryptoError::InvalidKey(
+            "x-only public key must be 32 bytes".into(),
+        ));
+    }
+    scalar_from_bytes(&tagged_hash("TapTweak", &[xonly]))
+}
+
+/// `lift_x`：x-only 公钥还原成偶 y 的完整点。
+fn lift_x(xonly: &[u8]) -> Result<ProjectivePoint> {
+    if xonly.len() != 32 {
+        return Err(CryptoError::InvalidKey(
+            "x-only public key must be 32 bytes".into(),
+        ));
+    }
+    let mut compressed = Vec::with_capacity(33);
+    compressed.push(0x02);
+    compressed.extend_from_slice(xonly);
+    let key = k256::PublicKey::from_sec1_bytes(&compressed)
+        .map_err(|e| CryptoError::InvalidKey(e.to_string()))?;
+    Ok(ProjectivePoint::from(*key.as_affine()))
+}
+
+/// BIP-341 key-path only 的输出公钥（x-only，32 字节）：
+/// `output = lift_x(internal) + TapTweak(internal)·G`。
+pub fn taproot_output_key(xonly: &[u8]) -> Result<Vec<u8>> {
+    let internal = lift_x(xonly)?;
+    let tweak = tap_tweak(xonly)?;
+    let output = internal + ProjectivePoint::GENERATOR * tweak;
+    x_bytes(&AffinePoint::from(output).to_encoded_point(true))
+}
+
+/// 私钥推导的 Taproot 输出公钥（x-only，32 字节）。
+pub fn taproot_output_key_from_private(private_key: &[u8]) -> Result<Vec<u8>> {
+    taproot_output_key(&xonly_public_key(private_key)?)
+}
+
+/// 用私钥直接做 BIP-340 Schnorr 签名（不做 taproot tweak）。
+pub fn schnorr_sign(private_key: &[u8], message: &[u8]) -> Result<Vec<u8>> {
+    let scalar = scalar_from_bytes(private_key)?;
+    let key = k256::schnorr::SigningKey::from_bytes(&scalar.to_bytes())
+        .map_err(|e| CryptoError::InvalidKey(e.to_string()))?;
+    // aux_rand 固定为 0：与 RFC6979 一样走确定性签名，同一消息可复现。
+    let signature = key
+        .sign_raw(message, &[0u8; 32])
+        .map_err(|e| CryptoError::InvalidKey(e.to_string()))?;
+    Ok(signature.to_bytes().to_vec())
+}
+
+/// Taproot key-path 签名：先把私钥按 BIP-341 调整（`d' = d + TapTweak(x)`，
+/// 内部公钥为奇 y 时先取反），再对 `message`（32 字节 sighash，必要时已含
+/// 1 字节 hash_type）做 BIP-340 Schnorr 签名。
+pub fn schnorr_sign_taproot(private_key: &[u8], message: &[u8]) -> Result<Vec<u8>> {
+    let mut scalar = scalar_from_bytes(private_key)?;
+    let point = (ProjectivePoint::GENERATOR * scalar).to_affine();
+    // 内部公钥必须是偶 y（BIP-341 的 lift_x 约定）。
+    if point.to_encoded_point(false).as_bytes()[64] & 1 == 1 {
+        scalar = -scalar;
+    }
+    let internal_x = x_bytes(&point.to_encoded_point(true))?;
+    let tweak = tap_tweak(&internal_x)?;
+    let tweaked = scalar + tweak;
+    schnorr_sign(&tweaked.to_bytes(), message)
+}
 
 pub fn sign_prehash_recoverable<F>(
     private_key: &[u8],
@@ -133,5 +244,83 @@ mod tests {
             let expected = exp_key.verifying_key();
             assert_eq!(recovered.to_sec1_bytes(), expected.to_sec1_bytes());
         }
+    }
+
+    // ── BIP-340 / BIP-341 ────────────────────────────────────────────
+
+    fn scalar_bytes(value: u32) -> Vec<u8> {
+        let mut out = vec![0u8; 32];
+        out[28..].copy_from_slice(&value.to_be_bytes());
+        out
+    }
+
+    /// BIP-340 官方测试向量 0：私钥 3、aux 全零、消息全零。
+    #[test]
+    fn schnorr_matches_bip340_vector_zero() {
+        let private_key = scalar_bytes(3);
+        assert_eq!(
+            hex::encode(xonly_public_key(&private_key).unwrap()),
+            "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
+        );
+        let signature = schnorr_sign(&private_key, &[0u8; 32]).unwrap();
+        assert_eq!(
+            hex::encode(&signature),
+            "e907831f80848d1069a5371b402410364bdf1c5f8307b0084c55f1ce2dca821525f66a4a85ea8b71e482a74f382d2ce5ebeee8fdb2172f477df4900d310536c0"
+        );
+    }
+
+    /// 手写 BIP-340 验签方程 `s·G == R + e·P`，不复用 k256 的 schnorr 实现。
+    fn verify_bip340(xonly: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        let point = |x: &[u8]| -> ProjectivePoint {
+            let mut compressed = vec![0x02];
+            compressed.extend_from_slice(x);
+            ProjectivePoint::from(*k256::PublicKey::from_sec1_bytes(&compressed).unwrap().as_affine())
+        };
+        let scalar = |bytes: &[u8]| -> Scalar {
+            let mut repr = k256::FieldBytes::default();
+            repr.copy_from_slice(bytes);
+            Option::from(Scalar::from_repr(repr)).unwrap()
+        };
+        let r_point = point(&signature[..32]);
+        let s = scalar(&signature[32..]);
+        let e = scalar(&tagged_hash(
+            "BIP0340/challenge",
+            &[&signature[..32], xonly, message],
+        ));
+        (ProjectivePoint::GENERATOR * s) == (r_point + point(xonly) * e)
+    }
+
+    #[test]
+    fn schnorr_signatures_satisfy_the_verification_equation() {
+        let private_key = test_privkey();
+        let xonly = xonly_public_key(&private_key).unwrap();
+        for i in 0..5u8 {
+            let message = crate::sha256::hash(&[i; 7]);
+            let signature = schnorr_sign(&private_key, &message).unwrap();
+            assert!(verify_bip340(&xonly, &message, &signature), "case {i}");
+        }
+    }
+
+    #[test]
+    fn taproot_output_key_is_tweaked_not_the_internal_key() {
+        let private_key = test_privkey();
+        let internal = xonly_public_key(&private_key).unwrap();
+        let output = taproot_output_key_from_private(&private_key).unwrap();
+        assert_eq!(output.len(), 32);
+        assert_ne!(output, internal, "输出公钥必须带 TapTweak");
+        // 同一内部公钥重复计算必须稳定。
+        assert_eq!(output, taproot_output_key(&internal).unwrap());
+    }
+
+    #[test]
+    fn taproot_signature_verifies_against_the_output_key() {
+        let private_key = test_privkey();
+        let output = taproot_output_key_from_private(&private_key).unwrap();
+        let message = crate::sha256::hash(b"taproot key path");
+        let signature = schnorr_sign_taproot(&private_key, &message).unwrap();
+        assert_eq!(signature.len(), 64);
+        let verifying = k256::schnorr::VerifyingKey::from_bytes(&output).unwrap();
+        let parsed = k256::schnorr::Signature::try_from(signature.as_slice()).unwrap();
+        verifying.verify_raw(&message, &parsed).unwrap();
     }
 }

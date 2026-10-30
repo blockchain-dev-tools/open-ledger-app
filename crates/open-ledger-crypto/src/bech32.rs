@@ -17,6 +17,25 @@ pub fn encode(hrp: &str, witness_version: u8, program: &[u8]) -> String {
         .collect()
 }
 
+/// segwit 地址编码，按 BIP-350 选择校验变体：witness v0 用 bech32，
+/// v1 及以上用 bech32m（Taproot `bc1p…` 必须走这条）。
+pub fn encode_segwit(hrp: &str, witness_version: u8, program: &[u8]) -> String {
+    if witness_version == 0 {
+        return encode(hrp, 0, program);
+    }
+    let parsed_hrp = bech32::Hrp::parse(hrp).expect("valid bech32 HRP");
+    use bech32::{ByteIterExt, Fe32IterExt};
+    let version_fe32 = bech32::Fe32::from_char_unchecked(b'q' - witness_version);
+    program
+        .iter()
+        .copied()
+        .bytes_to_fes()
+        .with_checksum::<bech32::Bech32m>(&parsed_hrp)
+        .with_witness_version(version_fe32)
+        .chars()
+        .collect()
+}
+
 /// 普通 bech32（非 segwit）：`hrp1<data>`，`data` 为 8-bit 字节流。
 ///
 /// 与 [`encode`] 的区别是**不带 witness version** —— Sui 的 `suiprivkey` 是

@@ -1,3 +1,4 @@
+import '../core/models/bitcoin_address_type.dart';
 import '../core/models/chain.dart';
 import '../generated/l10n/app_localizations.dart';
 
@@ -34,6 +35,29 @@ extension ChainLabelL10n on AppLocalizations {
     };
   }
 }
+
+/// Localized name of a Bitcoin address type.
+///
+/// Shares the four labels between the account row chip and the "Add Account"
+/// type picker, so the two can never drift.
+extension BitcoinAddressTypeLabelL10n on AppLocalizations {
+  String bitcoinAddressTypeLabel(BitcoinAddressType type) => switch (type) {
+        BitcoinAddressType.legacy => btcAddressTypeLegacy,
+        BitcoinAddressType.nestedSegwit => btcAddressTypeNestedSegwit,
+        BitcoinAddressType.nativeSegwit => btcAddressTypeNativeSegwit,
+        BitcoinAddressType.taproot => btcAddressTypeTaproot,
+      };
+}
+
+/// Address prefix that identifies [type] on-chain, shown next to the label.
+///
+/// Not translated: these are literal address prefixes.
+String bitcoinAddressTypePrefix(BitcoinAddressType type) => switch (type) {
+      BitcoinAddressType.legacy => '1…',
+      BitcoinAddressType.nestedSegwit => '3…',
+      BitcoinAddressType.nativeSegwit => 'bc1q…',
+      BitcoinAddressType.taproot => 'bc1p…',
+    };
 
 /// SVG asset path for a chain id.
 ///

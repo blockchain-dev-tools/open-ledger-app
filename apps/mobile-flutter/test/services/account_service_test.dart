@@ -550,6 +550,55 @@ void main() {
       expect(account!.address, '0xLegacy');
       expect(host.calls, isEmpty);
     });
+
+    test('routes every Bitcoin address type to its profile index', () async {
+      final cases = {
+        "m/44'/0'/0'/0/0": 1,
+        "m/49'/0'/0'/0/0": 2,
+        "m/84'/0'/0'/0/0": 0,
+        "m/86'/0'/0'/0/0": 3,
+      };
+      for (final entry in cases.entries) {
+        final host = _FakeChainHost(
+          material: const ChainAccountMaterial(
+            address: 'bc1host',
+            publicKeyHex: '02abcd',
+          ),
+        );
+        final service = AccountService(
+          crypto: _MockCryptoService(address: 'legacyfallback'),
+          chainHost: host,
+        );
+
+        final account =
+            await service.deriveSingleAccount('bitcoin', entry.key, _testSeed);
+
+        expect(account!.address, 'bc1host', reason: entry.key);
+        expect(host.calls, ['openledger.bitcoin#0'], reason: entry.key);
+        expect(host.profileIndexes, [entry.value], reason: entry.key);
+      }
+    });
+
+    test('keeps the Bitcoin legacy path away from the host', () async {
+      // `m/44'/60'` is an ETH path, not one of Bitcoin's four templates.
+      final host = _FakeChainHost(
+        material: const ChainAccountMaterial(address: 'bc1host', publicKeyHex: ''),
+      );
+      final service = AccountService(
+        crypto: _MockCryptoService(
+          address: 'legacybtc',
+          secp256k1PrivKey: _bytes('cafebabe'),
+          chainPubKeyBytes: _bytes('02cafe'),
+        ),
+        chainHost: host,
+      );
+
+      final account = await service.deriveSingleAccount(
+          'bitcoin', "m/44'/60'/0'/0/0", _testSeed);
+
+      expect(account!.address, 'legacybtc');
+      expect(host.calls, isEmpty);
+    });
   });
 }
 
@@ -559,6 +608,7 @@ class _FakeChainHost implements IChainHostService {
 
   final ChainAccountMaterial? material;
   final List<String> calls = <String>[];
+  final List<int> profileIndexes = <int>[];
 
   @override
   bool get isAvailable => true;
@@ -567,6 +617,7 @@ class _FakeChainHost implements IChainHostService {
   ChainAccountMaterial? deriveAccount(String moduleId,
       {int accountProfileIndex = 0, required int addressIndex}) {
     calls.add('$moduleId#$addressIndex');
+    profileIndexes.add(accountProfileIndex);
     return material;
   }
 

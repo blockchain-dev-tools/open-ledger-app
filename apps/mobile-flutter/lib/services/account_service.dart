@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../core/interfaces/account_service.dart';
 import '../core/interfaces/chain_host_service.dart';
 import '../core/interfaces/crypto_service.dart';
+import '../core/models/bitcoin_address_type.dart';
 import '../core/models/chain.dart';
 import '../core/models/wallet_accounts.dart';
 import '../utils/fnv.dart';
@@ -104,8 +105,11 @@ class AccountService implements IAccountService {
     );
   }
 
-  /// Stage 4：本机账户统一入口。只在「路径恰好是 `accountPathForIndex`」时
-  /// 走 Rust 模块，保证任意自定义路径仍由旧实现处理。
+  /// Stage 4：本机账户统一入口。只在「路径是该链的标准账户模板」时走 Rust
+  /// 模块，保证任意自定义路径仍由旧实现处理。
+  ///
+  /// Bitcoin 有四种地址类型，每种都是模板 `m/{44,49,84,86}'/0'/0'/0/{index}`；
+  /// 类型由路径决定，并作为 `accountProfileIndex` 传给模块。
   ChainAccount? _deriveViaHost(String chain, String path, String seedHex) {
     final host = _chainHost;
     if (host == null || !host.isAvailable) return null;
@@ -121,10 +125,22 @@ class AccountService implements IAccountService {
     }
     if (model == null) return null;
     final index = model.accountIndexFromPath(path);
-    if (model.accountPathForIndex(index) != path) return null;
+
+    var profileIndex = 0;
+    if (model == Chain.bitcoin) {
+      final type = BitcoinAddressType.fromPath(path);
+      if (type == null || type.pathForIndex(index) != path) return null;
+      profileIndex = type.profileIndex;
+    } else if (model.accountPathForIndex(index) != path) {
+      return null;
+    }
 
     host.setSeed(seedHex);
-    final material = host.deriveAccount(moduleId, addressIndex: index);
+    final material = host.deriveAccount(
+      moduleId,
+      accountProfileIndex: profileIndex,
+      addressIndex: index,
+    );
     if (material == null) return null;
     return ChainAccount(
       chain: chain,

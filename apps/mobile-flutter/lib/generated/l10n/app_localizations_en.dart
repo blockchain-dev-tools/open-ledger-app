@@ -522,6 +522,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addAccount => 'Add Account';
 
   @override
+  String get btcAddressTypeTitle => 'Bitcoin address type';
+
+  @override
+  String get btcAddressTypeHint =>
+      'Each type is a separate account on its own derivation path. Pick the format your exchange or wallet accepts.';
+
+  @override
+  String get btcAddressTypeLegacy => 'Legacy';
+
+  @override
+  String get btcAddressTypeNestedSegwit => 'Nested SegWit';
+
+  @override
+  String get btcAddressTypeNativeSegwit => 'Native SegWit';
+
+  @override
+  String get btcAddressTypeTaproot => 'Taproot';
+
+  @override
   String get startBle => 'Start BLE';
 
   @override

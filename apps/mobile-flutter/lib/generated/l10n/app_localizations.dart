@@ -1062,6 +1062,42 @@ abstract class AppLocalizations {
   /// **'Add Account'**
   String get addAccount;
 
+  /// No description provided for @btcAddressTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin address type'**
+  String get btcAddressTypeTitle;
+
+  /// No description provided for @btcAddressTypeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each type is a separate account on its own derivation path. Pick the format your exchange or wallet accepts.'**
+  String get btcAddressTypeHint;
+
+  /// No description provided for @btcAddressTypeLegacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy'**
+  String get btcAddressTypeLegacy;
+
+  /// No description provided for @btcAddressTypeNestedSegwit.
+  ///
+  /// In en, this message translates to:
+  /// **'Nested SegWit'**
+  String get btcAddressTypeNestedSegwit;
+
+  /// No description provided for @btcAddressTypeNativeSegwit.
+  ///
+  /// In en, this message translates to:
+  /// **'Native SegWit'**
+  String get btcAddressTypeNativeSegwit;
+
+  /// No description provided for @btcAddressTypeTaproot.
+  ///
+  /// In en, this message translates to:
+  /// **'Taproot'**
+  String get btcAddressTypeTaproot;
+
   /// No description provided for @startBle.
   ///
   /// In en, this message translates to:

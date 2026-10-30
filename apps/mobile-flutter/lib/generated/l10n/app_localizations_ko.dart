@@ -510,6 +510,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addAccount => '계정 추가';
 
   @override
+  String get btcAddressTypeTitle => '비트코인 주소 유형';
+
+  @override
+  String get btcAddressTypeHint =>
+      '네 가지 유형은 각기 다른 파생 경로의 독립된 계정입니다. 거래소나 지갑이 지원하는 형식을 선택하세요.';
+
+  @override
+  String get btcAddressTypeLegacy => 'Legacy';
+
+  @override
+  String get btcAddressTypeNestedSegwit => 'Nested SegWit';
+
+  @override
+  String get btcAddressTypeNativeSegwit => 'Native SegWit';
+
+  @override
+  String get btcAddressTypeTaproot => 'Taproot';
+
+  @override
   String get startBle => 'BLE 시작';
 
   @override
