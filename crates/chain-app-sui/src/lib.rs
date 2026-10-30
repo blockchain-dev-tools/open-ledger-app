@@ -1,20 +1,32 @@
 //! Sui 链 App（阶段 4）。
 //!
-//! 线格式与迁移前的 Dart 实现保持一致（CLA 0x07）：
+//! **非标准实现**：以下编号与 Ledger 官方 `app-sui` 都不一致，真实主机会拒绝。
+//!
+//! 官方 `app-sui`（`docs/apdu.md`，`rust-app/src/interface.rs`）：
+//! `CLA = 0x00`（全部命令），`P1`/`P2` 必须为 0，`0x01 VERIFY_ADDRESS`、
+//! `0x02 GET_PUBKEY`、`0x03 SIGN_TX`、`0x22 PROVIDE_TOKEN_DYNAMIC_DESCRIPTOR`、
+//! `0xFE GET_VERSION_STR`、`0xFF QUIT_APP`；大包走 Block Protocol 分块，
+//! 签名命令由设备解析完整 BCS 交易前导与指令。
+//!
+//! 我们的实现：`CLA 0x07`（官方不存在），`0x02` 取地址、`0x04` 签「宿主给的
+//! 消息字节」。因此：
+//!
+//! - 签名必须在确认页声明 `blind-signing`（设备没有解析 BCS 交易）；
+//! - 与官方对齐（含 Block Protocol）另开 ticket，见 D-021 的后果；
+//! - 不得把 `0x04` 改叫官方 `0x03`：编号对齐但语义不同更糟。
+//!
+//! 线格式细节：
 //!
 //! - `07 02 GET_PUBLIC_KEY` → ASCII 地址 `0x…` + `9000`
 //!   （地址 = `blake2b(0x00 || ed25519_pubkey)`）；
 //! - `07 04 SIGN_TX` → `[path][message]`，一次审批后返回 64 字节 Ed25519 签名。
-//!
-//! 这里签名的是宿主给的原始消息字节（产品现有协议）；Sui 的 intent 包装与
-//! 哈希由调用方完成，模块不额外套哈希。
 
 use chain_app_api::{
     AccountProfile, AppDescriptor, AppError, ChainApp, Curve, DerivationRule, DerivationScheme,
     Effect, Event, ExchangeId, Field, FieldValue, FinishStatus, KeyOutput, NetworkId, OperationKind,
     ParseStatus, PublicKeyRequest, ReviewAction, ReviewDocument, ReviewOutcome, ReviewRequest,
-    ReviewSection, ServiceResult, SessionConfig, SignOperation, SignPlan, SignScheme, Wire,
-    API_VERSION,
+    ReviewSection, Risk, RiskLevel, RiskSource, ServiceResult, SessionConfig, SignOperation,
+    SignPlan, SignScheme, Wire, API_VERSION,
 };
 use open_ledger_crypto::blake2b;
 
@@ -311,7 +323,16 @@ impl SuiModule {
                             },
                         ],
                     }],
-                    risks: vec![],
+                    // 设备只签宿主给的消息字节，没有解析 BCS 交易：盲签必须显式。
+                    risks: vec![Risk {
+                        code: "blind-signing".into(),
+                        severity: RiskLevel::Critical,
+                        parameters: vec![(
+                            "reason".into(),
+                            "host supplied message bytes; BCS transaction not parsed".into(),
+                        )],
+                        source: RiskSource::Module,
+                    }],
                     parse_status: ParseStatus::Partial,
                 },
                 action: ReviewAction::Sign(SignPlan::single(operation)),
@@ -434,10 +455,13 @@ pub fn descriptor() -> AppDescriptor {
             version: "0.1.0".into(),
             wire: Wire::LedgerApdu,
             supported: vec![
-                "07 02 GET_PUBLIC_KEY (ascii 0x address)".into(),
-                "07 04 SIGN_TX (ed25519, single chunk)".into(),
+                "07 02 GET_PUBLIC_KEY (non-standard CLA; official app uses 0x00 0x02)".into(),
+                "07 04 SIGN_TX (own extension: host-supplied bytes; blind signing)".into(),
             ],
-            unsupported: vec!["07 04 chunked payloads".into()],
+            unsupported: vec![
+                "official CLA 0x00 command set (0x01 VERIFY_ADDRESS / 0x03 SIGN_TX / 0x22 descriptor)".into(),
+                "Block Protocol chunking".into(),
+            ],
             vector_sources: vec!["tool/e2e/tests/sui_sign.py".into()],
         }],
         account_profiles: vec![AccountProfile {

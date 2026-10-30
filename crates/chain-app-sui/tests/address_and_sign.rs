@@ -209,6 +209,25 @@ fn sign_review_and_signature_verify_against_the_message() {
     verifying.verify_strict(&message, &signature).unwrap();
 }
 
+/// 我们签的是宿主给的字节、没有解析 BCS 交易，而且 `CLA 0x07` / `INS 0x04`
+/// 与官方 `app-sui`（`CLA 0x00` / `SIGN_TX 0x03`）都不一致：确认页必须显式
+/// 声明盲签，不能让用户以为设备审阅过交易。
+#[test]
+fn sign_review_declares_blind_signing() {
+    let mut fixture = setup();
+    let mut data = path_bytes();
+    data.extend_from_slice(b"payload");
+    let (_, document) = expect_review(submit(&mut fixture, apdu(0x04, &data)));
+    assert_eq!(document.parse_status, ParseStatus::Partial);
+    let risk = document
+        .risks
+        .iter()
+        .find(|risk| risk.code == "blind-signing")
+        .expect("Sui 签名必须声明 blind-signing");
+    assert_eq!(risk.severity, RiskLevel::Critical);
+    assert_eq!(risk.source, RiskSource::Module);
+}
+
 #[test]
 fn rejecting_a_signature_returns_user_denied() {
     let mut fixture = setup();
