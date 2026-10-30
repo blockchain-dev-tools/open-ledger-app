@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/bip39_wordlist.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/enigma_logo_icon.dart';
@@ -8,10 +9,7 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/neo_card.dart';
-import '../../widgets/common/primary_button.dart';
-import '../../widgets/mnemonic/mnemonic_language_picker.dart';
-import '../../../data/bip39_wordlist.dart';
-import '../../../utils/enigma.dart';
+import '../../widgets/mnemonic/enigma_form.dart';
 
 /// Enigma wallet creation screen.
 ///
@@ -21,14 +19,12 @@ import '../../../utils/enigma.dart';
 ///
 /// On success, navigates to [EnigmaMnemonicScreen] with the generated words.
 ///
+/// The inputs themselves live in [EnigmaForm], which the vault manager's
+/// "New Vault" Enigma tab renders too.
+///
 /// Ported from the original TypeScript implementation.
 class EnigmaScreen extends StatefulWidget {
-  /// When `true` the derived wallet is appended to the current session as a
-  /// new vault (`walletService.addVault`) instead of creating the primary
-  /// wallet. Reached from the vault manager's "New Vault" flow.
-  final bool addVault;
-
-  const EnigmaScreen({super.key, this.addVault = false});
+  const EnigmaScreen({super.key});
 
   @override
   State<EnigmaScreen> createState() => _EnigmaScreenState();
@@ -37,13 +33,7 @@ class EnigmaScreen extends StatefulWidget {
 class _EnigmaScreenState extends State<EnigmaScreen> {
   final _riddleController = TextEditingController();
   final _secretController = TextEditingController();
-  bool _obscureSecret = true;
-  bool _isGenerating = false;
   Bip39WordlistLanguage _selectedLanguage = Bip39WordlistLanguage.english;
-
-  /// Live count of BIP-39 words the riddle matches (null when the native
-  /// bridge is unavailable, in which case the hint stays hidden).
-  int? _matchCount;
 
   @override
   void dispose() {
@@ -52,126 +42,30 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
     super.dispose();
   }
 
-  /// Recomputes [_matchCount] from the current riddle and wordlist.
-  ///
-  /// Callers wrap this in `setState`; derivation itself is cheap (one
-  /// wordlist lookup per token, capped at 1024 tokens).
-  void _refreshMatchCount() {
-    final riddle = _riddleController.text.trim();
-    _matchCount = riddle.isEmpty
-        ? 0
-        : enigmaMatchCount(riddle, language: _selectedLanguage);
-  }
+  /// Leaves the screen: first-run setup returns to Welcome.
+  void _onBack() => context.go('/welcome');
 
-  /// Whether both input fields have content.
-  bool get _isFormValid =>
-      _riddleController.text.trim().isNotEmpty &&
-      _secretController.text.trim().isNotEmpty;
-
-  /// Leaves the screen: the new-vault flow returns to the import screen it was
-  /// pushed from; first-run setup returns to Welcome.
-  void _onBack() {
-    if (widget.addVault) {
-      if (context.canPop()) {
-        context.pop();
-        return;
-      }
-      context.go('/import', extra: const {'addVault': true});
-      return;
-    }
-    context.go('/welcome');
-  }
-
-  /// Wraps an input in the neo block in light mode; dark returns the field
-  /// untouched so it keeps its own filled, hairline-outlined box.
-  Widget _neoField(ColorTokens c, Widget child) =>
-      c.neobrutalism ? NeoCard(child: child) : child;
-
-  /// Field chrome. Light (neo) drops the field's own fill and outline — the
-  /// surrounding [NeoCard] supplies both — while dark keeps the original
-  /// filled, hairline-outlined box.
-  InputDecoration _fieldDecoration(
-    ColorTokens c, {
-    required String hintText,
-    Widget? suffixIcon,
-  }) {
-    final neo = c.neobrutalism;
-    final OutlineInputBorder border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(R.lg),
-      borderSide: BorderSide(color: c.border),
+  /// Hands the derived words to the review step.
+  void _onGenerated(EnigmaDerivation derivation) {
+    context.go(
+      '/enigma-mnemonic',
+      extra: <String, Object>{
+        'words': derivation.words,
+        'language': derivation.language,
+        'entropyHex': derivation.entropyHex,
+        'riddle': derivation.riddle,
+        'secret': derivation.secret,
+        'addVault': false,
+      },
     );
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: TextStyle(color: c.text.withAlpha(100), fontSize: 14),
-      filled: !neo,
-      fillColor: neo ? null : c.surface,
-      contentPadding: const EdgeInsets.all(16),
-      suffixIcon: suffixIcon,
-      border: neo ? InputBorder.none : border,
-      enabledBorder: neo ? InputBorder.none : border,
-      focusedBorder: neo
-          ? InputBorder.none
-          : OutlineInputBorder(
-              borderRadius: BorderRadius.circular(R.lg),
-              borderSide: BorderSide(color: c.primary, width: 1.5),
-            ),
-    );
-  }
-
-  void _onGenerate() {
-    if (!_isFormValid || _isGenerating) return;
-
-    setState(() => _isGenerating = true);
-    final language = _selectedLanguage;
-
-    // Brief delay to show processing state.
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-
-      try {
-        final result = generateEnigmaMnemonic(
-          _riddleController.text.trim(),
-          _secretController.text.trim(),
-          language: language,
-        );
-
-        setState(() => _isGenerating = false);
-
-        final extra = <String, Object>{
-          'words': result.words,
-          'language': language,
-          'entropyHex': result.entropyHex,
-          'riddle': _riddleController.text.trim(),
-          'secret': _secretController.text.trim(),
-          'addVault': widget.addVault,
-        };
-        // The new-vault flow pushes so its back arrow returns to the import
-        // screen with the typed phrase intact; first-run setup replaces the
-        // stack as before.
-        if (widget.addVault) {
-          context.push('/enigma-mnemonic', extra: extra);
-        } else {
-          context.go('/enigma-mnemonic', extra: extra);
-        }
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _isGenerating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Secret Phrase generation failed: $e'),
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? ColorTokens.dark.error
-                : ColorTokens.light.error,
-          ),
-        );
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final c = isDark ? ColorTokens.dark : ColorTokens.light;
+    final l10n = AppLocalizations.of(context)!;
+    final c = Theme.of(context).brightness == Brightness.dark
+        ? ColorTokens.dark
+        : ColorTokens.light;
 
     return PopScope(
       canPop: false,
@@ -185,7 +79,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
         backgroundColor: c.groupedBg,
         appBar: neoAppBar(
           c: c,
-          title: Text(AppLocalizations.of(context)!.enigmaWallet),
+          title: Text(l10n.enigmaWallet),
           leading: neoBackButton(c, onPressed: _onBack),
         ),
         body: GridBackground(
@@ -225,7 +119,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   const SizedBox(height: 24),
 
                   Text(
-                    AppLocalizations.of(context)!.enigmaTitle,
+                    l10n.enigmaTitle,
                     style: TextStyle(
                       color: c.text,
                       fontSize: 24,
@@ -234,7 +128,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    AppLocalizations.of(context)!.enigmaDescription,
+                    l10n.enigmaDescription,
                     style: TextStyle(
                       color: c.mutedText(160),
                       fontSize: 14,
@@ -244,130 +138,15 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
 
                   const SizedBox(height: 32),
 
-                  // ── Language Selector ──────────────────────────────
-                  Text(
-                    AppLocalizations.of(context)!.mnemonicLanguage,
-                    style: TextStyle(
-                      color: c.text.withAlpha(200),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  MnemonicLanguageTrigger(
+                  // ── Inputs + Generate ────────────────────────────────
+                  EnigmaForm(
+                    riddleController: _riddleController,
+                    secretController: _secretController,
                     language: _selectedLanguage,
-                    onChanged: (lang) => setState(() {
+                    onLanguageChanged: (lang) => setState(() {
                       _selectedLanguage = lang;
-                      _refreshMatchCount();
                     }),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── Riddle Input ────────────────────────────────────
-                  Text(
-                    AppLocalizations.of(context)!.yourRiddle,
-                    style: TextStyle(
-                      color: c.text.withAlpha(200),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _neoField(
-                    c,
-                    TextField(
-                      key: const Key('enigma-riddle'),
-                      controller: _riddleController,
-                      maxLines: 3,
-                      style: TextStyle(color: c.text, fontSize: 15),
-                      onChanged: (_) => setState(_refreshMatchCount),
-                      decoration: _fieldDecoration(
-                        c,
-                        hintText:
-                            AppLocalizations.of(context)!.enterMemorablePhrase,
-                      ),
-                    ),
-                  ),
-
-                  // ── Match count hint ────────────────────────────────
-                  if (_riddleController.text.trim().isNotEmpty &&
-                      _matchCount != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      _matchCount! > 0
-                          ? AppLocalizations.of(context)!
-                              .enigmaMatchCount(_matchCount!)
-                          : AppLocalizations.of(context)!.enigmaNoMatch,
-                      style: TextStyle(
-                        color: _matchCount! > 0
-                            ? c.mutedText(160)
-                            : c.error,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 20),
-
-                  // ── Secret Key Input ────────────────────────────────
-                  Text(
-                    AppLocalizations.of(context)!.secretKey,
-                    style: TextStyle(
-                      color: c.text.withAlpha(200),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _neoField(
-                    c,
-                    TextField(
-                      key: const Key('enigma-secret'),
-                      controller: _secretController,
-                      obscureText: _obscureSecret,
-                      style: TextStyle(color: c.text, fontSize: 15),
-                      onChanged: (_) => setState(() {}),
-                      decoration: _fieldDecoration(
-                        c,
-                        hintText: AppLocalizations.of(context)!.enterSecretKey,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureSecret
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: c.text.withAlpha(150),
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            setState(() => _obscureSecret = !_obscureSecret);
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // ── Tip Text ────────────────────────────────────────
-                  Text(
-                    AppLocalizations.of(context)!.tipLongUnique,
-                    style: TextStyle(
-                      color: c.text.withAlpha(100),
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // ── Generate Button ─────────────────────────────────
-                  PrimaryButton(
-                    key: const Key('enigma-generate'),
-                    label: AppLocalizations.of(context)!.generateWallet,
-                    onTap: _isFormValid && !_isGenerating ? _onGenerate : null,
-                    loading: _isGenerating,
+                    onGenerated: _onGenerated,
                   ),
 
                   const SizedBox(height: 24),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/bip39_english.dart';
+import '../../../data/bip39_wordlist.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../services/mnemonic_service.dart';
 import '../../theme/color_tokens.dart';
@@ -10,6 +11,7 @@ import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_back_button.dart';
 import '../../widgets/common/tab_button.dart';
+import '../../widgets/mnemonic/enigma_form.dart';
 import 'components/import_button.dart';
 import 'components/mnemonic_input_field.dart';
 import 'components/mnemonic_status_row.dart';
@@ -43,11 +45,16 @@ class ImportMnemonicScreen extends StatefulWidget {
   /// null the screen pushes [MnemonicQrScanScreen].
   final Future<String?> Function()? qrScanOverride;
 
+  /// Test seam: replaces the Rust-backed Enigma derivation of the secret
+  /// phrase tab. Null uses `generateEnigmaMnemonic`.
+  final EnigmaDerive? enigmaDerive;
+
   const ImportMnemonicScreen({
     super.key,
     this.mnemonicService,
     this.addVault = false,
     this.qrScanOverride,
+    this.enigmaDerive,
   });
 
   @override
@@ -65,6 +72,17 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
   final TextEditingController _passphraseController = TextEditingController();
   String _wordCount = '0';
 
+  /// Which mode tab is showing in the new-vault flow: 0 imports an existing
+  /// phrase, 1 derives one from a riddle + secret. Always 0 for a first-run
+  /// import, which has no tabs.
+  int _mode = 0;
+
+  /// Secret-phrase inputs, kept here (not in the form) so a tab switch — or
+  /// returning from the word review — never loses what the user typed.
+  final TextEditingController _riddleController = TextEditingController();
+  final TextEditingController _secretController = TextEditingController();
+  Bip39WordlistLanguage _enigmaLanguage = Bip39WordlistLanguage.english;
+
   /// Word total shown by the counter: 12 until the input grows past it.
   int _targetWordCount = 12;
   List<String> _suggestions = const <String>[];
@@ -76,6 +94,8 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
   void dispose() {
     _controller.dispose();
     _passphraseController.dispose();
+    _riddleController.dispose();
+    _secretController.dispose();
     super.dispose();
   }
 
@@ -177,11 +197,22 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     context.go(widget.addVault ? '/' : '/welcome');
   }
 
-  /// The secret-phrase mode tab: hands the new-vault flow to the Enigma screens,
-  /// which derive the vault's mnemonic from a riddle + secret instead of
-  /// importing an existing phrase.
-  void _openSecretPhrase() {
-    context.push('/enigma', extra: const {'addVault': true});
+  /// Hands the derived secret-phrase wallet to the shared word-review step.
+  ///
+  /// Pushed (not replaced) so the back arrow returns to this screen with the
+  /// secret-phrase tab still selected and the riddle intact.
+  void _onEnigmaGenerated(EnigmaDerivation derivation) {
+    context.push(
+      '/enigma-mnemonic',
+      extra: <String, Object>{
+        'words': derivation.words,
+        'language': derivation.language,
+        'entropyHex': derivation.entropyHex,
+        'riddle': derivation.riddle,
+        'secret': derivation.secret,
+        'addVault': true,
+      },
+    );
   }
 
   /// Navigates to PIN setup with the validated mnemonic.
@@ -236,129 +267,16 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
         ),
         body: GridBackground(
           child: SafeArea(
-            // 整页可滚动：键盘弹出时视口被压缩，固定高度的内容放不下会溢出，
-            // 导致 Import 按钮被顶出屏幕。改成可滚动后用户可以滑到按钮。
             child: Column(
               children: [
                 // ── Mode tabs (new vault only) ──────────────────────────
-                // Pinned above the scroll area: importing a phrase and the
-                // secret-phrase flow are the two ways to fill a new vault.
+                // In place, not a route: importing a phrase and deriving one
+                // from a riddle + secret are the two ways to fill a new vault.
                 if (widget.addVault) _modeTabs(c, l10n),
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 8),
-
-                          // ── Title (first-run import only) ───────────────
-                          if (!widget.addVault) ...[
-                            Text(
-                              l10n.importMnemonicTitle,
-                              style: TextStyle(
-                                color: c.text,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-
-                          // ── Subtitle ────────────────────────────────────
-                          Text(
-                            l10n.importMnemonicHint,
-                            style: TextStyle(
-                              color: c.mutedText(150),
-                              fontSize: 14,
-                            ),
-                          ),
-
-                          const SizedBox(height: 28),
-
-                          // ── Paste / scan actions ────────────────────────────
-                          Row(
-                            children: [
-                              Expanded(
-                                child: PasteButton(
-                                  onPressed: _pasteFromClipboard,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(child: QrScanButton(onPressed: _scanQr)),
-                            ],
-                          ),
-
-                          // Light gives the neo button's offset shadow room to clear.
-                          SizedBox(height: c.neobrutalism ? 22 : 18),
-
-                          // ── Text input field ─────────────────────────────────
-                          MnemonicInputField(
-                            controller: _controller,
-                            onChanged: _onTextChanged,
-                            onClear: _clear,
-                            hasChecked: _hasChecked,
-                            isValid: _isValid,
-                          ),
-
-                          // ── BIP-39 prefix suggestions ────────────────────────
-                          if (_suggestions.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            MnemonicSuggestions(
-                              suggestions: _suggestions,
-                              onTap: _applySuggestion,
-                            ),
-                          ],
-
-                          SizedBox(height: c.neobrutalism ? 18 : 14),
-
-                          // ── Passphrase field ──────────────────────────────
-                          PassphraseField(
-                            controller: _passphraseController,
-                            obscurePassphrase: _obscurePassphrase,
-                            onToggleObscure: () {
-                              setState(() {
-                                _obscurePassphrase = !_obscurePassphrase;
-                              });
-                            },
-                          ),
-
-                          SizedBox(height: c.neobrutalism ? 12 : 8),
-
-                          // ── Passphrase info text ──────────────────────────
-                          Text(
-                            'A passphrase creates a completely different set of wallets. '
-                            'Leave empty to use the standard BIP-39 seed.',
-                            style: TextStyle(
-                              color: c.mutedText(100),
-                              fontSize: 11,
-                            ),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // ── Status row: word count + validation ──────────────
-                          MnemonicStatusRow(
-                            wordCount: _wordCount,
-                            targetWordCount: _targetWordCount,
-                            hasChecked: _hasChecked,
-                            isValid: _isValid,
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // ── Import button ────────────────────────────────────
-                          ImportButton(
-                            key: const Key('import-mnemonic-submit'),
-                            isValid: _isValid,
-                            onTap: _import,
-                          ),
-
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: _mode == 0
+                      ? _importPane(c, l10n)
+                      : _secretPane(c, l10n),
                 ),
               ],
             ),
@@ -368,11 +286,156 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     );
   }
 
-  /// The mode switch above the import form (new-vault flow only).
+  /// Switches the new-vault mode tab, dropping focus first so the previous
+  /// pane's keyboard does not stay up over the new form.
+  void _switchMode(int mode) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (_mode != mode) setState(() => _mode = mode);
+  }
+
+  /// The import-phrase pane: the scrollable form this screen is named for.
   ///
-  /// Import is the tab this screen *is*; the secret-phrase tab hands off to
-  /// the existing Enigma flow, so the tapped tab reads as a mode switch while
-  /// the derivation form itself stays on its own screen.
+  /// Scrolls because the on-screen keyboard shrinks the viewport: fixed-height
+  /// content would overflow and push the Import button off screen.
+  Widget _importPane(ColorTokens c, AppLocalizations l10n) =>
+      SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+
+              // ── Title (first-run import only) ───────────────
+              if (!widget.addVault) ...[
+                Text(
+                  l10n.importMnemonicTitle,
+                  style: TextStyle(
+                    color: c.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // ── Subtitle ────────────────────────────────────
+              Text(
+                l10n.importMnemonicHint,
+                style: TextStyle(color: c.mutedText(150), fontSize: 14),
+              ),
+
+              const SizedBox(height: 28),
+
+              // ── Paste / scan actions ────────────────────────────
+              Row(
+                children: [
+                  Expanded(child: PasteButton(onPressed: _pasteFromClipboard)),
+                  const SizedBox(width: 12),
+                  Expanded(child: QrScanButton(onPressed: _scanQr)),
+                ],
+              ),
+
+              // Light gives the neo button's offset shadow room to clear.
+              SizedBox(height: c.neobrutalism ? 22 : 18),
+
+              // ── Text input field ─────────────────────────────────
+              MnemonicInputField(
+                controller: _controller,
+                onChanged: _onTextChanged,
+                onClear: _clear,
+                hasChecked: _hasChecked,
+                isValid: _isValid,
+              ),
+
+              // ── BIP-39 prefix suggestions ────────────────────────
+              if (_suggestions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                MnemonicSuggestions(
+                  suggestions: _suggestions,
+                  onTap: _applySuggestion,
+                ),
+              ],
+
+              SizedBox(height: c.neobrutalism ? 18 : 14),
+
+              // ── Passphrase field ──────────────────────────────
+              PassphraseField(
+                controller: _passphraseController,
+                obscurePassphrase: _obscurePassphrase,
+                onToggleObscure: () {
+                  setState(() {
+                    _obscurePassphrase = !_obscurePassphrase;
+                  });
+                },
+              ),
+
+              SizedBox(height: c.neobrutalism ? 12 : 8),
+
+              // ── Passphrase info text ──────────────────────────
+              Text(
+                'A passphrase creates a completely different set of wallets. '
+                'Leave empty to use the standard BIP-39 seed.',
+                style: TextStyle(color: c.mutedText(100), fontSize: 11),
+              ),
+
+              const SizedBox(height: 14),
+
+              // ── Status row: word count + validation ──────────────
+              MnemonicStatusRow(
+                wordCount: _wordCount,
+                targetWordCount: _targetWordCount,
+                hasChecked: _hasChecked,
+                isValid: _isValid,
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Import button ────────────────────────────────────
+              ImportButton(
+                key: const Key('import-mnemonic-submit'),
+                isValid: _isValid,
+                onTap: _import,
+              ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      );
+
+  /// The secret-phrase pane: the same [EnigmaForm] the first-run Enigma screen
+  /// renders, shown in place so the tab is a real switch rather than a route.
+  Widget _secretPane(ColorTokens c, AppLocalizations l10n) =>
+      SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.enigmaDescription,
+              style: TextStyle(
+                color: c.mutedText(150),
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 28),
+            EnigmaForm(
+              riddleController: _riddleController,
+              secretController: _secretController,
+              language: _enigmaLanguage,
+              onLanguageChanged: (lang) => setState(() {
+                _enigmaLanguage = lang;
+              }),
+              onGenerated: _onEnigmaGenerated,
+              derive: widget.enigmaDerive,
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      );
+
+  /// The mode switch above the panes (new-vault flow only).
   Widget _modeTabs(ColorTokens c, AppLocalizations l10n) => Padding(
     // Neo tabs carry an offset shadow, so light leaves room below the row.
     padding: EdgeInsets.fromLTRB(24, 12, 24, c.neobrutalism ? 6 : 0),
@@ -382,16 +445,16 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
           key: const Key('add-vault-tab-import'),
           c: c,
           label: l10n.newVaultImportTab,
-          selected: true,
-          onTap: () {},
+          selected: _mode == 0,
+          onTap: () => _switchMode(0),
         ),
         const SizedBox(width: 8),
         TabButton(
           key: const Key('add-vault-tab-secret'),
           c: c,
           label: l10n.newVaultSecretTab,
-          selected: false,
-          onTap: _openSecretPhrase,
+          selected: _mode == 1,
+          onTap: () => _switchMode(1),
         ),
       ],
     ),

@@ -233,16 +233,14 @@ GoRouter createRouter({required bool initialHasWallet, AppState? appState}) {
 
       // ── Enigma Flow ──────────────────────────────────────────────
       //
-      // `extra: {'addVault': true}` targets the vault manager's "New Vault"
-      // flow: the derived wallet is appended to the current session instead of
-      // creating the primary wallet.
+      // First-run creation only: the vault manager's "New Vault" flow renders
+      // the same [EnigmaForm] under a tab on the import screen instead of
+      // opening this route. `extra: {'addVault': true}` on
+      // `/enigma-mnemonic` is that flow's review step, so the derived wallet is
+      // appended to the current session instead of creating the primary wallet.
       GoRoute(
         path: '/enigma',
-        builder: (context, state) {
-          final extra = state.extra;
-          final addVault = extra is Map && extra['addVault'] == true;
-          return EnigmaScreen(addVault: addVault);
-        },
+        builder: (context, state) => const EnigmaScreen(),
       ),
       GoRoute(
         path: '/enigma-mnemonic',

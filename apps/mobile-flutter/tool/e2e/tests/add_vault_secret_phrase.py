@@ -73,12 +73,13 @@ async def run() -> int:
             if not await app.has_text("New Vault"):
                 print("[FAIL] 新金库流程没有显示 New Vault 标题")
                 return 1
+            # 暗语是同一页面上的模式 tab，不跳新页面：点完仍停在导入屏。
             await _tap(app, "add-vault-tab-secret", "Secret phrase tab")
-            screens = await app.wait_for_screen({"EnigmaScreen"}, timeout=8)
-            if "EnigmaScreen" not in screens:
-                print(f"[FAIL] 未进入暗语屏：{screens}")
-                return 1
             await app.settle(0.8)
+            screens = await app.screen()
+            if "ImportMnemonicScreen" not in screens:
+                print(f"[FAIL] 暗语 tab 切走了页面：{screens}")
+                return 1
 
             # ── 2. 暗语 → 24 词 → PIN ─────────────────────────────────
             await _tap(app, "enigma-riddle", "暗语输入框")

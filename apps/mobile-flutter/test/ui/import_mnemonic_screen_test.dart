@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
 import 'package:open_ledger_app/services/mnemonic_service.dart';
@@ -50,32 +49,6 @@ Widget _app({Future<String?> Function()? scan, bool addVault = false}) => Materi
         qrScanOverride: scan,
       ),
     );
-
-/// Minimal router harness for the new-vault flow: `/import` plus a stand-in
-/// for the Enigma route so the entry point can be tapped.
-Widget _routerApp() {
-  final router = GoRouter(
-    initialLocation: '/import',
-    routes: [
-      GoRoute(
-        path: '/import',
-        builder: (context, state) => ImportMnemonicScreen(
-          mnemonicService: MnemonicService(crypto: const _ValidatingCrypto()),
-          addVault: true,
-        ),
-      ),
-      GoRoute(
-        path: '/enigma',
-        builder: (context, state) => const Scaffold(body: Text('Enigma Screen')),
-      ),
-    ],
-  );
-  return MaterialApp.router(
-    routerConfig: router,
-    localizationsDelegates: const [AppLocalizations.delegate],
-    supportedLocales: AppLocalizations.supportedLocales,
-  );
-}
 
 String _fieldText(WidgetTester tester) => tester
     .widget<TextField>(find.byKey(const Key('mnemonic-input')))
@@ -236,13 +209,25 @@ void main() {
     expect(find.text('Secret phrase'), findsOneWidget);
   });
 
-  testWidgets('the secret-phrase tab opens the Enigma flow', (tester) async {
-    await tester.pumpWidget(_routerApp());
+  testWidgets('the secret-phrase tab swaps the form in place',
+      (tester) async {
+    await tester.pumpWidget(_app(addVault: true));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('add-vault-tab-secret')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Enigma Screen'), findsOneWidget);
+    // Same page, same route: the pane under the tabs is the riddle + secret
+    // form, not a pushed screen.
+    expect(find.byType(ImportMnemonicScreen), findsOneWidget);
+    expect(find.byKey(const Key('enigma-riddle')), findsOneWidget);
+    expect(find.byKey(const Key('enigma-secret')), findsOneWidget);
+    expect(find.byKey(const Key('mnemonic-input')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('add-vault-tab-import')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('mnemonic-input')), findsOneWidget);
+    expect(find.byKey(const Key('enigma-riddle')), findsNothing);
   });
 }
