@@ -6,8 +6,9 @@ import '../../../widgets/common/neo_button.dart';
 
 /// Full-width "paste from clipboard" action for the import-mnemonic screen.
 ///
-/// Light mode renders the neo quiet button; dark keeps the original outlined
-/// button.
+/// Light mode renders the neo quiet button — neutral fill, not the lime
+/// brand tone, because Paste sits beside Scan QR as a pair of equal-weight
+/// shortcuts. Dark keeps the original outlined button.
 class PasteButton extends StatelessWidget {
   final VoidCallback onPressed;
 
@@ -24,6 +25,7 @@ class PasteButton extends StatelessWidget {
         key: const Key('paste-btn'),
         label: l10n.pasteFromClipboard,
         icon: Icons.content_paste,
+        quiet: true,
         expanded: true,
         onTap: onPressed,
       );
