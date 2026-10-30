@@ -4,9 +4,9 @@
 //!
 //! Ledger 官方有两套 Bitcoin APDU 协议，本模块的编号组合与两者都不匹配：
 //!
-//! - legacy app（`LedgerHQ/app-bitcoin-legacy`）：`CLA 0xE0`，
-//!   `0x40 GET_WALLET_PUBLIC_KEY` / `0x44 HASH_INPUT_START` /
-//!   `0x48 HASH_INPUT_FINALIZE_FULL` / `0x4A HASH_SIGN`，摘要由设备自己算。
+//! - legacy app（`LedgerHQ/app-bitcoin-legacy`，`lib-app-bitcoin`）：`CLA 0xE0`，
+//!   `0x40 GET_WALLET_PUBLIC_KEY` / `0x42 GET_TRUSTED_INPUT` / `0x44 HASH_INPUT_START` /
+//!   `0x48 HASH_SIGN` / `0x4A HASH_INPUT_FINALIZE_FULL`，摘要由设备自己算。
 //! - 现行 app（`LedgerHQ/app-bitcoin`，协议 2.1.0+）：`CLA 0xE1`，
 //!   `0x00 GET_EXTENDED_PUBKEY` / `0x03 GET_WALLET_ADDRESS` / `0x04 SIGN_PSBT`，
 //!   `P1` 必须为 0、`P2` 是协议版本；`SIGN_PSBT` 是 Merkleized 交互协议，
