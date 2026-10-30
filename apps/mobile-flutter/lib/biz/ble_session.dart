@@ -385,7 +385,7 @@ class BleSession {
             command.ins == Ins.signEthPersonalMessage ||
             command.ins == Ins.ethSignEip712;
       case LedgerApp.solana:
-        return command.ins == Ins.solGetVersion ||
+        return command.ins == Ins.solGetAppConfiguration ||
             command.ins == Ins.solGetAddress ||
             command.ins == Ins.solSignMessage ||
             command.ins == Ins.solSignOffchainMessage;

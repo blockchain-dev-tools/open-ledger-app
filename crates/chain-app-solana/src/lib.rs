@@ -2,7 +2,8 @@
 //!
 //! 线格式与迁移前的 Dart 实现保持一致（`hw-app-solana` INS 表，CLA 0xE0）：
 //!
-//! - `E0 04 GET_VERSION` → `00 01 00 00` + `9000`；
+//! - `E0 04 GET_APP_CONFIGURATION` → `[allow_blind_sign][pubkey_display]`
+//!   `[major][minor][patch]` + `9000`（官方 `app-solana` 的 5 字节布局）；
 //! - `E0 05 GET_ADDR`（P1=0x00 直接返回 / P1=0x01 先在本机显示确认）→
 //!   **裸 32 字节 Ed25519 公钥** + `9000`（无长度前缀）；
 //! - `E0 06 SIGN` / `E0 07 SIGN_OFFCHAIN` → `[path][message]`，单块或按
@@ -32,7 +33,7 @@ pub mod sw {
 pub const MODULE_ID: &str = "openledger.solana";
 
 const CLA_SOL: u8 = 0xE0;
-const INS_GET_VERSION: u8 = 0x04;
+const INS_GET_APP_CONFIGURATION: u8 = 0x04;
 const INS_GET_ADDR: u8 = 0x05;
 const INS_SIGN: u8 = 0x06;
 const INS_SIGN_OFFCHAIN: u8 = 0x07;
@@ -264,9 +265,10 @@ impl SolanaModule {
             ));
         }
         match apdu.ins {
-            INS_GET_VERSION => Ok(self.emit(
+            INS_GET_APP_CONFIGURATION => Ok(self.emit(
                 exchange_id,
-                vec![0x00, 0x01, 0x00, 0x00, 0x90, 0x00],
+                // [allow_blind_sign][pubkey_display][major][minor][patch]
+                vec![0x00, 0x01, 0x00, 0x01, 0x00, 0x90, 0x00],
                 chain_app_api::OperationState::Final,
             )),
             INS_GET_ADDR => self.handle_get_addr(exchange_id, &apdu),
@@ -793,7 +795,7 @@ pub fn descriptor() -> AppDescriptor {
             version: "1.7.0".into(),
             wire: Wire::LedgerApdu,
             supported: vec![
-                "E0 04 GET_VERSION".into(),
+                "E0 04 GET_APP_CONFIGURATION".into(),
                 "E0 05 GET_ADDR (bare 32B Ed25519)".into(),
                 "E0 06/07 SIGN (single/multi-chunk)".into(),
             ],

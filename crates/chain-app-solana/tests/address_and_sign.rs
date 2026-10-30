@@ -198,11 +198,12 @@ fn transfer_message(lamports: u64) -> Vec<u8> {
 // ── 用例 ──────────────────────────────────────────────────────────────
 
 #[test]
-fn version_matches_the_legacy_response() {
+fn app_configuration_matches_the_official_five_byte_layout() {
     let mut fixture = setup();
+    // [allow_blind_sign=0][pubkey_display=1][major=0][minor=1][patch=0] + 9000
     assert_eq!(
         expect_emit(submit(&mut fixture, apdu(0x04, 0, 0, &[]))),
-        vec![0x00, 0x01, 0x00, 0x00, 0x90, 0x00]
+        vec![0x00, 0x01, 0x00, 0x01, 0x00, 0x90, 0x00]
     );
 }
 

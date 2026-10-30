@@ -54,11 +54,13 @@ async def run() -> int:
                 print(f"[FAIL] OPEN_APP(Solana) SW={sw:04x}")
                 return 1
 
-            data, sw = parse_response(ble.exchange(apdu.sol_get_version()))
-            if sw != SW_SUCCESS or data != bytes([0x00, 0x01, 0x00, 0x00]):
-                print(f"[FAIL] SOL GET_VERSION data={data.hex()} SW={sw:04x}")
+            data, sw = parse_response(ble.exchange(apdu.sol_get_app_configuration()))
+            # 官方 app-solana 的 GET_APP_CONFIGURATION：5 字节
+            # [allow_blind_sign][pubkey_display][major][minor][patch]。
+            if sw != SW_SUCCESS or data != bytes([0x00, 0x01, 0x00, 0x01, 0x00]):
+                print(f"[FAIL] SOL GET_APP_CONFIGURATION data={data.hex()} SW={sw:04x}")
                 return 1
-            print("  ✓ E0 04 版本响应与迁移前一致")
+            print("  ✓ E0 04 配置响应为官方 5 字节布局")
 
             data, sw = parse_response(ble.exchange(apdu.sol_get_address()))
             if sw != SW_SUCCESS:

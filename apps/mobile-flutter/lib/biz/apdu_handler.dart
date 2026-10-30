@@ -183,12 +183,12 @@ class ApduHandler {
   /// INS 0xE0 dispatch while the Solana app is open.
   ///
   /// Real Ledger Solana app INS table (hw-app-solana):
-  ///   0x04 GET_VERSION · 0x05 GET_ADDR · 0x06 SIGN · 0x07 SIGN_OFFCHAIN
-  /// Everything but the version probe is served by the Rust Solana module.
+  ///   0x04 GET_APP_CONFIGURATION · 0x05 GET_ADDR · 0x06 SIGN · 0x07 SIGN_OFFCHAIN
+  /// Everything but the configuration probe is served by the Rust Solana module.
   ApduResponse _handleSolanaApp(ApduCommand command) {
     switch (command.ins) {
-      case Ins.solGetVersion: // 0x04
-        return _buildSolVersion();
+      case Ins.solGetAppConfiguration: // 0x04
+        return _buildSolanaAppConfiguration();
       default:
         return _errorResponse(Sw.insNotSupported);
     }
@@ -300,10 +300,13 @@ class ApduHandler {
     );
   }
 
-  /// Solana GET_VERSION response: [flags(1)] [major] [minor] [patch] + 9000.
-  ApduResponse _buildSolVersion() {
+  /// Solana `GET_APP_CONFIGURATION` (0x04) response, mirroring the official
+  /// app-solana layout: `allow_blind_sign(1) + pubkey_display(1) + major +
+  /// minor + patch`. Blind signing is not allowed here, and the reported
+  /// version is the module version (0.1.0).
+  ApduResponse _buildSolanaAppConfiguration() {
     return ApduResponse(
-      data: Uint8List.fromList([0x00, 0x01, 0x00, 0x00]),
+      data: Uint8List.fromList([0x00, 0x01, 0x00, 0x01, 0x00]),
       sw1: 0x90,
       sw2: 0x00,
     );

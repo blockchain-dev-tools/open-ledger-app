@@ -16,7 +16,7 @@ INS_SIGN_PERSONAL = 0x08
 INS_SIGN_EIP712 = 0x0C
 INS_BTC_GET_PUBLIC_KEY = 0x40
 INS_BTC_SIGN_TX = 0x44
-INS_SOL_VERSION = 0x04
+INS_SOL_APP_CONFIGURATION = 0x04
 INS_SOL_GET_ADDR = 0x05
 INS_SOL_SIGN = 0x06
 INS_SUI_GET_PUBLIC_KEY = 0x02
@@ -182,8 +182,9 @@ def parse_eth_address(data: bytes) -> str:
 
 # ── Solana（CLA 0xE0，按 OPEN_APP 选择 INS 表） ──────────────────────
 
-def sol_get_version() -> bytes:
-    return apdu(CLA_OS, INS_SOL_VERSION, 0x00, 0x00)
+def sol_get_app_configuration() -> bytes:
+    """官方 `E0 04 GET_APP_CONFIGURATION`（5 字节，非 GET_VERSION）。"""
+    return apdu(CLA_OS, INS_SOL_APP_CONFIGURATION, 0x00, 0x00)
 
 
 def sol_get_address(path: str = SOL_PATH, confirm: bool = False) -> bytes:

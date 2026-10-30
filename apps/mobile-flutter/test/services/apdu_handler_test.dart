@@ -219,18 +219,19 @@ void main() {
     expect(appNameOf(response), equals('Solana'));
   });
 
-  test('Solana GET_VERSION (INS 0x04) reports the app version', () {
+  test('Solana GET_APP_CONFIGURATION (INS 0x04) returns 5 bytes', () {
     handler.setCurrentApp(LedgerApp.solana);
 
     final response = handler.handle(const ApduCommand(
       cla: Cla.os,
-      ins: Ins.solGetVersion,
+      ins: Ins.solGetAppConfiguration,
       p1: 0,
       p2: 0,
     ));
 
+    // [allow_blind_sign][pubkey_display][major][minor][patch] + 9000
     expect(response.toBytes(),
-        equals(Uint8List.fromList([0x00, 0x01, 0x00, 0x00, 0x90, 0x00])));
+        equals(Uint8List.fromList([0x00, 0x01, 0x00, 0x01, 0x00, 0x90, 0x00])));
   });
 
   // ── Tron app identity (real Ledger app-tron speaks CLA 0xE0) ────────

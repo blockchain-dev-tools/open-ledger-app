@@ -140,8 +140,10 @@ class Ins {
   // per app) and are only valid after OPEN_APP "Solana". Routing is driven
   // by the currentApp state in ApduHandler, not by the raw INS byte.
 
-  /// Solana GET_VERSION (note: 0x04 here vs ETH_SIGN in the Ethereum app).
-  static const int solGetVersion = 0x04;
+  /// Solana GET_APP_CONFIGURATION: `[allow_blind_sign][pubkey_display]`
+  /// `[major][minor][patch]` + `9000` (official `app-solana`, CLA 0xE0).
+  /// Note: 0x04 is SIGN in the Ethereum app; the CLA is shared.
+  static const int solGetAppConfiguration = 0x04;
 
   /// Solana GET_ADDR — returns the 32-byte Ed25519 pubkey.
   static const int solGetAddress = 0x05;
