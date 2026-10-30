@@ -40,10 +40,15 @@ class EnigmaMnemonicScreen extends StatefulWidget {
   final List<String>? previewWords;
   final String? previewEntropyHex;
 
+  /// When `true` the derived wallet is added to the current session as a new
+  /// vault instead of creating the primary wallet.
+  final bool addVault;
+
   const EnigmaMnemonicScreen({
     super.key,
     this.previewWords,
     this.previewEntropyHex,
+    this.addVault = false,
   });
 
   @override
@@ -132,9 +137,14 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
 
   void _computeSeed() {
     final phrase = _englishWords.join(' ');
-    final seedHex = bridge.CryptoBridge.mnemonicToSeed(phrase);
-    if (seedHex != null) {
-      _seedHex = seedHex;
+    try {
+      final seedHex = bridge.CryptoBridge.mnemonicToSeed(phrase);
+      if (seedHex != null) {
+        _seedHex = seedHex;
+      }
+    } catch (_) {
+      // Hosts without the Rust symbols (flutter test, design gallery) throw on
+      // the FFI lookup; the seed-hex card simply stays hidden there.
     }
   }
 
@@ -162,6 +172,7 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
           'passphrase': _passphraseController.text.trim(),
           'source': 'enigma',
           'enigmaLanguage': _creationLanguage,
+          'addVault': widget.addVault,
         },
       );
     } catch (e) {
@@ -172,6 +183,19 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
         ),
       );
     }
+  }
+
+  /// Goes back one step: the new-vault flow pops to the Enigma screen it was
+  /// pushed from; first-run setup restarts the Enigma screen.
+  void _onBack() {
+    if (widget.addVault && context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(
+      '/enigma',
+      extra: widget.addVault ? const {'addVault': true} : null,
+    );
   }
 
   @override
@@ -188,7 +212,7 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/enigma');
+        if (!didPop) _onBack();
       },
       child: Scaffold(
         // Light follows the neo page tint (pale lime) so the reference grid
@@ -198,7 +222,7 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
         appBar: neoAppBar(
           c: c,
           title: const Text('Secret Phrase Mnemonic'),
-          leading: neoBackButton(c, onPressed: () => context.go('/enigma')),
+          leading: neoBackButton(c, onPressed: _onBack),
         ),
         body: GridBackground(
           child: SafeArea(
@@ -258,6 +282,7 @@ class _EnigmaMnemonicScreenState extends State<EnigmaMnemonicScreen> {
 
                   // ── Continue Button ─────────────────────────────────
                   EnigmaContinueButton(
+                    key: const Key('enigma-mnemonic-continue'),
                     onTap: _englishWords.isNotEmpty ? _onContinue : null,
                   ),
 

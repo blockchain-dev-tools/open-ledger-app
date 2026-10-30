@@ -14,6 +14,7 @@ This checklist is a test specification, not a record of passed tests. Run on a d
 - [ ] Five failures lock input across restart; explicit reset clears all layers and history.
 - [ ] Change PIN preserves addresses and saved passphrase recovery for the affected layer.
 - [ ] Vault switches isolate APDU signing context and history.
+- [ ] The vault manager's "New Vault" flow accepts both an imported phrase and a secret phrase (Enigma); the derived wallet is appended as a second vault and the active vault is unchanged.
 - [ ] Stand-in hide/wipe and explicit device reset use the documented deletion scopes.
 
 ## BLE/APDU and signing

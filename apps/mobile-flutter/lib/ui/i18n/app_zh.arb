@@ -55,6 +55,7 @@
   "switchVault": "切换金库",
   "manageVaults": "管理金库",
   "newVault": "新建金库",
+  "addVaultSecretPhrase": "使用暗语",
   "vaultLimitReached": "已达金库上限，请先移除一个。",
   "vaultAlreadyInTier": "该钱包已经添加过了。",
   "renameVault": "重命名",

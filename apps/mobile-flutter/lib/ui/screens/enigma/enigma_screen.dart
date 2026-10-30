@@ -23,7 +23,12 @@ import '../../../utils/enigma.dart';
 ///
 /// Ported from the original TypeScript implementation.
 class EnigmaScreen extends StatefulWidget {
-  const EnigmaScreen({super.key});
+  /// When `true` the derived wallet is appended to the current session as a
+  /// new vault (`walletService.addVault`) instead of creating the primary
+  /// wallet. Reached from the vault manager's "New Vault" flow.
+  final bool addVault;
+
+  const EnigmaScreen({super.key, this.addVault = false});
 
   @override
   State<EnigmaScreen> createState() => _EnigmaScreenState();
@@ -62,6 +67,20 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
   bool get _isFormValid =>
       _riddleController.text.trim().isNotEmpty &&
       _secretController.text.trim().isNotEmpty;
+
+  /// Leaves the screen: the new-vault flow returns to the import screen it was
+  /// pushed from; first-run setup returns to Welcome.
+  void _onBack() {
+    if (widget.addVault) {
+      if (context.canPop()) {
+        context.pop();
+        return;
+      }
+      context.go('/import', extra: const {'addVault': true});
+      return;
+    }
+    context.go('/welcome');
+  }
 
   /// Wraps an input in the neo block in light mode; dark returns the field
   /// untouched so it keeps its own filled, hairline-outlined box.
@@ -118,13 +137,22 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
 
         setState(() => _isGenerating = false);
 
-        context.go('/enigma-mnemonic', extra: {
+        final extra = <String, Object>{
           'words': result.words,
           'language': language,
           'entropyHex': result.entropyHex,
           'riddle': _riddleController.text.trim(),
           'secret': _secretController.text.trim(),
-        });
+          'addVault': widget.addVault,
+        };
+        // The new-vault flow pushes so its back arrow returns to the import
+        // screen with the typed phrase intact; first-run setup replaces the
+        // stack as before.
+        if (widget.addVault) {
+          context.push('/enigma-mnemonic', extra: extra);
+        } else {
+          context.go('/enigma-mnemonic', extra: extra);
+        }
       } catch (e) {
         if (!mounted) return;
         setState(() => _isGenerating = false);
@@ -148,7 +176,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/welcome');
+        if (!didPop) _onBack();
       },
       child: Scaffold(
         // Light follows the neo page tint (pale lime) so the reference grid
@@ -158,7 +186,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
         appBar: neoAppBar(
           c: c,
           title: Text(AppLocalizations.of(context)!.enigmaWallet),
-          leading: neoBackButton(c, onPressed: () => context.go('/welcome')),
+          leading: neoBackButton(c, onPressed: _onBack),
         ),
         body: GridBackground(
           child: SafeArea(
@@ -249,6 +277,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   _neoField(
                     c,
                     TextField(
+                      key: const Key('enigma-riddle'),
                       controller: _riddleController,
                       maxLines: 3,
                       style: TextStyle(color: c.text, fontSize: 15),
@@ -295,6 +324,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
                   _neoField(
                     c,
                     TextField(
+                      key: const Key('enigma-secret'),
                       controller: _secretController,
                       obscureText: _obscureSecret,
                       style: TextStyle(color: c.text, fontSize: 15),
@@ -334,6 +364,7 @@ class _EnigmaScreenState extends State<EnigmaScreen> {
 
                   // ── Generate Button ─────────────────────────────────
                   PrimaryButton(
+                    key: const Key('enigma-generate'),
                     label: AppLocalizations.of(context)!.generateWallet,
                     onTap: _isFormValid && !_isGenerating ? _onGenerate : null,
                     loading: _isGenerating,

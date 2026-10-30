@@ -186,6 +186,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newVault => 'New Vault';
 
   @override
+  String get addVaultSecretPhrase => 'Use a secret phrase';
+
+  @override
   String get vaultLimitReached => 'Vault limit reached. Remove a vault first.';
 
   @override

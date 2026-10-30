@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:open_ledger_app/generated/l10n/app_localizations.dart';
 import 'package:open_ledger_app/services/mnemonic_service.dart';
@@ -40,14 +41,41 @@ class _ValidatingCrypto extends FakeCryptoService {
   }
 }
 
-Widget _app({Future<String?> Function()? scan}) => MaterialApp(
+Widget _app({Future<String?> Function()? scan, bool addVault = false}) => MaterialApp(
       localizationsDelegates: const [AppLocalizations.delegate],
       supportedLocales: AppLocalizations.supportedLocales,
       home: ImportMnemonicScreen(
         mnemonicService: MnemonicService(crypto: const _ValidatingCrypto()),
+        addVault: addVault,
         qrScanOverride: scan,
       ),
     );
+
+/// Minimal router harness for the new-vault flow: `/import` plus a stand-in
+/// for the Enigma route so the entry point can be tapped.
+Widget _routerApp() {
+  final router = GoRouter(
+    initialLocation: '/import',
+    routes: [
+      GoRoute(
+        path: '/import',
+        builder: (context, state) => ImportMnemonicScreen(
+          mnemonicService: MnemonicService(crypto: const _ValidatingCrypto()),
+          addVault: true,
+        ),
+      ),
+      GoRoute(
+        path: '/enigma',
+        builder: (context, state) => const Scaffold(body: Text('Enigma Screen')),
+      ),
+    ],
+  );
+  return MaterialApp.router(
+    routerConfig: router,
+    localizationsDelegates: const [AppLocalizations.delegate],
+    supportedLocales: AppLocalizations.supportedLocales,
+  );
+}
 
 String _fieldText(WidgetTester tester) => tester
     .widget<TextField>(find.byKey(const Key('mnemonic-input')))
@@ -179,5 +207,34 @@ void main() {
 
     expect(_fieldText(tester), '');
     expect(find.text('Invalid recovery phrase'), findsNothing);
+  });
+
+  testWidgets('first-run import offers no secret-phrase entry', (tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Import Wallet'), findsOneWidget);
+    expect(find.byKey(const Key('use-secret-phrase')), findsNothing);
+  });
+
+  testWidgets('new-vault mode titles the screen and offers a secret phrase',
+      (tester) async {
+    await tester.pumpWidget(_app(addVault: true));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Vault'), findsOneWidget);
+    expect(find.text('Use a secret phrase'), findsOneWidget);
+    expect(find.byKey(const Key('use-secret-phrase')), findsOneWidget);
+  });
+
+  testWidgets('the secret-phrase entry opens the Enigma flow', (tester) async {
+    await tester.pumpWidget(_routerApp());
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('use-secret-phrase')));
+    await tester.tap(find.byKey(const Key('use-secret-phrase')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enigma Screen'), findsOneWidget);
   });
 }

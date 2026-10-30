@@ -55,6 +55,7 @@
   "switchVault": "지갑 전환",
   "manageVaults": "지갑 관리",
   "newVault": "새 지갑",
+  "addVaultSecretPhrase": "비밀 문구 사용",
   "vaultLimitReached": "지갑 한도에 도달했습니다. 먼저 하나를 삭제하세요.",
   "vaultAlreadyInTier": "이미 추가된 지갑입니다.",
   "renameVault": "이름 변경",

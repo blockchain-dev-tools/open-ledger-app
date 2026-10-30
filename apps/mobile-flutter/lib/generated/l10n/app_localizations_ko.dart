@@ -181,6 +181,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get newVault => '새 지갑';
 
   @override
+  String get addVaultSecretPhrase => '비밀 문구 사용';
+
+  @override
   String get vaultLimitReached => '지갑 한도에 도달했습니다. 먼저 하나를 삭제하세요.';
 
   @override

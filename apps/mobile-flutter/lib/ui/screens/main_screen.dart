@@ -291,6 +291,7 @@ class _MainScreenState extends State<MainScreen> {
         c: c,
         title: _currentIndex == 0 && widget.walletService != null
             ? VaultSwitcherTitle(
+                key: const ValueKey('vault-switcher-title'),
                 walletService: widget.walletService!,
                 onChanged: () => setState(() {}),
               )

@@ -6,6 +6,7 @@ import '../../../data/bip39_english.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../services/mnemonic_service.dart';
 import '../../theme/color_tokens.dart';
+import '../../widgets/common/adaptive_action_button.dart';
 import '../../widgets/common/grid_background.dart';
 import '../../widgets/common/neo_app_bar.dart';
 import '../../widgets/common/neo_back_button.dart';
@@ -166,6 +167,22 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     _onTextChanged('');
   }
 
+  /// Leaves the screen: a new-vault import returns to the accounts screen it
+  /// was pushed from; a first-run import returns to the welcome screen.
+  void _back() {
+    if (widget.addVault && context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(widget.addVault ? '/' : '/welcome');
+  }
+
+  /// Opens the Secret Phrase (Enigma) flow, which derives the vault's mnemonic
+  /// from a riddle + secret instead of importing an existing phrase.
+  void _openSecretPhrase() {
+    context.push('/enigma', extra: const {'addVault': true});
+  }
+
   /// Navigates to PIN setup with the validated mnemonic.
   void _import() {
     final words = _parseWords(_controller.text);
@@ -196,7 +213,7 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) context.go('/welcome');
+        if (!didPop) _back();
       },
       child: Scaffold(
         // Light follows the neo page tint (pale lime) so the reference grid
@@ -205,7 +222,7 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
         backgroundColor: c.groupedBg,
         appBar: neoAppBar(
           c: c,
-          leading: neoBackButton(c, onPressed: () => context.go('/welcome')),
+          leading: neoBackButton(c, onPressed: _back),
           darkBackground: c.bg,
         ),
         body: GridBackground(
@@ -221,7 +238,9 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
 
                     // ── Title ───────────────────────────────────────────
                     Text(
-                      l10n.importMnemonicTitle,
+                      widget.addVault
+                          ? l10n.newVault
+                          : l10n.importMnemonicTitle,
                       style: TextStyle(
                         color: c.text,
                         fontSize: 22,
@@ -315,6 +334,21 @@ class _ImportMnemonicScreenState extends State<ImportMnemonicScreen> {
                       isValid: _isValid,
                       onTap: _import,
                     ),
+
+                    // ── Secret Phrase alternative (new vault only) ───────
+                    // A first-run import must stay phrase-only: creating the
+                    // primary wallet has its own Enigma entry on Welcome.
+                    if (widget.addVault) ...[
+                      const SizedBox(height: 20),
+                      AdaptiveActionButton(
+                        key: const Key('use-secret-phrase'),
+                        label: l10n.addVaultSecretPhrase,
+                        quiet: true,
+                        legacyOutline: true,
+                        icon: Icons.lock_outline,
+                        onTap: _openSecretPhrase,
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
                   ],

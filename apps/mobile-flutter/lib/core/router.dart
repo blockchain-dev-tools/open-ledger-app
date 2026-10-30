@@ -232,13 +232,25 @@ GoRouter createRouter({required bool initialHasWallet, AppState? appState}) {
       ),
 
       // ── Enigma Flow ──────────────────────────────────────────────
+      //
+      // `extra: {'addVault': true}` targets the vault manager's "New Vault"
+      // flow: the derived wallet is appended to the current session instead of
+      // creating the primary wallet.
       GoRoute(
         path: '/enigma',
-        builder: (context, state) => const EnigmaScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          final addVault = extra is Map && extra['addVault'] == true;
+          return EnigmaScreen(addVault: addVault);
+        },
       ),
       GoRoute(
         path: '/enigma-mnemonic',
-        builder: (context, state) => const EnigmaMnemonicScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          final addVault = extra is Map && extra['addVault'] == true;
+          return EnigmaMnemonicScreen(addVault: addVault);
+        },
       ),
     ],
 
