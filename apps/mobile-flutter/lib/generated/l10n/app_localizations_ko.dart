@@ -1006,10 +1006,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get keystoneExportNext => '다음 페이지';
 
   @override
-  String get keystoneExportTestAccount =>
-      '데모 계정 — 공개 테스트 문구에서 파생되었으며 자산이 없습니다. 실제 자산을 보내지 마세요.';
-
-  @override
   String get keystoneScanTitle => '서명 요청 스캔';
 
   @override

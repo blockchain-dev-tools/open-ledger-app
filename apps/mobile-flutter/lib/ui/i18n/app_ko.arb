@@ -371,7 +371,6 @@
   "keystoneExportPath": "경로",
   "keystoneExportPrev": "이전 페이지",
   "keystoneExportNext": "다음 페이지",
-  "keystoneExportTestAccount": "데모 계정 — 공개 테스트 문구에서 파생되었으며 자산이 없습니다. 실제 자산을 보내지 마세요.",
   "keystoneScanTitle": "서명 요청 스캔",
   "keystoneScanHint": "MetaMask에 표시된 QR 코드에 카메라를 맞추세요",
   "keystoneScanProgress": "프레임 수집 중 {received}/{total}",

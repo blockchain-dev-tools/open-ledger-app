@@ -1038,10 +1038,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keystoneExportNext => 'Next page';
 
   @override
-  String get keystoneExportTestAccount =>
-      'Demo account — derived from a public test phrase with no funds. Never send real assets here.';
-
-  @override
   String get keystoneScanTitle => 'Scan the signing request';
 
   @override

@@ -411,7 +411,6 @@
   "keystoneExportPath": "Path",
   "keystoneExportPrev": "Previous page",
   "keystoneExportNext": "Next page",
-  "keystoneExportTestAccount": "Demo account — derived from a public test phrase with no funds. Never send real assets here.",
   "keystoneScanTitle": "Scan the signing request",
   "keystoneScanHint": "Point the camera at the QR code shown by MetaMask",
   "keystoneScanProgress": "Collecting frames {received}/{total}",

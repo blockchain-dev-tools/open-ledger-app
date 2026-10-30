@@ -21,6 +21,7 @@ AppBar neoAppBar({
   required ColorTokens c,
   Widget? title,
   Widget? leading,
+  bool automaticallyImplyLeading = true,
   List<Widget>? actions,
   Color? darkBackground,
   double ruleWidth = Neo.edge,
@@ -37,6 +38,7 @@ AppBar neoAppBar({
         : null,
     title: title,
     leading: leading,
+    automaticallyImplyLeading: automaticallyImplyLeading,
     actions: actions,
     titleSpacing: titleSpacing,
   );

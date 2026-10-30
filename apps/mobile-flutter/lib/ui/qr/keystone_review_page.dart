@@ -6,6 +6,10 @@ import 'package:flutter/material.dart';
 import '../../biz/qr_sign_flow.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../theme/color_tokens.dart';
+import '../widgets/common/adaptive_action_button.dart';
+import '../widgets/common/grid_background.dart';
+import '../widgets/common/neo_app_bar.dart';
+import '../widgets/common/neo_card.dart';
 import 'keystone_signature_page.dart';
 
 /// 一期只支持交易（1）、个人消息（3）与已编码 typed transaction（4）。
@@ -24,7 +28,11 @@ class _TxSummary {
   final String amount;
   final Uint8List? data;
 
-  const _TxSummary({required this.to, required this.amount, required this.data});
+  const _TxSummary({
+    required this.to,
+    required this.amount,
+    required this.data,
+  });
 }
 
 Uint8List? _hexToBytes(String hex) {
@@ -52,7 +60,11 @@ class _RlpSpan {
   final int start;
   final int end;
 
-  const _RlpSpan({required this.isList, required this.start, required this.end});
+  const _RlpSpan({
+    required this.isList,
+    required this.start,
+    required this.end,
+  });
 }
 
 /// 解一个 RLP 项，返回它的内容区间（字符串项直接给区间，列表项只给范围）。
@@ -317,172 +329,204 @@ class _KeystoneReviewPageState extends State<KeystoneReviewPage> {
     return Scaffold(
       key: const Key('keystone-review-page'),
       backgroundColor: c.groupedBg,
-      appBar: AppBar(
-        backgroundColor: c.groupedBg,
-        foregroundColor: c.text,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.groupedBg,
         automaticallyImplyLeading: false,
         title: Text(l10n.keystoneReviewTitle),
       ),
       body: request == null
           ? const SizedBox.shrink()
-          : SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      children: [
-                        _Row(
-                          label: l10n.keystoneReviewDataType,
-                          value: _dataTypeLabel(l10n, request.dataType),
-                          c: c,
-                        ),
-                        if (request.chainId != null)
-                          _Row(
-                            label: l10n.keystoneReviewChain,
-                            value: '${request.chainId}',
+          : GridBackground(
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        children: [
+                          _DetailBlock(
                             c: c,
+                            children: [
+                              _Row(
+                                label: l10n.keystoneReviewDataType,
+                                value: _dataTypeLabel(l10n, request.dataType),
+                                c: c,
+                              ),
+                              if (request.chainId != null)
+                                _Row(
+                                  label: l10n.keystoneReviewChain,
+                                  value: '${request.chainId}',
+                                  c: c,
+                                ),
+                              _Row(
+                                label: l10n.keystoneReviewOrigin,
+                                value: request.origin ?? '—',
+                                c: c,
+                                emphasize: true,
+                              ),
+                              _Row(
+                                label: l10n.keystoneReviewPath,
+                                value: request.path,
+                                c: c,
+                                mono: true,
+                              ),
+                              _Row(
+                                label: l10n.keystoneReviewAddress,
+                                value: request.address ?? '—',
+                                c: c,
+                                mono: true,
+                                emphasize: true,
+                              ),
+                              _Row(
+                                label: l10n.keystoneReviewDataHash,
+                                value: request.signingHashHex,
+                                c: c,
+                                mono: true,
+                              ),
+                              _Row(
+                                label: l10n.keystoneReviewDataSize,
+                                value: '${request.signDataBytes} B',
+                                c: c,
+                              ),
+                              if (tx != null) ...[
+                                if (tx.to != null)
+                                  _Row(
+                                    label: l10n.keystoneReviewTo,
+                                    value: tx.to!,
+                                    c: c,
+                                    mono: true,
+                                    emphasize: true,
+                                  ),
+                                _Row(
+                                  label: l10n.keystoneReviewAmount,
+                                  value: tx.amount,
+                                  c: c,
+                                ),
+                              ],
+                              if (message != null)
+                                _Row(
+                                  label: l10n.keystoneReviewMessage,
+                                  value: message,
+                                  c: c,
+                                ),
+                            ],
                           ),
-                        _Row(
-                          label: l10n.keystoneReviewOrigin,
-                          value: request.origin ?? '—',
-                          c: c,
-                          emphasize: true,
-                        ),
-                        _Row(
-                          label: l10n.keystoneReviewPath,
-                          value: request.path,
-                          c: c,
-                          mono: true,
-                        ),
-                        _Row(
-                          label: l10n.keystoneReviewAddress,
-                          value: request.address ?? '—',
-                          c: c,
-                          mono: true,
-                          emphasize: true,
-                        ),
-                        _Row(
-                          label: l10n.keystoneReviewDataHash,
-                          value: request.signingHashHex,
-                          c: c,
-                          mono: true,
-                        ),
-                        _Row(
-                          label: l10n.keystoneReviewDataSize,
-                          value: '${request.signDataBytes} B',
-                          c: c,
-                        ),
-                        if (tx != null) ...[
-                          if (tx.to != null)
-                            _Row(
-                              label: l10n.keystoneReviewTo,
-                              value: tx.to!,
+                          if (call != null)
+                            _CallBlock(
+                              label: l10n.keystoneReviewCalldata,
+                              unknownLabel: l10n.keystoneReviewUnknownMethod,
+                              call: call,
                               c: c,
-                              mono: true,
-                              emphasize: true,
                             ),
-                          _Row(
-                            label: l10n.keystoneReviewAmount,
-                            value: tx.amount,
-                            c: c,
-                          ),
-                        ],
-                        if (message != null)
-                          _Row(
-                            label: l10n.keystoneReviewMessage,
-                            value: message,
-                            c: c,
-                          ),
-                        if (call != null)
-                          _CallBlock(
-                            label: l10n.keystoneReviewCalldata,
-                            unknownLabel: l10n.keystoneReviewUnknownMethod,
-                            call: call,
-                            c: c,
-                          ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: c.error.withAlpha(24),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: c.error.withAlpha(80)),
-                          ),
-                          child: Text(
-                            l10n.keystoneReviewWarning,
-                            style: TextStyle(
-                              color: c.text,
-                              fontSize: 12,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                        if (failed) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.keystoneErrorSigning,
-                            key: const Key('keystone-review-error'),
-                            style: TextStyle(color: c.error, fontSize: 13),
-                          ),
-                          if (widget.flow.errorDetail != null)
-                            Text(
-                              widget.flow.errorDetail!,
-                              style: TextStyle(
-                                color: c.text.withAlpha(130),
-                                fontSize: 11,
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: c.error.withAlpha(
+                                c.neobrutalism ? 20 : 24,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                c.neobrutalism ? Neo.radius : 12,
+                              ),
+                              border: Border.all(
+                                color: c.neobrutalism
+                                    ? c.neoEdge
+                                    : c.error.withAlpha(80),
+                                width: c.neobrutalism ? Neo.edge : 1,
                               ),
                             ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            key: const Key('keystone-review-reject'),
-                            onPressed: signing ? null : _reject,
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
-                              foregroundColor: c.text,
-                              side: BorderSide(color: c.text.withAlpha(80)),
-                            ),
-                            child: Text(l10n.keystoneReject),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            key: const Key('keystone-review-approve'),
-                            onPressed: signing ? null : (failed ? _retry : widget.flow.approve),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
-                            ),
-                            child: signing
-                                ? SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: c.onPrimary,
-                                    ),
-                                  )
-                                : Text(
-                                    failed
-                                        ? l10n.keystoneRetry
-                                        : l10n.keystoneApprove,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (c.neobrutalism) ...[
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    size: 18,
+                                    color: c.error,
                                   ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    l10n.keystoneReviewWarning,
+                                    style: TextStyle(
+                                      color: c.text,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                          if (failed) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.keystoneErrorSigning,
+                              key: const Key('keystone-review-error'),
+                              style: TextStyle(color: c.error, fontSize: 13),
+                            ),
+                            if (widget.flow.errorDetail != null)
+                              Text(
+                                widget.flow.errorDetail!,
+                                style: TextStyle(
+                                  color: c.text.withAlpha(130),
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: AdaptiveActionButton(
+                              key: const Key('keystone-review-reject'),
+                              label: l10n.keystoneReject,
+                              quiet: true,
+                              legacyOutlineColor: c.error,
+                              onTap: signing ? null : _reject,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AdaptiveActionButton(
+                              key: const Key('keystone-review-approve'),
+                              label: failed
+                                  ? l10n.keystoneRetry
+                                  : l10n.keystoneApprove,
+                              loading: signing,
+                              onTap: failed ? _retry : widget.flow.approve,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+    );
+  }
+}
+
+/// Detail rows as one block: a neo card in light mode, bare rows in dark.
+class _DetailBlock extends StatelessWidget {
+  final ColorTokens c;
+  final List<Widget> children;
+
+  const _DetailBlock({required this.c, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!c.neobrutalism) return Column(children: children);
+    return NeoCard(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Column(children: children),
     );
   }
 }
@@ -510,7 +554,11 @@ class _Row extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(120), fontSize: 11),
+            style: TextStyle(
+              color: c.mutedText(120),
+              fontSize: 11,
+              fontWeight: c.neobrutalism ? FontWeight.w600 : null,
+            ),
           ),
           const SizedBox(height: 2),
           SelectableText(
@@ -553,74 +601,85 @@ class _CallBlock extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(120), fontSize: 11),
+            style: TextStyle(
+              color: c.mutedText(120),
+              fontSize: 11,
+              fontWeight: c.neobrutalism ? FontWeight.w600 : null,
+            ),
           ),
           const SizedBox(height: 4),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: c.text.withAlpha(40)),
+          if (c.neobrutalism)
+            NeoCard(padding: const EdgeInsets.all(10), child: _body(known))
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: c.text.withAlpha(40)),
+              ),
+              child: _body(known),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        call.title,
-                        style: TextStyle(
-                          color: c.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                    if (!known) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        unknownLabel,
-                        style: TextStyle(color: c.text.withAlpha(110), fontSize: 11),
-                      ),
-                    ],
-                  ],
+        ],
+      ),
+    );
+  }
+
+  Widget _body(bool known) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                call.title,
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace',
                 ),
-                if (known) ...[
-                  const SizedBox(height: 6),
-                  for (final param in call.params)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: SelectableText(
-                        '· $param',
-                        style: TextStyle(
-                          color: c.text,
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                ] else ...[
-                  const SizedBox(height: 6),
-                  SelectableText(
-                    call.rawHex,
-                    style: TextStyle(
-                      color: c.text.withAlpha(180),
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ],
+              ),
+            ),
+            if (!known) ...[
+              const SizedBox(width: 8),
+              Text(
+                unknownLabel,
+                style: TextStyle(color: c.text.withAlpha(110), fontSize: 11),
+              ),
+            ],
+          ],
+        ),
+        if (known) ...[
+          const SizedBox(height: 6),
+          for (final param in call.params)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: SelectableText(
+                '· $param',
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  height: 1.35,
+                ),
+              ),
+            ),
+        ] else ...[
+          const SizedBox(height: 6),
+          SelectableText(
+            call.rawHex,
+            style: TextStyle(
+              color: c.text.withAlpha(180),
+              fontSize: 11,
+              fontFamily: 'monospace',
+              height: 1.4,
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 }

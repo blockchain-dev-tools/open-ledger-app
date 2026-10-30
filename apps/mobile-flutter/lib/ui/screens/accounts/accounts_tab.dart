@@ -9,6 +9,7 @@ import '../../../generated/l10n/app_localizations.dart';
 import '../../theme/color_tokens.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/neo_button.dart';
+import '../../widgets/common/neo_sheet.dart';
 import 'components/chain_section.dart';
 import 'components/empty_vault.dart';
 import 'components/manage_chains_sheet.dart';
@@ -148,13 +149,15 @@ class _AccountsTabState extends State<AccountsTab> {
     final accounts = _accounts;
     if (accounts == null) return;
     final visible = _enabledChains(accounts).toSet();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = isDark ? ColorTokens.dark : ColorTokens.light;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => ManageChainsSheet(
-        visible: visible,
-        onToggle: _setChainVisible,
-      ),
+      backgroundColor: c.surface,
+      shape: neoSheetShape(c),
+      builder: (_) =>
+          ManageChainsSheet(visible: visible, onToggle: _setChainVisible),
     );
     if (mounted) setState(() {});
   }

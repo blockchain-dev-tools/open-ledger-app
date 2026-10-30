@@ -5,6 +5,9 @@ import '../../../../core/models/chain.dart';
 import '../../../../generated/l10n/app_localizations.dart';
 import '../../../../utils/formatting.dart';
 import '../../../theme/color_tokens.dart';
+import '../../../widgets/common/neo_card.dart';
+import '../../../widgets/common/neo_rule.dart';
+import '../../../widgets/common/neo_sheet.dart';
 
 /// Bottom sheet for turning chains on and off ("Manage chains").
 ///
@@ -57,54 +60,78 @@ class _ManageChainsSheetState extends State<ManageChainsSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final c = isDark ? ColorTokens.dark : ColorTokens.light;
     final l10n = AppLocalizations.of(context)!;
+    final chains = Chain.withLedgerApp;
 
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            neoSheetHandle(c),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 8, 8),
+              child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       l10n.manageChainsSheetTitle,
                       style: TextStyle(
                         color: c.text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                        fontWeight: c.neobrutalism
+                            ? FontWeight.w800
+                            : FontWeight.w600,
                       ),
                     ),
                   ),
                   IconButton(
                     key: const Key('manage-chains-close'),
-                    icon: Icon(Icons.close, color: c.text.withAlpha(140)),
+                    icon: Icon(Icons.close, color: c.mutedText(140)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.manageChainsSheetHint,
-                style: TextStyle(color: c.text.withAlpha(130), fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              for (final chain in Chain.withLedgerApp)
-                _ManageChainRow(
-                  chain: chain,
-                  label: l10n.chainLabel(chain.id),
-                  tokens: c,
-                  shown: _visible.contains(chain.id),
-                  busy: _busy.contains(chain.id),
-                  onToggle: () => _toggle(chain),
+            ),
+            if (c.neobrutalism) neoRule(c, heavy: true),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                      child: Text(
+                        l10n.manageChainsSheetHint,
+                        style: TextStyle(
+                          color: c.mutedText(150),
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    for (final chain in chains) ...[
+                      _ManageChainRow(
+                        chain: chain,
+                        label: l10n.chainLabel(chain.id),
+                        tokens: c,
+                        shown: _visible.contains(chain.id),
+                        busy: _busy.contains(chain.id),
+                        onToggle: () => _toggle(chain),
+                      ),
+                      if (c.neobrutalism && chain != chains.last) neoRule(c),
+                    ],
+                  ],
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -130,15 +157,53 @@ class _ManageChainRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final neo = tokens.neobrutalism;
+    final icon = SvgPicture.asset(chain.iconAssetPath, width: 24, height: 24);
+    final toggle = busy
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: tokens.accent,
+            ),
+          )
+        : neo
+        // 日间模式把开关画成 neo 块：黑描边 + lime 轨道 + 黑滑块。
+        ? SwitchTheme(
+            data: SwitchThemeData(
+              trackColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? tokens.actionFill
+                    : tokens.surface,
+              ),
+              trackOutlineColor: WidgetStatePropertyAll(tokens.neoEdge),
+              trackOutlineWidth: const WidgetStatePropertyAll(Neo.edge),
+              thumbColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? tokens.brandInk
+                    : tokens.text.withAlpha(90),
+              ),
+            ),
+            child: _switch(),
+          )
+        : _switch();
+
     return InkWell(
       key: ValueKey('chain-toggle-row-${chain.id}'),
       onTap: busy ? null : onToggle,
-      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: EdgeInsets.symmetric(vertical: neo ? 7 : 4, horizontal: 4),
         child: Row(
           children: [
-            SvgPicture.asset(chain.iconAssetPath, width: 28, height: 28),
+            if (neo)
+              NeoCard(
+                lifted: false,
+                padding: const EdgeInsets.all(5),
+                child: icon,
+              )
+            else
+              icon,
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -150,14 +215,16 @@ class _ManageChainRow extends StatelessWidget {
                 ),
               ),
             ),
-            Switch(
-              key: ValueKey('chain-toggle-${chain.id}'),
-              value: shown,
-              onChanged: busy ? null : (_) => onToggle(),
-            ),
+            toggle,
           ],
         ),
       ),
     );
   }
+
+  Widget _switch() => Switch(
+    key: ValueKey('chain-toggle-${chain.id}'),
+    value: shown,
+    onChanged: busy ? null : (_) => onToggle(),
+  );
 }

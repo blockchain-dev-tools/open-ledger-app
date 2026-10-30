@@ -161,13 +161,26 @@ class _BleFabState extends State<BleFab> with SingleTickerProviderStateMixin {
                   // white-on-white — the fill alone disappears, so the disc
                   // carries its own outline. `c.border` is too close to the
                   // page colour to register, hence the toned-down text token.
-                  // The brand fill needs no outline of its own.
+                  // Neo light mode uses the same hard black edge as the cards
+                  // (and drops the soft elevation); dark keeps the hairline.
                   shape: on || disabled
-                      ? const CircleBorder()
+                      ? CircleBorder(
+                          side: c.neobrutalism
+                              ? BorderSide(
+                                  color: disabled ? c.text.withAlpha(70) : c.neoEdge,
+                                  width: Neo.edge,
+                                )
+                              : BorderSide.none,
+                        )
                       : CircleBorder(
-                          side: BorderSide(color: c.text.withAlpha(60)),
+                          side: BorderSide(
+                            color: c.neobrutalism
+                                ? c.neoEdge
+                                : c.text.withAlpha(60),
+                            width: c.neobrutalism ? Neo.edge : 1,
+                          ),
                         ),
-                  elevation: disabled ? 0 : 3,
+                  elevation: c.neobrutalism ? 0 : (disabled ? 0 : 3),
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     onTap: disabled ? null : widget.onTap,

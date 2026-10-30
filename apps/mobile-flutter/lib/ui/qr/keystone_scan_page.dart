@@ -254,6 +254,12 @@ class _FailureCard extends StatelessWidget {
           FilledButton(
             key: const Key('keystone-scan-retry'),
             onPressed: onRetry,
+            // 相机页永远是深色 chrome，按钮颜色显式取深色 token，
+            // 不受日间主题的 Material 默认值影响。
+            style: FilledButton.styleFrom(
+              backgroundColor: c.primary,
+              foregroundColor: c.onPrimary,
+            ),
             child: Text(retryLabel),
           ),
         ],

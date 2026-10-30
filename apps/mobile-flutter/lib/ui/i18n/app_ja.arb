@@ -371,7 +371,6 @@
   "keystoneExportPath": "パス",
   "keystoneExportPrev": "前のページ",
   "keystoneExportNext": "次のページ",
-  "keystoneExportTestAccount": "デモ用アカウント — 公開テストフレーズから派生したもので、資産はありません。実際の資産を送らないでください。",
   "keystoneScanTitle": "署名リクエストをスキャン",
   "keystoneScanHint": "MetaMask に表示された QR コードにカメラを向けてください",
   "keystoneScanProgress": "フレームを収集中 {received}/{total}",

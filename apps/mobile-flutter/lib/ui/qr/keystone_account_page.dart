@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/interfaces/ur_codec.dart';
 import '../../core/models/ur_qr.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../theme/color_tokens.dart';
+import '../widgets/common/grid_background.dart';
+import '../widgets/common/neo_app_bar.dart';
+import '../widgets/common/neo_mono_block.dart';
+import '../widgets/common/qr_display_card.dart';
 
 /// 账户导出页：手机显示 `crypto-account` 二维码，主机扫码导入。
 ///
@@ -129,101 +132,117 @@ class _KeystoneAccountPageState extends State<KeystoneAccountPage> {
     return Scaffold(
       key: const Key('keystone-account-page'),
       backgroundColor: c.groupedBg,
-      appBar: AppBar(
-        backgroundColor: c.groupedBg,
-        foregroundColor: c.text,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.groupedBg,
         title: Text(l10n.keystoneExportTitle),
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          children: [
-            _Warning(text: l10n.keystoneExportTestAccount),
-            const SizedBox(height: 16),
-            Text(
-              l10n.keystoneExportHint,
-              style: TextStyle(color: c.text.withAlpha(170), fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<_ExportFormat>(
-              key: const Key('keystone-account-format'),
-              segments: [
-                ButtonSegment(
-                  value: _ExportFormat.metaMask,
-                  label: Text(l10n.keystoneExportFormatMetaMask),
-                ),
-                ButtonSegment(
-                  value: _ExportFormat.keystone,
-                  label: Text(l10n.keystoneExportFormatKeystone),
-                ),
-              ],
-              selected: {_format},
-              showSelectedIcon: false,
-              onSelectionChanged: (selection) => _selectFormat(selection.first),
-            ),
-            const SizedBox(height: 16),
-            if (!_accountLevel)
-              Row(
-                children: [
-                  IconButton(
-                    key: const Key('keystone-account-prev'),
-                    onPressed: _index == 0 ? null : () => _move(-1),
-                    icon: const Icon(Icons.chevron_left),
-                    color: c.text,
-                    tooltip: l10n.keystoneExportPrev,
+      body: GridBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            children: [
+              Text(
+                l10n.keystoneExportHint,
+                style: TextStyle(color: c.mutedText(170), fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<_ExportFormat>(
+                key: const Key('keystone-account-format'),
+                // 日间模式把分段控件画成 neo 块：黑描边、lime 选中块、紧圆角。
+                style: c.neobrutalism
+                    ? SegmentedButton.styleFrom(
+                        backgroundColor: c.surface,
+                        foregroundColor: c.text,
+                        selectedBackgroundColor: c.actionFill,
+                        selectedForegroundColor: c.brandInk,
+                        side: BorderSide(color: c.neoEdge, width: Neo.edge),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(Neo.radius),
+                        ),
+                      )
+                    : null,
+                segments: [
+                  ButtonSegment(
+                    value: _ExportFormat.metaMask,
+                    label: Text(l10n.keystoneExportFormatMetaMask),
                   ),
-                  Expanded(
-                    child: Text(
-                      l10n.keystoneExportAccountRange(
-                        _index,
-                        _index + _pageSize - 1,
-                      ),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: c.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    key: const Key('keystone-account-next'),
-                    onPressed:
-                        _index + _pageSize > _maxAccounts ? null : () => _move(1),
-                    icon: const Icon(Icons.chevron_right),
-                    color: c.text,
-                    tooltip: l10n.keystoneExportNext,
+                  ButtonSegment(
+                    value: _ExportFormat.keystone,
+                    label: Text(l10n.keystoneExportFormatKeystone),
                   ),
                 ],
+                selected: {_format},
+                showSelectedIcon: false,
+                onSelectionChanged: (selection) =>
+                    _selectFormat(selection.first),
               ),
-            const SizedBox(height: 8),
-            Center(child: _buildQr(c, frame, l10n)),
-            if (_frames.length > 1) ...[
+              const SizedBox(height: 16),
+              if (!_accountLevel)
+                Row(
+                  children: [
+                    IconButton(
+                      key: const Key('keystone-account-prev'),
+                      onPressed: _index == 0 ? null : () => _move(-1),
+                      icon: const Icon(Icons.chevron_left),
+                      color: c.text,
+                      tooltip: l10n.keystoneExportPrev,
+                    ),
+                    Expanded(
+                      child: Text(
+                        l10n.keystoneExportAccountRange(
+                          _index,
+                          _index + _pageSize - 1,
+                        ),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: c.text,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      key: const Key('keystone-account-next'),
+                      onPressed: _index + _pageSize > _maxAccounts
+                          ? null
+                          : () => _move(1),
+                      icon: const Icon(Icons.chevron_right),
+                      color: c.text,
+                      tooltip: l10n.keystoneExportNext,
+                    ),
+                  ],
+                ),
               const SizedBox(height: 8),
-              Text(
-                '${_frameIndex + 1} / ${_frames.length}',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: c.text.withAlpha(120), fontSize: 12),
-              ),
+              Center(child: _buildQr(c, frame)),
+              if (_frames.length > 1) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${_frameIndex + 1} / ${_frames.length}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: c.mutedText(120), fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 20),
+              if (_addresses.isNotEmpty)
+                _Field(
+                  label: l10n.keystoneExportPageAddresses,
+                  value: [
+                    for (var i = 0; i < _addresses.length; i++)
+                      '${_index + i}  ${_addresses[i]}',
+                  ].join('\n'),
+                  c: c,
+                ),
+              if (_path != null)
+                _Field(label: l10n.keystoneExportPath, value: _path!, c: c),
             ],
-            const SizedBox(height: 20),
-            if (_addresses.isNotEmpty)
-              _Field(
-                label: l10n.keystoneExportPageAddresses,
-                value: [
-                  for (var i = 0; i < _addresses.length; i++)
-                    '${_index + i}  ${_addresses[i]}',
-                ].join('\n'),
-                c: c,
-              ),
-            if (_path != null) _Field(label: l10n.keystoneExportPath, value: _path!, c: c),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildQr(ColorTokens c, String? frame, AppLocalizations l10n) {
+  Widget _buildQr(ColorTokens c, String? frame) {
     final size = MediaQuery.of(context).size.shortestSide * 0.72;
     if (_error != null) {
       return Container(
@@ -234,8 +253,13 @@ class _KeystoneAccountPageState extends State<KeystoneAccountPage> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.text.withAlpha(40)),
+          borderRadius: BorderRadius.circular(
+            c.neobrutalism ? Neo.radius : R.lg,
+          ),
+          border: Border.all(
+            color: c.neobrutalism ? c.neoEdge : c.text.withAlpha(40),
+            width: c.neobrutalism ? Neo.edge : 1,
+          ),
         ),
         child: Text(
           _error!,
@@ -251,61 +275,11 @@ class _KeystoneAccountPageState extends State<KeystoneAccountPage> {
         child: Center(child: CircularProgressIndicator(color: c.accent)),
       );
     }
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        // 二维码永远画在白底上，不跟随暗色主题。
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: QrImageView(
-        key: const Key('keystone-account-qr'),
-        data: frame,
-        version: QrVersions.auto,
-        size: size - 28,
-        backgroundColor: Colors.white,
-        eyeStyle: const QrEyeStyle(
-          eyeShape: QrEyeShape.square,
-          color: Colors.black,
-        ),
-        dataModuleStyle: const QrDataModuleStyle(
-          dataModuleShape: QrDataModuleShape.square,
-          color: Colors.black,
-        ),
-      ),
-    );
-  }
-}
-
-class _Warning extends StatelessWidget {
-  final String text;
-
-  const _Warning({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final c = isDark ? ColorTokens.dark : ColorTokens.light;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.accent.withAlpha(28),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.accent.withAlpha(90)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.science_outlined, size: 18, color: c.accent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: c.text, fontSize: 12, height: 1.4),
-            ),
-          ),
-        ],
-      ),
+    // 白底二维码卡片；日间模式由 QrDisplayCard 加黑描边，深色保留细边。
+    return QrDisplayCard(
+      key: const Key('keystone-account-qr'),
+      data: frame,
+      size: size - 24,
     );
   }
 }
@@ -319,6 +293,10 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = SelectableText(
+      value,
+      style: TextStyle(color: c.text, fontSize: 13, fontFamily: 'monospace'),
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
@@ -326,17 +304,15 @@ class _Field extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: c.text.withAlpha(120), fontSize: 11),
-          ),
-          const SizedBox(height: 2),
-          SelectableText(
-            value,
             style: TextStyle(
-              color: c.text,
-              fontSize: 13,
-              fontFamily: 'monospace',
+              color: c.mutedText(120),
+              fontSize: 11,
+              fontWeight: c.neobrutalism ? FontWeight.w600 : null,
             ),
           ),
+          const SizedBox(height: 4),
+          // 日间模式把数据收进带黑框的块里；深色保持裸文本。
+          NeoMonoBlock(child: text),
         ],
       ),
     );

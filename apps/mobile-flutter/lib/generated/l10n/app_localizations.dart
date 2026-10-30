@@ -2004,12 +2004,6 @@ abstract class AppLocalizations {
   /// **'Next page'**
   String get keystoneExportNext;
 
-  /// No description provided for @keystoneExportTestAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Demo account — derived from a public test phrase with no funds. Never send real assets here.'**
-  String get keystoneExportTestAccount;
-
   /// No description provided for @keystoneScanTitle.
   ///
   /// In en, this message translates to:

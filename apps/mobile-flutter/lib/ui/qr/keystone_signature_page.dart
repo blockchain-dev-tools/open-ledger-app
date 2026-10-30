@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../biz/qr_sign_flow.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../theme/color_tokens.dart';
+import '../widgets/common/adaptive_action_button.dart';
+import '../widgets/common/grid_background.dart';
+import '../widgets/common/neo_app_bar.dart';
+import '../widgets/common/qr_display_card.dart';
 
 /// 回显页：循环播放 `eth-signature` 帧，让主机扫码取回签名。
 class KeystoneSignaturePage extends StatefulWidget {
@@ -55,77 +58,56 @@ class _KeystoneSignaturePageState extends State<KeystoneSignaturePage> {
     return Scaffold(
       key: const Key('keystone-signature-page'),
       backgroundColor: c.groupedBg,
-      appBar: AppBar(
-        backgroundColor: c.groupedBg,
-        foregroundColor: c.text,
+      appBar: neoAppBar(
+        c: c,
+        darkBackground: c.groupedBg,
         automaticallyImplyLeading: false,
         title: Text(l10n.keystoneSignatureTitle),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                children: [
-                  Text(
-                    l10n.keystoneSignatureHint,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: c.text.withAlpha(170), fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: frames.isEmpty
-                        ? const SizedBox.shrink()
-                        : Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: QrImageView(
-                              key: const Key('keystone-signature-qr'),
-                              data: frames[_frameIndex],
-                              version: QrVersions.auto,
-                              size: size - 28,
-                              backgroundColor: Colors.white,
-                              eyeStyle: const QrEyeStyle(
-                                eyeShape: QrEyeShape.square,
-                                color: Colors.black,
-                              ),
-                              dataModuleStyle: const QrDataModuleStyle(
-                                dataModuleShape: QrDataModuleShape.square,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                  ),
-                  if (frames.length > 1) ...[
-                    const SizedBox(height: 8),
+      body: GridBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                  children: [
                     Text(
-                      '${_frameIndex + 1} / ${frames.length}',
+                      l10n.keystoneSignatureHint,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: c.text.withAlpha(120),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: c.mutedText(170), fontSize: 13),
                     ),
+                    const SizedBox(height: 20),
+                    if (frames.isEmpty)
+                      const SizedBox.shrink()
+                    else
+                      // 白底二维码卡片；日间模式带黑描边，深色保留细边。
+                      QrDisplayCard(
+                        key: const Key('keystone-signature-qr'),
+                        data: frames[_frameIndex],
+                        size: size - 24,
+                      ),
+                    if (frames.length > 1) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_frameIndex + 1} / ${frames.length}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: c.mutedText(120), fontSize: 12),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-              child: FilledButton(
-                key: const Key('keystone-signature-done'),
-                onPressed: _done,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
                 ),
-                child: Text(l10n.keystoneDone),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                child: AdaptiveActionButton(
+                  key: const Key('keystone-signature-done'),
+                  label: l10n.keystoneDone,
+                  onTap: _done,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

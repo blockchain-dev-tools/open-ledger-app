@@ -54,6 +54,10 @@ ThemeData _buildTheme(ColorTokens c, Brightness b) {
       scrolledUnderElevation: 2,
       shadowColor: Colors.black26,
       surfaceTintColor: Colors.transparent,
+      // Material's 22px title reads oversized on a phone; 18 keeps the bar
+      // subordinate to the page content. Screens that pass their own colour
+      // or weight still inherit this size.
+      titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 18),
     ),
     cardTheme: CardThemeData(
       color: c.surface,

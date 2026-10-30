@@ -93,6 +93,24 @@ class PinNumberPad extends StatelessWidget {
   }
 }
 
+/// Both pad keys share one chrome: a neo block in light mode (hard
+/// [Neo.edge] black outline, [Neo.radius] corners), the pre-neo hairline in
+/// dark.
+BoxDecoration _keyDecoration(ColorTokens c) {
+  if (c.neobrutalism) {
+    return BoxDecoration(
+      color: c.surface,
+      borderRadius: BorderRadius.circular(Neo.radius),
+      border: Border.all(color: c.neoEdge, width: Neo.edge),
+    );
+  }
+  return BoxDecoration(
+    color: c.surface,
+    borderRadius: BorderRadius.circular(R.lg),
+    border: Border.all(color: c.border.withAlpha(100)),
+  );
+}
+
 /// A single digit button in the number pad.
 class _NumButton extends StatelessWidget {
   final int digit;
@@ -118,11 +136,7 @@ class _NumButton extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: c.border.withAlpha(100)),
-        ),
+        decoration: _keyDecoration(c),
         alignment: Alignment.center,
         child: Text(
           '$digit',
@@ -160,11 +174,7 @@ class _BackspaceButton extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: c.border.withAlpha(100)),
-        ),
+        decoration: _keyDecoration(c),
         alignment: Alignment.center,
         child: Icon(
           Icons.backspace_outlined,

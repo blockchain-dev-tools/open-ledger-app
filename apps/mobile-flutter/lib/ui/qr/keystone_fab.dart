@@ -30,10 +30,19 @@ class KeystoneFab extends StatelessWidget {
         children: [
           Material(
             color: disabled ? c.text.withAlpha(22) : c.surface,
+            // 日间模式与 BLE 悬浮按钮一致：黑描边、无投影；深色保留细边 +
+            // Material 高度。
             shape: CircleBorder(
-              side: BorderSide(color: c.text.withAlpha(disabled ? 30 : 60)),
+              side: c.neobrutalism
+                  ? BorderSide(
+                      color: disabled ? c.text.withAlpha(70) : c.neoEdge,
+                      width: Neo.edge,
+                    )
+                  : BorderSide(
+                      color: c.text.withAlpha(disabled ? 30 : 60),
+                    ),
             ),
-            elevation: disabled ? 0 : 2,
+            elevation: c.neobrutalism ? 0 : (disabled ? 0 : 2),
             child: InkWell(
               key: const Key('keystone-fab'),
               customBorder: const CircleBorder(),

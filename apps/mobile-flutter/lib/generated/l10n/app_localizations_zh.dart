@@ -989,10 +989,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keystoneExportNext => '下一页账户';
 
   @override
-  String get keystoneExportTestAccount =>
-      '演示账户——由公开测试助记词派生，无任何资产。请勿向此地址转入真实资产。';
-
-  @override
   String get keystoneScanTitle => '扫描签名请求';
 
   @override

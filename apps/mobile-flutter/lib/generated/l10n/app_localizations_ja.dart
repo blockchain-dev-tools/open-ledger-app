@@ -1003,10 +1003,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get keystoneExportNext => '次のページ';
 
   @override
-  String get keystoneExportTestAccount =>
-      'デモ用アカウント — 公開テストフレーズから派生したもので、資産はありません。実際の資産を送らないでください。';
-
-  @override
   String get keystoneScanTitle => '署名リクエストをスキャン';
 
   @override
