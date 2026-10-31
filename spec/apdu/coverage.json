@@ -306,6 +306,53 @@
       "ins": "0x10",
       "state": "missing",
       "ref": "btc-app-version-target"
+    },
+    {
+      "app": "sui",
+      "ins": "0x00",
+      "dart": "suiGetVersion",
+      "state": "aligned",
+      "note": "official GET_VERSION; returns [major][minor][patch] || \"sui\" over the Block Protocol"
+    },
+    {
+      "app": "sui",
+      "ins": "0x01",
+      "dart": "suiVerifyAddress",
+      "state": "aligned",
+      "note": "official VERIFY_ADDRESS; device confirmation, then pubkey + address"
+    },
+    {
+      "app": "sui",
+      "ins": "0x02",
+      "dart": "suiGetPublicKey",
+      "state": "aligned",
+      "note": "official GET_PUBKEY; [len][pubkey][len][address]"
+    },
+    {
+      "app": "sui",
+      "ins": "0x03",
+      "dart": "suiSignTx",
+      "state": "aligned",
+      "note": "official SIGN_TX; the device parses the BCS transaction and refuses unknown shapes (0x6808)"
+    },
+    {
+      "app": "sui",
+      "ins": "0x22",
+      "state": "missing",
+      "note": "PROVIDE_TRUSTED_DYNAMIC_DESCRIPTOR needs Ledger PKI/CAL; the module answers 0x6D00"
+    },
+    {
+      "app": "sui",
+      "ins": "0xfe",
+      "dart": "suiGetVersionStr",
+      "state": "aligned"
+    },
+    {
+      "app": "sui",
+      "ins": "0xff",
+      "dart": "suiQuitApp",
+      "state": "aligned",
+      "note": "QUIT_APP; the module replies and ble_session resets the exposed app"
     }
   ],
   "dartOnly": [
@@ -335,12 +382,8 @@
       "reason": "framework F8 01 CONTINUE answering SW_INTERRUPTED_EXECUTION (0xE000); not part of an app INS table"
     },
     {
-      "dart": "suiGetPublicKey",
-      "reason": "no official app-sui source is vendored in spec/apdu/commands.json"
-    },
-    {
-      "dart": "suiSignTx",
-      "reason": "no official app-sui source is vendored in spec/apdu/commands.json"
+      "dart": "suiTokenDescriptor",
+      "reason": "declared gap: PROVIDE_TRUSTED_DYNAMIC_DESCRIPTOR needs Ledger PKI/CAL, the module answers 0x6D00"
     },
     {
       "dart": "nearGetVersion",

@@ -7,7 +7,7 @@
 ///   0xe0 — OS commands / Ethereum / Solana / Tron / legacy Bitcoin app
 ///   0xe1 — Bitcoin (current app, protocol 2.1.0+)
 ///   0xf8 — Bitcoin (framework: CONTINUE for interrupted commands)
-///   0x07 — Sui
+///   0x00 — Sui (official `app-sui` uses CLA 0x00 for every command)
 ///
 /// NOTE: the legacy Bitcoin app uses CLA 0xe0, the current one 0xe1. Our own
 /// Bitcoin extension (host-supplied digests) lives on 0xe1 with legacy-style
@@ -40,8 +40,9 @@ class Cla {
   /// interrupted command). Not an app command namespace.
   static const int bitcoinExt = 0xf8;
 
-  /// Sui.
-  static const int sui = 0x07;
+  /// Sui. Official `app-sui` (`docs/apdu.md`) uses `CLA 0x00` for **all**
+  /// commands; no other app in this project claims that class.
+  static const int sui = 0x00;
 
   /// NEAR (own CLA; no overlap with the 0xE0 family).
   static const int near = 0x80;
@@ -210,13 +211,33 @@ class Ins {
   /// Sign a Tron TIP-712 domain/message hash pair (CLA 0xE0: SIGN_TIP_712_MESSAGE).
   static const int tronSignTip712 = 0x0C;
 
-  // ── Sui instructions (CLA 0x07) ────────────────────────────────────────
+  // ── Sui instructions (CLA 0x00, official `app-sui`) ────────────────────
+  //
+  // Every Sui command rides the Block Protocol: APDU data starts with a
+  // HostToLedger instruction (0x00 START …) and the reply starts with a
+  // LedgerToHost instruction (0x01 RESULT_FINAL …). See
+  // `crates/chain-app-sui/src/block.rs`.
 
-  /// Get Sui public key / address.
+  /// GET_VERSION: `[major][minor][patch] || "sui"`.
+  static const int suiGetVersion = 0x00;
+
+  /// VERIFY_ADDRESS: show the address, then return the key.
+  static const int suiVerifyAddress = 0x01;
+
+  /// GET_PUBKEY: `[len][pubkey][len][address]` without confirmation.
   static const int suiGetPublicKey = 0x02;
 
-  /// Sign a Sui transaction.
-  static const int suiSignTx = 0x04;
+  /// SIGN_TX: the device parses the BCS transaction.
+  static const int suiSignTx = 0x03;
+
+  /// PROVIDE_TRUSTED_DYNAMIC_DESCRIPTOR (needs Ledger PKI/CAL; not implemented).
+  static const int suiTokenDescriptor = 0x22;
+
+  /// GET_VERSION_STR.
+  static const int suiGetVersionStr = 0xFE;
+
+  /// QUIT_APP.
+  static const int suiQuitApp = 0xFF;
 
   // ── NEAR instructions (CLA 0x80) ───────────────────────────────────────
 

@@ -148,14 +148,19 @@ class ApduLogDecoder {
       return 'P1=${_h(p1)} P2=${_h(p2)}';
     }
 
+    // Sui (CLA 0x00): every frame carries a Block Protocol instruction byte.
+    // Paths arrive inside the chunked parameters, not as a leading field.
+    if (cla == Cla.sui) {
+      return _decodeSuiBlock(data);
+    }
+
     // SOL_GET_ADDR: data = BIP-32 path (hardened levels only).
     if (cla == Cla.os && ins == Ins.solGetAddress) {
       return 'path=${_decodePath(data)}';
     }
 
-    // GET_PUBKEY (ETH / Tron / Sui): data = BIP-32 path.
-    final isGetPubkey = (cla == Cla.os && ins == Ins.getPublicKey) ||
-        (cla == Cla.sui && ins == Ins.suiGetPublicKey);
+    // GET_PUBKEY (ETH / Tron): data = BIP-32 path.
+    final isGetPubkey = cla == Cla.os && ins == Ins.getPublicKey;
     if (isGetPubkey) {
       return 'P1=${_h(p1)} P2=${_h(p2)} path=${_decodePath(data)}';
     }
@@ -214,6 +219,11 @@ class ApduLogDecoder {
     final cla = _lastCla;
     final ins = _lastIns;
 
+    // Sui (CLA 0x00): the reply starts with a LedgerToHost instruction.
+    if (cla == Cla.sui) {
+      return _decodeSuiResponse(ins, payload);
+    }
+
     // GET_APP_AND_VERSION:
     //   01 [name_len][name][ver_len][version][flags_len][flags]
     if (cla == Cla.global &&
@@ -228,10 +238,9 @@ class ApduLogDecoder {
       }
     }
 
-    // GET_PUBKEY (ETH/Tron/Sui):
+    // GET_PUBKEY (ETH/Tron):
     //   [pubkey_len][pubkey 65B][addr_len][addr ASCII hex]
-    final isGetPubkey = (cla == Cla.os && ins == Ins.getPublicKey) ||
-        (cla == Cla.sui && ins == Ins.suiGetPublicKey);
+    final isGetPubkey = cla == Cla.os && ins == Ins.getPublicKey;
     if (isGetPubkey) {
       final pubkeyLen = payload[0];
       var i = 1 + pubkeyLen;
@@ -268,6 +277,54 @@ class ApduLogDecoder {
         ? '${_bytesToHex(payload.sublist(0, 8))}…'
         : _bytesToHex(payload);
     return '${payload.length} bytes: $preview';
+  }
+
+  // ── Sui Block Protocol decoding ──────────────────────────────────────
+
+  /// HostToLedger instruction byte → readable description.
+  static String _decodeSuiBlock(Uint8List data) {
+    if (data.isEmpty) return '';
+    return switch (data[0]) {
+      0x00 => 'START (${(data.length - 1) ~/ 32} param(s))',
+      0x01 => 'GET_CHUNK_RESPONSE ${data.length - 1}B',
+      0x02 => 'GET_CHUNK_FAILURE',
+      0x03 => 'PUT_CHUNK_RESPONSE',
+      0x04 => 'RESULT_ACCUMULATING_RESPONSE',
+      final other => 'instruction=0x${other.toRadixString(16)}',
+    };
+  }
+
+  /// LedgerToHost instruction + payload for the last Sui command.
+  static String _decodeSuiResponse(int? ins, Uint8List payload) {
+    switch (payload[0]) {
+      case 0x02:
+        return 'GET_CHUNK ${_bytesToHex(payload.sublist(1))}';
+      case 0x01:
+        final body = payload.sublist(1);
+        if (ins == Ins.suiGetPublicKey || ins == Ins.suiVerifyAddress) {
+          // [pubkey_len][pubkey][addr_len][address 32B]
+          if (body.isEmpty) return 'RESULT_FINAL';
+          final keyLen = body[0];
+          final offset = 1 + keyLen;
+          if (offset < body.length) {
+            final addrLen = body[offset];
+            final end = offset + 1 + addrLen;
+            if (end <= body.length) {
+              return 'address=0x${_bytesToHex(body.sublist(offset + 1, end))}';
+            }
+          }
+          return 'RESULT_FINAL ${body.length}B';
+        }
+        if (ins == Ins.suiSignTx && body.length == 64) {
+          return 'signature ${_bytesToHex(body.sublist(0, 8))}…';
+        }
+        if (ins == Ins.suiGetVersion && body.length >= 3) {
+          return 'Sui ${body[0]}.${body[1]}.${body[2]}';
+        }
+        return 'RESULT_FINAL ${body.length}B';
+      default:
+        return '${payload.length} bytes';
+    }
   }
 
   // ── BIP-32 path decoding ─────────────────────────────────────────────

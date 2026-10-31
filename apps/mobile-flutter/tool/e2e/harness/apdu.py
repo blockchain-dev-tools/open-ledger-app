@@ -6,7 +6,8 @@ from __future__ import annotations
 
 CLA_OS = 0xE0
 CLA_BTC = 0xE1
-CLA_SUI = 0x07
+# 官方 `app-sui` 的全部命令都用 CLA 0x00。
+CLA_SUI = 0x00
 CLA_NEAR = 0x80
 INS_OPEN_APP = 0xD8
 INS_GET_PUBLIC_KEY = 0x02
@@ -21,8 +22,13 @@ CLA_BTC_CONTINUE = 0xF8
 INS_SOL_APP_CONFIGURATION = 0x04
 INS_SOL_GET_ADDR = 0x05
 INS_SOL_SIGN = 0x06
+INS_SUI_GET_VERSION = 0x00
+INS_SUI_VERIFY_ADDRESS = 0x01
 INS_SUI_GET_PUBLIC_KEY = 0x02
-INS_SUI_SIGN_TX = 0x04
+INS_SUI_SIGN_TX = 0x03
+INS_SUI_TOKEN_DESCRIPTOR = 0x22
+INS_SUI_GET_VERSION_STR = 0xFE
+INS_SUI_QUIT_APP = 0xFF
 INS_TRON_GET_ADDRESS = 0x02
 INS_TRON_SIGN_TX = 0x04
 INS_TRON_CONFIG = 0x06
@@ -195,14 +201,25 @@ def sol_sign(message: bytes, path: str = SOL_PATH) -> bytes:
     return apdu(CLA_OS, INS_SOL_SIGN, 0x00, 0x00, encode_path(path) + message)
 
 
-# ── Sui（CLA 0x07） ──────────────────────────────────────────────────
+def encode_path_le(path: str) -> bytes:
+    """Sui 的路径编码：`[depth(1B)][component(4B **little-endian**)]*`。
 
-def sui_get_public_key(path: str = SUI_PATH) -> bytes:
-    return apdu(CLA_SUI, INS_SUI_GET_PUBLIC_KEY, 0x00, 0x00, encode_path(path))
+    官方 `Bip32Key = DArray<Byte, U32<Little>, 10>` 与客户端
+    `pack_derivation_path` 都是小端；用大端会派生到另一条路径。
+    """
+    comps = [c for c in path.split("/")[1:] if c]
+    out = bytearray([len(comps)])
+    for c in comps:
+        hardened = c[-1] in "'hH"
+        value = int(c.rstrip("'hH"))
+        if hardened:
+            value |= 0x80000000
+        out += value.to_bytes(4, "little")
+    return bytes(out)
 
 
-def sui_sign(message: bytes, path: str = SUI_PATH) -> bytes:
-    return apdu(CLA_SUI, INS_SUI_SIGN_TX, 0x00, 0x00, encode_path(path) + message)
+# Sui 的 APDU 与 Block Protocol 应答都在 `harness/sui_host.py` 里；
+# 这里只保留路径编码，供两端复用。
 
 
 # ── Tron（CLA 0xE0，按 OPEN_APP 选择 INS 表） ────────────────────────

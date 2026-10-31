@@ -326,7 +326,7 @@ class BleSession {
 
       // ── Chain commands: the Rust chain-app host owns every one ────
       // ETH: GET_PUBLIC_KEY (P1=0x00 return / P1=0x01 confirm), SIGN,
-      // SIGN_PERSONAL, SIGN_EIP_712. BTC (CLA 0xE1/0xF8) and Sui (0x07) keep
+      // SIGN_PERSONAL, SIGN_EIP_712. BTC (CLA 0xE1/0xF8) and Sui (0x00) keep
       // their own CLA; SOL/Tron share CLA 0xE0 and are selected by the app
       // the host opened via OPEN_APP.
       if (_isChainCommand(command)) {
@@ -362,8 +362,9 @@ class BleSession {
   /// Whether this command belongs to a Rust chain module.
   ///
   /// CLA 0xE0 is shared by Ethereum, Solana and Tron, so the opened app decides
-  /// which INS table (and therefore which module) owns the frame. BTC and Sui
-  /// keep their own CLA and never depend on the app context.
+  /// which INS table (and therefore which module) owns the frame. BTC keeps its
+  /// own CLA and never depends on the app context; Sui's official CLA is 0x00,
+  /// which no other app in this project uses.
   bool _isChainCommand(ApduCommand command) {
     if (command.cla == Cla.bitcoin) {
       return command.ins == Ins.btcGetWalletPublicKey ||
@@ -376,8 +377,10 @@ class BleSession {
     if (command.cla == Cla.bitcoinExt) {
       return command.ins == Ins.btcContinue;
     }
+    // Sui owns CLA 0x00 outright: every official command (including the
+    // Block Protocol's GET_CHUNK responses) belongs to the Rust module.
     if (command.cla == Cla.sui) {
-      return command.ins == Ins.suiGetPublicKey || command.ins == Ins.suiSignTx;
+      return true;
     }
     if (command.cla == Cla.near) {
       return command.ins == Ins.nearGetPublicKey ||
@@ -465,6 +468,10 @@ class BleSession {
       case ChainHostEmit(:final payload):
         debugPrint('[CHAIN HOST] emit ${payload.length}B');
         await ble.sendApduResponse(payload);
+        // `00 FF QUIT_APP`：模块只负责回包，App 上下文由本层复位。
+        if (command.cla == Cla.sui && command.ins == Ins.suiQuitApp) {
+          _apduHandler.setCurrentApp(null);
+        }
         return true;
 
       case ChainHostReview(:final reviewId):
@@ -582,10 +589,30 @@ class BleSession {
           'version': fields['review.field.version'] ?? 'legacy',
         };
       case 'review.section.sui':
+        // Sui 的字段由设备解析 BCS 得出（收款方/金额/手续费上限），按顺序渲染。
+        final lines = <String>[];
+        for (final (label, value) in _reviewFieldEntries(review.document)) {
+          switch (label) {
+            case 'review.field.to':
+              lines.add('To: $value');
+            case 'review.field.amount':
+              lines.add('Amount: $value');
+            case 'review.field.max_fee':
+              lines.add('Max fee: $value');
+            case 'review.field.gas_price':
+              lines.add('Gas price: $value');
+            case 'review.field.gas_payment':
+              lines.add('Gas payment: $value');
+            case 'review.field.asset':
+              lines.add('Asset: $value');
+            case 'review.field.address':
+              break; // 账户地址已由确认页头部展示
+          }
+        }
         return {
           'type': 'personal_msg',
-          'message': '',
-          'messageHex': fields['review.field.message_hex'] ?? '',
+          'message': lines.join('\n'),
+          'messageHex': review.payloadHex,
         };
       case 'review.section.tron':
         // Tron 的字段随命令与合约类型变化（多合约、通用视图），必须按顺序

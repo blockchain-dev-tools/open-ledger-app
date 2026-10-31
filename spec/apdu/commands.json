@@ -16,6 +16,10 @@
     "bitcoin": {
       "repo": "LedgerHQ/app-bitcoin-new",
       "file": "src/commands.h"
+    },
+    "sui": {
+      "repo": "LedgerHQ/app-sui",
+      "file": "rust-app/src/interface.rs"
     }
   },
   "apps": {
@@ -311,6 +315,48 @@
           "ins": "0x10",
           "name": "SIGN_MESSAGE",
           "line": 12
+        }
+      ]
+    },
+    "sui": {
+      "cla": "0x00",
+      "claSource": "app-sui/docs/apdu.md:5 (all commands use CLA 0x00, P1/P2 = 0)",
+      "insSource": "app-sui/rust-app/src/interface.rs:48-58",
+      "ins": [
+        {
+          "ins": "0x00",
+          "name": "GET_VERSION",
+          "line": 51
+        },
+        {
+          "ins": "0x01",
+          "name": "VERIFY_ADDRESS",
+          "line": 52
+        },
+        {
+          "ins": "0x02",
+          "name": "GET_PUBKEY",
+          "line": 53
+        },
+        {
+          "ins": "0x03",
+          "name": "SIGN",
+          "line": 54
+        },
+        {
+          "ins": "0x22",
+          "name": "PROVIDE_TRUSTED_DYNAMIC_DESCRIPTOR",
+          "line": 55
+        },
+        {
+          "ins": "0xfe",
+          "name": "GET_VERSION_STR",
+          "line": 56
+        },
+        {
+          "ins": "0xff",
+          "name": "EXIT",
+          "line": 57
         }
       ]
     }

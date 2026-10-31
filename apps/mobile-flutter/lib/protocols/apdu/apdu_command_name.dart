@@ -78,13 +78,24 @@ String apduCommandName(Uint8List apdu) {
     return _unknown(cla, ins);
   }
 
-  // CLA 0x07 — Sui.
+  // CLA 0x00 — Sui (official `app-sui`; every command rides the Block
+  // Protocol, so the same CLA/INS repeats for START and GET_CHUNK replies).
   if (cla == Cla.sui) {
     switch (ins) {
+      case Ins.suiGetVersion:
+        return 'SUI_GET_VERSION';
+      case Ins.suiVerifyAddress:
+        return 'SUI_VERIFY_ADDRESS';
       case Ins.suiGetPublicKey:
         return 'SUI_GET_PUBKEY';
       case Ins.suiSignTx:
         return 'SUI_SIGN_TX';
+      case Ins.suiTokenDescriptor:
+        return 'SUI_PROVIDE_TOKEN_DESCRIPTOR';
+      case Ins.suiGetVersionStr:
+        return 'SUI_GET_VERSION_STR';
+      case Ins.suiQuitApp:
+        return 'SUI_QUIT_APP';
     }
     return _unknown(cla, ins);
   }

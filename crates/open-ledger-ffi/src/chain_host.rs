@@ -1392,14 +1392,62 @@ mod tests {
         set_seed(host, &seed_hex());
         open_module(host, SUI_MODULE_ID);
 
-        let payload = emit_payload(&call(host, &apdu(0x07, 0x02, &sui_path())));
-        assert_eq!(&payload[payload.len() - 2..], &[0x90, 0x00]);
-        let address = std::str::from_utf8(&payload[..payload.len() - 2]).unwrap();
+        // 官方 `app-sui`：CLA 0x00 + Block Protocol；路径分量是小端。
+        let mut param = vec![5u8];
+        for component in [
+            0x8000_002Cu32,
+            0x8000_0310,
+            0x8000_0000,
+            0x8000_0000,
+            0x8000_0000,
+        ] {
+            param.extend_from_slice(&component.to_le_bytes());
+        }
+        let mut blocks: std::collections::HashMap<Vec<u8>, Vec<u8>> = Default::default();
+        let mut last = [0u8; 32];
+        for chunk in param.chunks(180).collect::<Vec<_>>().into_iter().rev() {
+            let mut block = last.to_vec();
+            block.extend_from_slice(chunk);
+            last = open_ledger_crypto::sha256::hash(&block);
+            blocks.insert(last.to_vec(), block);
+        }
+        let first = last;
 
-        let seed = hex::decode(seed_hex()).unwrap();
-        let expected =
-            open_ledger_biz::sui::derive_address(&seed, "m/44'/784'/0'/0'/0'").unwrap();
-        assert_eq!(address, expected);
+        let mut payload = vec![0u8];
+        payload.extend_from_slice(&first);
+        let mut request = apdu(0x00, 0x02, &payload);
+        loop {
+            let response = emit_payload(&call(host, &request));
+            assert_eq!(&response[response.len() - 2..], &[0x90, 0x00]);
+            match response[0] {
+                0x02 => {
+                    let block = blocks
+                        .get(&response[1..33])
+                        .expect("device asked for a known chunk");
+                    let mut next = vec![0x01u8];
+                    next.extend_from_slice(block);
+                    request = apdu(0x00, 0x02, &next);
+                }
+                0x01 => {
+                    let body = &response[1..response.len() - 2];
+                    let key_len = body[0] as usize;
+                    assert_eq!(key_len, 32);
+                    let addr_len = body[1 + key_len] as usize;
+                    assert_eq!(addr_len, 32);
+                    let address = format!(
+                        "0x{}",
+                        hex::encode(&body[2 + key_len..2 + key_len + addr_len])
+                    );
+                    let seed = hex::decode(seed_hex()).unwrap();
+                    let expected =
+                        open_ledger_biz::sui::derive_address(&seed, "m/44'/784'/0'/0'/0'")
+                            .unwrap();
+                    assert_eq!(address, expected);
+                    break;
+                }
+                other => panic!("unexpected LedgerToHost instruction {other:#x}"),
+            }
+        }
 
         unsafe { chain_host_free(host) };
     }
