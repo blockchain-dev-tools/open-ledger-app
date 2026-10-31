@@ -365,9 +365,16 @@ class BleSession {
   /// which INS table (and therefore which module) owns the frame. BTC and Sui
   /// keep their own CLA and never depend on the app context.
   bool _isChainCommand(ApduCommand command) {
-    if (command.cla == Cla.bitcoin || command.cla == Cla.bitcoinExt) {
+    if (command.cla == Cla.bitcoin) {
       return command.ins == Ins.btcGetWalletPublicKey ||
-          command.ins == Ins.btcSignTx;
+          command.ins == Ins.btcGetExtendedPubkey ||
+          command.ins == Ins.btcGetMasterFingerprint ||
+          command.ins == Ins.btcSignPsbt;
+    }
+    // F8 01 CONTINUE answers a device-initiated E000 request; it belongs to
+    // the Bitcoin module that asked, never to the OS table.
+    if (command.cla == Cla.bitcoinExt) {
+      return command.ins == Ins.btcContinue;
     }
     if (command.cla == Cla.sui) {
       return command.ins == Ins.suiGetPublicKey || command.ins == Ins.suiSignTx;
@@ -426,7 +433,10 @@ class BleSession {
 
     // 选模块：BTC/Sui 有独立 CLA；CLA 0xE0 由当前打开的 App 决定
     // （Ethereum / Solana / Tron）。
-    if (command.cla == Cla.bitcoin || command.cla == Cla.bitcoinExt) {
+    if (command.cla == Cla.bitcoin) {
+      host.openApp('openledger.bitcoin');
+    } else if (command.cla == Cla.bitcoinExt) {
+      // CONTINUE must reach the module that raised the interruption.
       host.openApp('openledger.bitcoin');
     } else if (command.cla == Cla.sui) {
       host.openApp('openledger.sui');
@@ -533,10 +543,35 @@ class BleSession {
           'structHash': fields['review.field.struct_hash'] ?? '',
         };
       case 'review.section.bitcoin':
+        // BTC 审阅的字段随交易变化（多收款方、找零、手续费），按顺序渲染，
+        // 不能走 Map：同名 label 会被覆盖。金额单位是 satoshi（`decimals=8`）。
+        final lines = <String>[];
+        for (final (label, value) in _reviewFieldEntries(review.document)) {
+          switch (label) {
+            case 'review.field.to':
+              lines.add('To: $value');
+            case 'review.field.amount':
+              lines.add('Amount: $value sat');
+            case 'review.field.change':
+              lines.add('Change: $value sat');
+            case 'review.field.fee':
+              lines.add('Fee: $value sat');
+            case 'review.field.fee_rate':
+              lines.add('Fee rate: $value');
+            case 'review.field.rbf':
+              lines.add('RBF: $value');
+            case 'review.field.locktime':
+              lines.add('Locktime: $value');
+            case 'review.field.inputs':
+              lines.add('Inputs: $value');
+            case 'review.field.address':
+              break; // 账户地址已由确认页头部展示
+          }
+        }
         return {
-          'type': 'btc_tx',
-          'address': fields['review.field.address'] ?? review.address,
-          'inputs': fields['review.field.inputs'] ?? '1',
+          'type': 'personal_msg',
+          'message': lines.join('\n'),
+          'messageHex': review.payloadHex,
         };
       case 'review.section.solana':
         return {

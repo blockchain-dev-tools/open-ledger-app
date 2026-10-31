@@ -403,6 +403,29 @@ fn host_policy() -> CapabilitySet {
                 hardened_positions: vec![0, 1, 2],
                 max_index: 1000,
             },
+            // BTC 官方协议：`E1 05` 需要主密钥（depth 0），`E1 00` 需要账户级
+            // （depth 3）与父级（depth 2，用于父指纹）。
+            DerivationRule {
+                derivation_scheme: DerivationScheme::Bip32Secp256k1,
+                curve: Curve::Secp256k1,
+                depth: 0,
+                hardened_positions: vec![],
+                max_index: 0,
+            },
+            DerivationRule {
+                derivation_scheme: DerivationScheme::Bip32Secp256k1,
+                curve: Curve::Secp256k1,
+                depth: 2,
+                hardened_positions: vec![0, 1],
+                max_index: 1000,
+            },
+            DerivationRule {
+                derivation_scheme: DerivationScheme::Bip32Secp256k1,
+                curve: Curve::Secp256k1,
+                depth: 3,
+                hardened_positions: vec![0, 1, 2],
+                max_index: 1000,
+            },
             // Solana：`m/44'/501'/{account}'/0'`（全硬化，4 段）。
             DerivationRule {
                 derivation_scheme: DerivationScheme::Slip10Ed25519,
@@ -1152,45 +1175,6 @@ mod tests {
     }
 
     /// 宿主必须自己完成 taproot tweak 与 Schnorr 签名。
-    #[test]
-    fn bitcoin_host_signs_taproot_with_a_bip340_signature() {
-        let host = chain_host_new();
-        set_seed(host, &seed_hex());
-        open_module(host, BTC_MODULE_ID);
-
-        let mut data = vec![5u8];
-        for component in [0x8000_0056u32, 0x8000_0000, 0x8000_0000, 0, 0] {
-            data.extend_from_slice(&component.to_be_bytes());
-        }
-        data.push(1);
-        data.extend_from_slice(&[0x55u8; 32]);
-
-        let json = call(host, &apdu(0xE1, 0x44, &data));
-        assert!(json.contains("\"kind\":\"review\""), "{json}");
-        let id = review_id(&json);
-        let rendered = resolve_review(host, id, true);
-        let signature = emit_payload(&rendered);
-
-        assert_eq!(signature.len(), 66);
-        assert_eq!(&signature[64..], &[0x90, 0x00]);
-
-        let seed = hex::decode(seed_hex()).unwrap();
-        let private_key =
-            open_ledger_biz::hdkey::derive_secp256k1_private_key(&seed, "m/86'/0'/0'/0/0").unwrap();
-        let expected =
-            open_ledger_crypto::secp256k1::schnorr_sign_taproot(&private_key, &[0x55u8; 32]).unwrap();
-        assert_eq!(&signature[..64], expected.as_slice());
-
-        // 独立验签：Taproot 输出公钥（x-only）验证通过。
-        let output_key =
-            open_ledger_crypto::secp256k1::taproot_output_key_from_private(&private_key).unwrap();
-        let verifying = k256::schnorr::VerifyingKey::from_bytes(&output_key).unwrap();
-        let parsed = k256::schnorr::Signature::try_from(&signature[..64]).unwrap();
-        verifying.verify_raw(&[0x55u8; 32], &parsed).unwrap();
-
-        unsafe { chain_host_free(host) };
-    }
-
     fn default_path() -> Vec<u32> {
         vec![0x8000_002C, 0x8000_003C, 0x8000_0000, 0, 0]
     }

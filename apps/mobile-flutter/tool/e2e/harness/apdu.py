@@ -15,7 +15,9 @@ INS_GET_APP_CONFIG = 0x06
 INS_SIGN_PERSONAL = 0x08
 INS_SIGN_EIP712 = 0x0C
 INS_BTC_GET_PUBLIC_KEY = 0x40
-INS_BTC_SIGN_TX = 0x44
+INS_BTC_SIGN_PSBT = 0x04
+INS_BTC_CONTINUE = 0x01
+CLA_BTC_CONTINUE = 0xF8
 INS_SOL_APP_CONFIGURATION = 0x04
 INS_SOL_GET_ADDR = 0x05
 INS_SOL_SIGN = 0x06
@@ -133,26 +135,22 @@ def btc_get_public_key(
     )
 
 
-def btc_sign(
-    sighashes: list[bytes],
-    path: str = BTC_PATH,
-    *,
-    hash_type: int = 0,
-    network: int = BTC_NET_MAINNET,
-) -> bytes:
-    """自有扩展 `SIGN_DIGEST`：`[path][count][sighash(32)]*count`，P1 = sighash type。
+def btc_sign_psbt(header: bytes) -> bytes:
+    """官方现行 app 的 `E1 04 SIGN_PSBT`（P1=0，P2=协议版本 1）。
 
-    这**不是** Ledger 协议：官方现行 app 的 `E1 04` 是 `SIGN_PSBT`，legacy app 的
-    `0x44` 是 `HASH_INPUT_START`（摘要由设备算）。设备据此声明 `blind-signing`。
-    P2 只允许携带网络位（低 4 位必须为 0）。
+    `header` 是 PSBTv2 的 Merkle 化摘要（见 `harness/psbt_host.py`）。
+    之后的每一轮都由设备发起 `0xE000`，主机用 `btc_continue` 回答。
     """
-    if not sighashes or len(sighashes) > 16:
-        raise ValueError("sighashes 数量必须在 1..=16")
-    for sighash in sighashes:
-        if len(sighash) != 32:
-            raise ValueError("每个 sighash 必须是 32 字节")
-    data = encode_path(path) + bytes([len(sighashes)]) + b"".join(sighashes)
-    return apdu(CLA_BTC, INS_BTC_SIGN_TX, hash_type, network, data)
+    return apdu(CLA_BTC, INS_BTC_SIGN_PSBT, 0x00, 0x01, header)
+
+
+def btc_continue(data: bytes = b"") -> bytes:
+    """`F8 01 CONTINUE`：回答设备发起的 `0xE000` 请求。
+
+    空数据带 `Lc = 0`（5 字节）。Dart 侧的 `ApduCommand.toBytes()` 会发不带
+    Lc 的 4 字节 case-1 APDU，设备两种都要接受（见 `Apdu::parse` 的单测）。
+    """
+    return bytes([CLA_BTC_CONTINUE, INS_BTC_CONTINUE, 0x00, 0x01, len(data)]) + data
 
 
 def parse_response(resp: bytes) -> tuple[bytes, int]:

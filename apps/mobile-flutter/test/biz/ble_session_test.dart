@@ -596,6 +596,35 @@ void main() {
       expect(chainHost.submitted.length, 2);
     });
 
+    test('F8 01 CONTINUE is routed to the Bitcoin module', () async {
+      chainHost.reply = ChainHostEmit(Uint8List.fromList([0x90, 0x00]));
+
+      await session.onApduCommand(
+          ApduCommand(cla: Cla.bitcoinExt, ins: Ins.btcContinue, p1: 0, p2: 1)
+              .toBytes(),
+          'seed-hex');
+
+      expect(chainHost.openedApps, ['openledger.bitcoin']);
+      expect(chainHost.submitted.length, 1);
+    });
+
+    test('Solana GET_APP_CONFIGURATION is forwarded to the Rust module',
+        () async {
+      chainHost.reply = ChainHostEmit(Uint8List.fromList(
+          [0x00, 0x01, 0x00, 0x01, 0x00, 0x90, 0x00]));
+      apduHandler.setCurrentApp(LedgerApp.solana);
+
+      await session.onApduCommand(
+          ApduCommand(cla: Cla.os, ins: Ins.solGetAppConfiguration, p1: 0, p2: 0)
+              .toBytes(),
+          'seed-hex');
+
+      expect(chainHost.openedApps, ['openledger.solana']);
+      expect(chainHost.submitted.length, 1);
+      expect(blePeripheral.sentResponses.single,
+          Uint8List.fromList([0x00, 0x01, 0x00, 0x01, 0x00, 0x90, 0x00]));
+    });
+
     test('Solana and Tron modules follow the opened app', () async {
       chainHost.reply = ChainHostEmit(Uint8List.fromList([0x90, 0x00]));
       apduHandler.setCurrentApp(LedgerApp.solana);

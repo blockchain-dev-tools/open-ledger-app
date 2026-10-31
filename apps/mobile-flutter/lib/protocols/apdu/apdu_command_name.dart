@@ -66,8 +66,14 @@ String apduCommandName(Uint8List apdu) {
     switch (ins) {
       case Ins.btcGetWalletPublicKey:
         return 'BTC_GET_WALLET_PUBKEY';
-      case Ins.btcSignTx:
-        return 'BTC_SIGN_TX';
+      case Ins.btcGetExtendedPubkey:
+        return 'BTC_GET_EXTENDED_PUBKEY';
+      case Ins.btcGetMasterFingerprint:
+        return 'BTC_GET_MASTER_FINGERPRINT';
+      case Ins.btcSignPsbt:
+        return 'BTC_SIGN_PSBT';
+      case Ins.btcContinue:
+        return 'BTC_CONTINUE';
     }
     return _unknown(cla, ins);
   }

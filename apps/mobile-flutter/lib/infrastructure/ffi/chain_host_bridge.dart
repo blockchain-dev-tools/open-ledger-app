@@ -214,6 +214,9 @@ class ChainHostBridge implements IChainHostService {
     final failed = view.errorCode != 0;
     final String? data;
     if (failed) {
+      // 静默吞错会让 E2E 只剩一个 6D00；至少把宿主给的原因打出来。
+      debugPrint('[CHAIN HOST] ffi error ${view.errorCode}: '
+          '${view.errorMsg == nullptr ? '' : view.errorMsg.toDartString()}');
       data = null;
     } else if (view.data == nullptr) {
       data = '';

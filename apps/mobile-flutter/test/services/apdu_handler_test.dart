@@ -219,7 +219,7 @@ void main() {
     expect(appNameOf(response), equals('Solana'));
   });
 
-  test('Solana GET_APP_CONFIGURATION (INS 0x04) returns 5 bytes', () {
+  test('Solana GET_APP_CONFIGURATION (INS 0x04) is not answered in Dart', () {
     handler.setCurrentApp(LedgerApp.solana);
 
     final response = handler.handle(const ApduCommand(
@@ -229,9 +229,9 @@ void main() {
       p2: 0,
     ));
 
-    // [allow_blind_sign][pubkey_display][major][minor][patch] + 9000
-    expect(response.toBytes(),
-        equals(Uint8List.fromList([0x00, 0x01, 0x00, 0x01, 0x00, 0x90, 0x00])));
+    // The whole Solana INS table belongs to the Rust module; a second Dart
+    // implementation is exactly what D-021 forbids.
+    expect(response.statusWord, Sw.insNotSupported);
   });
 
   // ── Tron app identity (real Ledger app-tron speaks CLA 0xE0) ────────

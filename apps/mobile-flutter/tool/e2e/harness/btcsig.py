@@ -71,6 +71,44 @@ def address(
     return encoded, bytes.fromhex(out["publicKey"])
 
 
+def account(
+    mnemonic: str,
+    path: str,
+    *,
+    network: str = "mainnet",
+) -> tuple[str, bytes]:
+    """独立派生账户级 `key_info`（`[fp/purpose'/coin'/account']xpub…`）与公钥。
+
+    `network` 只影响 xpub 版本字节（xpub / tpub），与派生路径无关。
+    """
+    out = _run({"op": "account", "mnemonic": mnemonic, "path": path,
+                "network": network})
+    return f"[{out['fingerprint']}{path[1:]}]{out['xpub']}", bytes.fromhex(
+        out["publicKey"])
+
+
+def verify_ecdsa(public_key: bytes, sighash: bytes, signature: bytes) -> bool:
+    """BIP-143 摘要 + 设备给的 DER 签名（不含 sighash type 字节）。"""
+    out = _run({
+        "op": "ecdsa-verify",
+        "publicKey": public_key.hex(),
+        "sighash": sighash.hex(),
+        "signature": signature.hex(),
+    })
+    return bool(out.get("ok"))
+
+
+def taproot_output_key(mnemonic: str, path: str) -> bytes:
+    """Taproot key-path 的输出公钥（32B x-only），即 `OP_1 <key>` 里的 key。"""
+    out = _run({
+        "op": "address",
+        "mnemonic": mnemonic,
+        "path": path,
+        "type": "p2tr",
+    })
+    return bytes.fromhex(out["encoding"]["program"])
+
+
 def verify_schnorr(
     mnemonic: str,
     path: str,

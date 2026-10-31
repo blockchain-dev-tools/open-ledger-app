@@ -85,6 +85,30 @@ if (input.op === 'address') {
     ok: schnorr.verify(unhex(input.signature), message, outputKey),
     outputKey: hex(outputKey),
   };
+} else if (input.op === 'account') {
+  // 账户级 xpub + 主密钥指纹：`E1 04` 的钱包策略要 `[fp/84'/1'/0']xpub…`。
+  const versions = input.network === 'testnet'
+    ? { private: 0x04358394, public: 0x043587cf }
+    : { private: 0x0488ade4, public: 0x0488b21e };
+  const seed = mnemonicToSeedSync(input.mnemonic, '');
+  const master = HDKey.fromMasterSeed(seed, versions);
+  const node = master.derive(input.path);
+  out = {
+    xpub: node.publicExtendedKey,
+    fingerprint: master.fingerprint.toString(16).padStart(8, '0'),
+    publicKey: hex(node.publicKey),
+  };
+} else if (input.op === 'ecdsa-verify') {
+  // 设备 YIELD 里给的是 DER(r,s)；摘要由主机按 BIP-143 自己算。
+  // `prehash: false` 很关键：noble 默认会对 message 再做一次 sha256。
+  out = {
+    ok: secp256k1.verify(
+      unhex(input.signature),
+      unhex(input.sighash),
+      unhex(input.publicKey),
+      { prehash: false, format: 'der' },
+    ),
+  };
 } else {
   throw new Error(`unknown op ${input.op}`);
 }

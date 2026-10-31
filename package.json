@@ -8,10 +8,13 @@
     "node": ">=20.19.0"
   },
   "devDependencies": {
+    "@ledgerhq/hw-app-btc": "^12.0.0",
+    "@ledgerhq/hw-transport": "^6.36.1",
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1",
     "@scure/bip32": "2.0.1",
-    "@scure/bip39": "2.0.1"
+    "@scure/bip39": "2.0.1",
+    "bitcoinjs-lib": "^7.0.5"
   },
   "scripts": {
     "check:e2e-verifier": "node scripts/check-e2e-verifier.mjs"

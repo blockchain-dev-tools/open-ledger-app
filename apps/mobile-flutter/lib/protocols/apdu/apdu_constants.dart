@@ -167,8 +167,18 @@ class Ins {
   /// Get Bitcoin wallet public key / xpub.
   static const int btcGetWalletPublicKey = 0x40;
 
-  /// Sign a Bitcoin transaction (PSBT or raw TX input).
-  static const int btcSignTx = 0x44;
+  /// 官方现行 app 的 `E1 00 GET_EXTENDED_PUBKEY`（返回 ASCII xpub）。
+  static const int btcGetExtendedPubkey = 0x00;
+
+  /// 官方现行 app 的 `E1 05 GET_MASTER_FINGERPRINT`。
+  static const int btcGetMasterFingerprint = 0x05;
+
+  /// 官方现行 app 的 `E1 04 SIGN_PSBT`（Merkleized 多轮交互）。
+  static const int btcSignPsbt = 0x04;
+
+  /// Bitcoin framework `F8 01 CONTINUE` — the host's answer to a
+  /// device-initiated `SW_INTERRUPTED_EXECUTION (0xE000)` request.
+  static const int btcContinue = 0x01;
 
   // ── Tron instructions (CLA 0xE0 real app / CLA 0x14 legacy) ────────────
   //

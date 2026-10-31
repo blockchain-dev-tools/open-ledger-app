@@ -50,7 +50,6 @@ CLA_GLOBAL = 0xB0
 INS_GET_VERSION = 0x01
 INS_OPEN_APP = 0xD8
 INS_QUIT_APP = 0xA7
-INS_SOL_VERSION = 0x04
 INS_SOL_ADDR = 0x05
 INS_TRON_ADDR = 0x02
 INS_TRON_VERSION = 0x06
@@ -246,9 +245,12 @@ def stage_error_paths(ble) -> None:
 def stage_app_switching(ble) -> None:
     print("\n[5/8] OPEN_APP：Solana / Tron")
     expect_sw(ble, apdu.open_app("Solana"), SW_SUCCESS, "OPEN_APP Solana")
-    data = expect_sw(ble, bytes([CLA_OS, INS_SOL_VERSION, 0, 0]),
-                     SW_SUCCESS, "E0 04 SOL GET_VERSION")
-    expect(len(data) == 4, f"Solana 版本响应长度异常: {data.hex()}")
+    data = expect_sw(ble, apdu.sol_get_app_configuration(),
+                     SW_SUCCESS, "E0 04 SOL GET_APP_CONFIGURATION")
+    # [allow_blind_sign][pubkey_display][major][minor][patch]
+    expect(len(data) == 5, f"Solana 配置响应长度异常: {data.hex()}")
+    expect(data[:2] == bytes([0x00, 0x01]),
+           f"Solana 配置响应标志位异常: {data.hex()}")
     data = expect_sw(ble,
                      apdu.apdu(CLA_OS, INS_SOL_ADDR, 0, 0, encode_path(SOL_PATH)),
                      SW_SUCCESS, "E0 05 SOL GET_ADDR")

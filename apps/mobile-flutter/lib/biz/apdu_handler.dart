@@ -8,7 +8,7 @@
 ///   * OPEN_APP / QUIT_APP, which select the CLA-0xE0 INS table,
 ///   * the app-level probes that never reach the chain modules
 ///     (ETH GET_VERSION / GET_APP_CONFIGURATION / ERC-20 ACK,
-///     Solana GET_VERSION, Tron GET_APP_CONFIGURATION).
+///     Tron GET_APP_CONFIGURATION).
 ///
 /// Signing, address derivation and review construction live in the Rust
 /// modules; this table answers 6D00 for any chain INS it does not own.
@@ -124,14 +124,14 @@ class ApduHandler {
       return _errorResponse(Sw.insNotSupported);
     }
     return switch (app) {
-      // The Solana and Tron apps reuse CLA 0xE0 with their own INS tables.
-      LedgerApp.solana => _handleSolanaApp(command),
       LedgerApp.tron => _handleTronApp(command),
       // The Ethereum app owns the default CLA-0xE0 table.
       LedgerApp.ethereum => _handleEthereumApp(command),
-      // Bitcoin (0xE1/0xF8), Sui (0x07) and NEAR (0x80) are routed by CLA, so
-      // nothing is ever served through 0xE0 while one of them is open. TON's
-      // chain frames are routed by ble_session before they reach this table.
+      // Solana (0x04/0x05/0x06/0x07), Bitcoin (0xE1/0xF8), Sui (0x07) and
+      // NEAR (0x80) are served entirely by their Rust modules, so nothing is
+      // ever left for this table to answer. TON's chain frames are routed by
+      // ble_session before they reach this table.
+      LedgerApp.solana ||
       LedgerApp.bitcoin ||
       LedgerApp.sui ||
       LedgerApp.near ||
@@ -175,20 +175,6 @@ class ApduHandler {
       case Ins.ethProvideErc20TokenInfo:
         return ApduResponse(data: null, sw1: 0x90, sw2: 0x00);
 
-      default:
-        return _errorResponse(Sw.insNotSupported);
-    }
-  }
-
-  /// INS 0xE0 dispatch while the Solana app is open.
-  ///
-  /// Real Ledger Solana app INS table (hw-app-solana):
-  ///   0x04 GET_APP_CONFIGURATION · 0x05 GET_ADDR · 0x06 SIGN · 0x07 SIGN_OFFCHAIN
-  /// Everything but the configuration probe is served by the Rust Solana module.
-  ApduResponse _handleSolanaApp(ApduCommand command) {
-    switch (command.ins) {
-      case Ins.solGetAppConfiguration: // 0x04
-        return _buildSolanaAppConfiguration();
       default:
         return _errorResponse(Sw.insNotSupported);
     }
@@ -300,19 +286,7 @@ class ApduHandler {
     );
   }
 
-  /// Solana `GET_APP_CONFIGURATION` (0x04) response, mirroring the official
-  /// app-solana layout: `allow_blind_sign(1) + pubkey_display(1) + major +
-  /// minor + patch`. Blind signing is not allowed here, and the reported
-  /// version is the module version (0.1.0).
-  ApduResponse _buildSolanaAppConfiguration() {
-    return ApduResponse(
-      data: Uint8List.fromList([0x00, 0x01, 0x00, 0x01, 0x00]),
-      sw1: 0x90,
-      sw2: 0x00,
-    );
-  }
-
-  /// Build GET_VERSION response (CLA 0xE0, INS 0x01 for non-Solana).
+  /// Build the Ethereum app's GET_VERSION response (CLA 0xE0, INS 0x01).
   ///
   /// Format: target_id(4) + se_ver_len(1) + se_ver + flags_len(1) + flags(4)
   ///         + mcu_ver_len(1) + mcu_ver + 0x90 0x00

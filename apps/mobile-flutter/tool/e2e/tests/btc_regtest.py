@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""E2E：BTC 在本机 regtest 真链上的端到端验证（T-027 / ADR-020）。
+"""E2E：BTC 在本机 regtest 真链上的端到端验证（T-027 / T-028 / ADR-020）。
 
 判定标准是**交易被节点接受并进块**，不是 host 自己验签：
 
   T1  regtest 地址与独立派生一致，且 Core 认为它是本网络地址
-  T2  单输入花费：设备签名 → testmempoolaccept → sendrawtransaction → 进块
-  T3  双输入花费：一次审批两个签名，两个 witness 都有效
+  T2  单输入花费：`E1 04 SIGN_PSBT` 多轮交互 → 审批 → YIELD → 上链
+  T3  双输入花费：一次审批两个 YIELD，两个 witness 都有效
   T4  拒绝：收到 0x6985，链上无该交易
   T5  超时：确认页倒计时结束后回终态 SW，不产出签名
   T6  非法 P2：网络位/格式位非法分别回 0x6A86 / 0x6A80
@@ -21,16 +21,14 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from harness import apdu, btc_rpc, btc_sig, btcsig  # noqa: E402
-from harness.apdu import (  # noqa: E402
-    SW_SUCCESS,
-    parse_response,
-)
+from harness import apdu, btc_rpc, btcsig, psbt_host  # noqa: E402
+from harness.apdu import SW_SUCCESS, parse_response  # noqa: E402
 from harness.btc_sighash import sighash_p2wpkh  # noqa: E402
 from harness.btc_tx import (  # noqa: E402
     Tx,
@@ -38,6 +36,7 @@ from harness.btc_tx import (  # noqa: E402
     TxOut,
     btc_to_satoshi,
     p2pkh_script_code,
+    p2wpkh_script,
 )
 from harness.device import TEST_MNEMONIC  # noqa: E402
 from harness.session import DeviceSession  # noqa: E402
@@ -47,7 +46,9 @@ SW_TIMEOUT = 0x6400
 SW_WRONG_P1_P2 = 0x6A86
 SW_WRONG_DATA = 0x6A80
 
-REG_PATH = "m/84'/1'/0'/0/0"
+ACCOUNT_PATH = "m/84'/1'/0'"
+REG_PATH = f"{ACCOUNT_PATH}/0/0"
+TEMPLATE = "wpkh(@0/**)"
 FEE = 2000
 # 确认页倒计时 60s；留一点余量。
 TIMEOUT_WAIT_SECONDS = 75
@@ -56,6 +57,10 @@ TIMEOUT_WAIT_SECONDS = 75
 def expect(condition: bool, message: str) -> None:
     if not condition:
         raise RuntimeError(message)
+
+
+def hash160(pubkey: bytes) -> bytes:
+    return hashlib.new("ripemd160", hashlib.sha256(pubkey).digest()).digest()
 
 
 def mine_blocks(count: int = 1) -> None:
@@ -105,37 +110,6 @@ def fund(address: str, amount_btc: float) -> tuple[str, int, int]:
     return txid, output["n"], btc_to_satoshi(output["value"])
 
 
-def build_spend(
-    utxos: list[tuple[str, int, int]],
-    destination: str,
-) -> Tx:
-    total = sum(value for _, _, value in utxos)
-    tx = Tx(
-        inputs=[TxIn(txid, vout) for txid, vout, _ in utxos],
-        outputs=[TxOut(total - FEE, script_pubkey(destination))],
-    )
-    return tx
-
-
-async def approve_signature(sess, ble, sighashes: list[bytes]) -> list[bytes]:
-    """发签名请求 → 确认页 → Approve → 返回每个输入的 65B compact 签名。"""
-    ble.send(
-        apdu.btc_sign(sighashes, path=REG_PATH, network=apdu.BTC_NET_REGTEST)
-    )
-    screens = await sess.app.wait_for_screen({"TransactionScreen"}, timeout=10)
-    expect("TransactionScreen" in screens, f"未弹出签名确认页：{screens}")
-    await sess.app.settle(0.8)
-    hit = await sess.app.tap_key("sign-approve")
-    expect(hit.startswith("TAPPED"), f"点不到 Approve：{hit!r}")
-    data, sw = parse_response(ble.recv(timeout=20))
-    expect(sw == SW_SUCCESS, f"签名响应 SW=0x{sw:04x}")
-    expect(
-        len(data) == len(sighashes) * 65,
-        f"签名长度 {len(data)}，期望 {len(sighashes) * 65}",
-    )
-    return [data[i * 65:(i + 1) * 65] for i in range(len(sighashes))]
-
-
 def broadcast_and_mine(tx: Tx) -> str:
     raw = tx.serialize().hex()
     verdict = btc_rpc.call("testmempoolaccept", [raw])[0]
@@ -146,6 +120,42 @@ def broadcast_and_mine(tx: Tx) -> str:
     txid = btc_rpc.call("sendrawtransaction", raw)
     mine_blocks()
     return txid
+
+
+async def sign_spend(
+    sess,
+    ble,
+    utxos: list[tuple[str, int, int]],
+    destination: str,
+    receive_script: bytes,
+    receive_pubkey: bytes,
+    *,
+    decision: str = "approve",
+    timeout_wait: float = 0.0,
+) -> tuple[Tx, psbt_host.PsbtHost, int]:
+    """把「花掉这些 UTXO」写成 PSBT 并走完设备交互，返回 (交易骨架, host, SW)。"""
+    total = sum(value for _, _, value in utxos)
+    tx = Tx(
+        inputs=[TxIn(txid, vout, sequence=0xFFFFFFFD) for txid, vout, _ in utxos],
+        outputs=[TxOut(total - FEE, script_pubkey(destination))],
+    )
+    key_info, _ = btcsig.account(TEST_MNEMONIC, ACCOUNT_PATH, network="testnet")
+    host = psbt_host.PsbtHost()
+    header = psbt_host.build_psbt(
+        host,
+        template=TEMPLATE,
+        key_info=key_info,
+        tx=tx,
+        prevouts=[(value, receive_script) for _, _, value in utxos],
+        input_paths={index: (REG_PATH, receive_pubkey) for index in range(len(utxos))},
+        output_paths={},
+    )
+    _, _, sw = await psbt_host.sign_with_device(
+        sess, ble, host, header,
+        decision=decision,
+        timeout_wait=timeout_wait,
+    )
+    return tx, host, sw
 
 
 async def run() -> int:
@@ -160,9 +170,10 @@ async def run() -> int:
     except btc_rpc.RpcError:
         pass  # 已存在
 
-    expected_regtest, pubkey = btcsig.address(
+    expected_regtest, receive_pubkey = btcsig.address(
         TEST_MNEMONIC, REG_PATH, 0x02, hrp="bcrt"
     )
+    receive_script = p2wpkh_script(hash160(receive_pubkey))
     print(f"独立派生 regtest 地址: {expected_regtest}")
 
     serial = os.environ.get("ANDROID_SERIAL") or None
@@ -199,20 +210,30 @@ async def run() -> int:
                 funded_pkh == bytes.fromhex(info["witness_program"]),
                 "witness program 与 scriptPubKey 不一致",
             )
+            expect(receive_script == bytes.fromhex(info["scriptPubKey"]),
+                   "独立派生的 scriptPubKey 与 Core 不一致")
             print("  ✓ T1 设备地址与独立派生逐字节一致，Core 认可为 regtest 地址")
 
-            # ── T2 单输入花费上链 ───────────────────────────────────
-            txid, vout, value = fund(regtest, 1.0)
-            print(f"  资助 {value} sat：{txid[:16]}…:{vout}")
-            spend = build_spend([(txid, vout, value)], btc_rpc.call(
-                "getnewaddress", "", "bech32", wallet="miner"))
-            sighash = sighash_p2wpkh(
-                spend, 0, p2pkh_script_code(funded_pkh), value)
-            signature = (await approve_signature(sess, ble, [sighash]))[0]
-            spend.inputs[0].witness = [btc_sig.compact_to_der(signature), pubkey]
+            # ── T2 单输入花费上链（PSBT）────────────────────────────
+            utxo = fund(regtest, 1.0)
+            print(f"  资助 {utxo[2]} sat：{utxo[0][:16]}…:{utxo[1]}")
+            spend, host, sw = await sign_spend(
+                sess, ble, [utxo],
+                btc_rpc.call("getnewaddress", "", "bech32", wallet="miner"),
+                receive_script, receive_pubkey,
+            )
+            expect(sw == SW_SUCCESS, f"PSBT 签名 SW=0x{sw:04x}")
+            expect(len(host.yields) == 1, f"YIELD 数量 {len(host.yields)} ≠ 1")
+            index, pubkey, signature = psbt_host.parse_yield(host.yields[0])
+            expect(index == 0 and pubkey == receive_pubkey, "YIELD 与输入不匹配")
+            digest = sighash_p2wpkh(
+                spend, 0, p2pkh_script_code(hash160(pubkey)), utxo[2])
+            expect(btcsig.verify_ecdsa(pubkey, digest, signature[:-1]),
+                   "签名对独立 BIP-143 摘要验签失败")
+            spend.inputs[0].witness = [signature, pubkey]
             spent_txid = broadcast_and_mine(spend)
             expect(
-                btc_rpc.call("gettxout", txid, vout) is None,
+                btc_rpc.call("gettxout", utxo[0], utxo[1]) is None,
                 "资助输出仍未被花费，交易没有真正生效",
             )
             print(f"  ✓ T2 单输入交易进块：{spent_txid[:16]}…，UTXO 已花费")
@@ -220,18 +241,22 @@ async def run() -> int:
             # ── T3 双输入花费 ───────────────────────────────────────
             first = fund(regtest, 0.4)
             second = fund(regtest, 0.6)
-            multi = build_spend(
-                [first, second],
+            multi, host, sw = await sign_spend(
+                sess, ble, [first, second],
                 btc_rpc.call("getnewaddress", "", "bech32", wallet="miner"),
+                receive_script, receive_pubkey,
             )
-            sighashes = [
-                sighash_p2wpkh(multi, index, p2pkh_script_code(funded_pkh), utxo[2])
-                for index, utxo in enumerate([first, second])
-            ]
-            signatures = await approve_signature(sess, ble, sighashes)
-            for index, signature in enumerate(signatures):
-                multi.inputs[index].witness = [
-                    btc_sig.compact_to_der(signature), pubkey]
+            expect(sw == SW_SUCCESS, f"双输入 PSBT SW=0x{sw:04x}")
+            expect(len(host.yields) == 2, f"YIELD 数量 {len(host.yields)} ≠ 2")
+            values = [first[2], second[2]]
+            for payload in host.yields:
+                index, pubkey, signature = psbt_host.parse_yield(payload)
+                expect(pubkey == receive_pubkey, "双输入 YIELD 公钥不一致")
+                digest = sighash_p2wpkh(
+                    multi, index, p2pkh_script_code(hash160(pubkey)), values[index])
+                expect(btcsig.verify_ecdsa(pubkey, digest, signature[:-1]),
+                       f"输入 {index} 的签名验签失败")
+                multi.inputs[index].witness = [signature, pubkey]
             multi_txid = broadcast_and_mine(multi)
             expect(
                 btc_rpc.call("gettxout", first[0], first[1]) is None
@@ -242,26 +267,16 @@ async def run() -> int:
 
             # ── T4 拒绝不产出签名 ───────────────────────────────────
             reject_funding = fund(regtest, 0.5)
-            reject_tx = build_spend(
-                [reject_funding],
+            _, host, sw = await sign_spend(
+                sess, ble, [reject_funding],
                 btc_rpc.call("getnewaddress", "", "bech32", wallet="miner"),
+                receive_script, receive_pubkey,
+                decision="reject",
             )
-            reject_sighash = sighash_p2wpkh(
-                reject_tx, 0, p2pkh_script_code(funded_pkh), reject_funding[2])
-            ble.send(apdu.btc_sign(
-                [reject_sighash],
-                path=REG_PATH,
-                network=apdu.BTC_NET_REGTEST,
-            ))
-            screens = await sess.app.wait_for_screen(
-                {"TransactionScreen"}, timeout=10)
-            expect("TransactionScreen" in screens, f"未弹出确认页：{screens}")
-            await sess.app.settle(0.8)
-            hit = await sess.app.tap_key("sign-reject")
-            expect(hit.startswith("TAPPED"), f"点不到 Reject：{hit!r}")
-            data, sw = parse_response(ble.recv(timeout=15))
             expect(sw == SW_USER_REJECTED, f"拒绝后 SW=0x{sw:04x}")
-            expect(not data, f"拒绝响应不应带数据：{data.hex()}")
+            expect(not host.yields, f"拒绝后不应有 YIELD：{host.yields}")
+            expect(btc_rpc.call("gettxout", reject_funding[0], reject_funding[1]),
+                   "拒绝后不应花费该 UTXO")
             print("  ✓ T4 拒绝返回 0x6985，无签名")
 
             # ── T6 非法 P2 ──────────────────────────────────────────
@@ -282,26 +297,18 @@ async def run() -> int:
                 print("  - T5 已按 BTC_REGTEST_SKIP_TIMEOUT 跳过")
             else:
                 timeout_funding = fund(regtest, 0.3)
-                timeout_tx = build_spend(
-                    [timeout_funding],
+                _, host, sw = await sign_spend(
+                    sess, ble, [timeout_funding],
                     btc_rpc.call("getnewaddress", "", "bech32", wallet="miner"),
+                    receive_script, receive_pubkey,
+                    decision="timeout",
+                    timeout_wait=TIMEOUT_WAIT_SECONDS,
                 )
-                timeout_sighash = sighash_p2wpkh(
-                    timeout_tx, 0, p2pkh_script_code(funded_pkh), timeout_funding[2])
-                ble.send(apdu.btc_sign(
-                    [timeout_sighash],
-                    path=REG_PATH,
-                    network=apdu.BTC_NET_REGTEST,
-                ))
-                screens = await sess.app.wait_for_screen(
-                    {"TransactionScreen"}, timeout=10)
-                expect("TransactionScreen" in screens, f"未弹出确认页：{screens}")
-                print(f"  等待 {TIMEOUT_WAIT_SECONDS}s 让确认页超时…")
-                data, sw = parse_response(
-                    ble.recv(timeout=TIMEOUT_WAIT_SECONDS + 10))
                 expect(sw in (SW_USER_REJECTED, SW_TIMEOUT),
                        f"超时后 SW=0x{sw:04x}")
-                expect(not data, f"超时响应不应带数据：{data.hex()}")
+                expect(not host.yields, "超时后不应有 YIELD")
+                expect(btc_rpc.call("gettxout", timeout_funding[0], timeout_funding[1]),
+                       "超时后不应花费该 UTXO")
                 print(f"  ✓ T5 超时返回 0x{sw:04x}，无签名")
 
     print("\n[OK] btc_regtest 通过")

@@ -173,9 +173,9 @@
     {
       "app": "solana",
       "ins": "0x04",
-      "dart": "solGetVersion",
-      "state": "differentMeaning",
-      "note": "official 0x04 = GET_APP_CONFIGURATION (flags + version); Dart's Ins.solGetVersion returns only a 4-byte version block"
+      "dart": "solGetAppConfiguration",
+      "state": "aligned",
+      "note": "official GET_APP_CONFIGURATION; 5 bytes = allow_blind_sign + pubkey_display + version"
     },
     {
       "app": "solana",
@@ -271,8 +271,9 @@
     {
       "app": "bitcoin",
       "ins": "0x00",
-      "state": "missing",
-      "ref": "btc-app-version-target"
+      "state": "aligned",
+      "dart": "btcGetExtendedPubkey",
+      "note": "official GET_EXTENDED_PUBKEY; returns the ASCII xpub (the device also asks the host for the parent key to fill the parent fingerprint)"
     },
     {
       "app": "bitcoin",
@@ -289,14 +290,16 @@
     {
       "app": "bitcoin",
       "ins": "0x04",
-      "state": "missing",
-      "ref": "btc-app-version-target"
+      "dart": "btcSignPsbt",
+      "state": "aligned",
+      "note": "official SIGN_PSBT; the Merkleized multi-round flow lives in chain-app-bitcoin::flow"
     },
     {
       "app": "bitcoin",
       "ins": "0x05",
-      "state": "missing",
-      "ref": "btc-app-version-target"
+      "state": "aligned",
+      "dart": "btcGetMasterFingerprint",
+      "note": "official GET_MASTER_FINGERPRINT; hash160(master pubkey)[0..4]"
     },
     {
       "app": "bitcoin",
@@ -328,9 +331,8 @@
       "reason": "legacy Ledger Bitcoin command set (0x40), not present in app-bitcoin-new"
     },
     {
-      "dart": "btcSignTx",
-      "ref": "btc-app-version-target",
-      "reason": "legacy Ledger Bitcoin command set (0x44), not present in app-bitcoin-new"
+      "dart": "btcContinue",
+      "reason": "framework F8 01 CONTINUE answering SW_INTERRUPTED_EXECUTION (0xE000); not part of an app INS table"
     },
     {
       "dart": "suiGetPublicKey",
