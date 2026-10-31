@@ -290,9 +290,11 @@ void main() {
     await tester.pumpWidget(_app(_accounts()));
     await tester.pumpAndSettle();
 
-    // Account rows hidden while collapsed.
-    expect(find.text('0x9686b…dc989'), findsNothing);
-    expect(find.text('0x25B24…0F758'), findsNothing);
+    // Account rows hidden while collapsed. The row middle-truncates the
+    // address, so match a fragment — this test tracks visibility, not the
+    // truncation budget.
+    expect(find.textContaining('0x9686b'), findsNothing);
+    expect(find.textContaining('0x25B24'), findsNothing);
   });
 
   testWidgets('tapping blank space in a chain header expands it',
@@ -309,8 +311,8 @@ void main() {
     await tester.tapAt(Offset(rect.right - rect.width * 0.15, rect.center.dy));
     await tester.pumpAndSettle();
 
-    expect(find.text('0x9686b…dc989'), findsOneWidget);
-    expect(find.text('0x25B24…0F758'), findsOneWidget);
+    expect(find.textContaining('0x9686b'), findsOneWidget);
+    expect(find.textContaining('0x25B24'), findsOneWidget);
   });
 
   testWidgets('tapping blank space again collapses the section',
@@ -325,11 +327,11 @@ void main() {
 
     await tester.tapAt(blankSpot);
     await tester.pumpAndSettle();
-    expect(find.text('0x9686b…dc989'), findsOneWidget);
+    expect(find.textContaining('0x9686b'), findsOneWidget);
 
     await tester.tapAt(blankSpot);
     await tester.pumpAndSettle();
-    expect(find.text('0x9686b…dc989'), findsNothing);
+    expect(find.textContaining('0x9686b'), findsNothing);
   });
 
   testWidgets('manage chains toggles a chain off and on', (tester) async {
